@@ -12,7 +12,6 @@ ifdef DEBUG
 endif
 
 ifeq (, $(wildcard $(OBJ_DIR)))
-$(info ./obj does not exist. I'll make ./obj before complie.)
 $(shell mkdir $(OBJ_DIR))
 endif
 
