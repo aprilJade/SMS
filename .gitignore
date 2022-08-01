@@ -1,4 +1,5 @@
-.vscode
-*/.vscode
+.vscode/
+*/.vscode/
 */agent
 *.o
+objs/
