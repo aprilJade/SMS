@@ -3,11 +3,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <stdlib.h>
-#define SYSTEM_INFO "/proc/stat"
-#define PROCESS_INFO "/proc/%d/stat"
-#define MEMORY_INFO "/proc/meminfo"
-#define DISK_INFO "/proc/diskstats"
-#define NET_INFO "/proc/net/dev"
+#include "define.h"
 
 int main(void)
 {
