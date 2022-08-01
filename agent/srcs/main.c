@@ -3,15 +3,14 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <stdlib.h>
-#include "define.h"
 
 int main(void)
 {
 	int fd;
 
-	if ((fd = open(SYSTEM_INFO, O_RDONLY)) == -1)
+	if ((fd = open("asdf", O_RDONLY)) == -1)
 	{
-		perror("agent: ");
+		perror("agent");
 		exit(errno);
 	}
 	char buf[8192] = { 0, };

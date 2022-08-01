@@ -1,27 +1,34 @@
 NAME			=	agent
 CFLAG			=	-Wall -Wextra -Werror
 INCLUDES		=	-I./includes/
-SRC				=	main.c 
-SRCS			=	$(addprefix ./srcs/, $(SRC))
-OBJS			=	$(SRCS:.c=.o)
+SRC_DIR			=	./srcs
+OBJ_DIR			=	./objs
+SRCS	=	$(notdir $(wildcard $(SRC_DIR)/*.c))
+OBJS	=	$(SRCS:.c=.o)
+OBJECTS	=	$(patsubst %.o, $(OBJ_DIR)/%.o, $(OBJS))
 
 ifdef DEBUG
 	CFLAG += -g -fsanitize=address
 endif
 
-%.o: %.c
-	cc $(CFLAG) $(INCLUDES) $(BONUS_INCLUDES) -c $< -o $@ 
+ifeq (, $(wildcard $(OBJ_DIR)))
+$(info ./obj does not exist. I'll make ./obj before complie.)
+$(shell mkdir $(OBJ_DIR))
+endif
 
-$(NAME): $(OBJS)
-	cc $(CFLAG) $(INCLUDES) -o $(NAME) $(OBJS)
+$(OBJ_DIR)/%.o	: $(SRC_DIR)/%.c
+	$(CC) $(FLAG) -c $< -o $@ $(INCLUDES) 
+
+$(NAME): $(OBJECTS)
+	cc $(CFLAG) $(INCLUDES) -o $(NAME) $(OBJECTS)
 
 all: $(NAME)
 
 clean:
-	rm -rf $(OBJS) $(BONUS_OBJS)
+	rm -rf $(OBJECTS)
 
 fclean: clean
-	rm -rf $(NAME) $(BONUS_NAME)
+	rm -rf $(NAME)
 
 re:
 	make fclean
