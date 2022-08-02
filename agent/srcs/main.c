@@ -96,9 +96,18 @@ void collectMemInfo(char* buf)
 	while (*buf++ != '\n');
 	while (*buf++ != ' ');
 	size_t memCached = atoll(buf);
+	for (int i = 0; i < 10; i++)
+		while (*buf++ != '\n');
+	while (*buf++ != ' ');
+	size_t swapTotal = atol(buf);
+
+	while (*buf++ != '\n');
+	while (*buf++ != ' ');
+	size_t swapFree = atol(buf);
 #if DEBUG
-	printf("Total: %9ld kB\tFree: %9ld kB\tUsed: %9ld kB\n",
-		memTotal, memFree, memTotal - memFree - memBuffers - memCached);
+	printf("Total: %9ld kB\tFree: %9ld kB\tUsed: %9ld kB\tSwap Total: %ld kB\tSwap Free %ld kB\n",
+		memTotal, memFree, memTotal - memFree - memBuffers - memCached,
+		swapTotal, swapFree);
 #endif
 	close(fd);
 }
@@ -272,7 +281,7 @@ void collectProcInfo(char *buf, size_t maxPid)
 			//printf("%c\n", state);
 #endif
 			free(userName);
-			sprintf(fileName, "/proc/%d/cmdline");
+			sprintf(fileName, "/proc/%d/cmdline", i);
 			fd = open(fileName, O_RDONLY);
 			if (fd == -1)
 			{
@@ -306,10 +315,9 @@ int main(void)
 	while(1)
 	{
 		//collectCpuInfo(logicalCoreCount, toMs, sysbuf);
-		//collectMemInfo(sysbuf);
+		collectMemInfo(sysbuf);
 		//collectNetInfo(sysbuf);
-		collectProcInfo(sysbuf, getMaxPid());
-		return 0;
+		// collectProcInfo(sysbuf, getMaxPid());
 		sleep(1);
 	}
 }
