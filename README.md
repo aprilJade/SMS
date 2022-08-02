@@ -1,2 +1,2 @@
 # SMS
-System Monitoring System with exam!
+*S*ystem *M*onitoring *S*ystem with exam!
