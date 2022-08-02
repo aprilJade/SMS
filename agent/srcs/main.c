@@ -15,7 +15,7 @@
 #define NET_INFO		"/proc/net/dev"
 
 
-void	collectCpuInfo(int us, long cpuCnt, long timeConversion, char* rdBuf)
+void collectCpuInfo(long cpuCnt, long timeConversion, char* rdBuf)
 {
 	int	fd;
 	int readSize = 0;
@@ -52,11 +52,10 @@ void	collectCpuInfo(int us, long cpuCnt, long timeConversion, char* rdBuf)
 #endif
 		while (*rdBuf++ != '\n');
 	}
-	usleep(us);
 	close(fd);
 }
 
-void collectMemInfo(int us, char* buf)
+void collectMemInfo(char* buf)
 {
 	int fd = open("/proc/meminfo", O_RDONLY);
 	int readSize;
@@ -97,19 +96,39 @@ void collectMemInfo(int us, char* buf)
 		memTotal, memFree, memTotal - memFree - memBuffers - memCached);
 #endif
 	close(fd);
-	usleep(us);
+}
+
+void collectNetInfo(char* buf)
+{
+	int fd = open("/proc/net/dev", O_RDONLY);
+	if (fd == -1)
+	{
+		// TODO: handling open error
+		perror("agent");
+		return ;
+	}
+	int readSize = read(fd, buf, 512);
+	if (readSize == -1)
+	{
+		// TODO: handling read error
+		perror("agent");
+		return ;
+	}
+	buf[512] = 0;
+
 }
 
 int main(void)
 {
-	char	sysbuf[SYS_INFO_BUF_SIZE] = { 0, };
+	char sysbuf[SYS_INFO_BUF_SIZE] = { 0, };
 	long logicalCoreCount = sysconf(_SC_NPROCESSORS_ONLN);
 	long oneTick = sysconf(_SC_CLK_TCK);
 	long toMs = 1000 / oneTick;
 	
 	while(1)
 	{
-		//collectCpuInfo(2000, logicalCoreCount, toMs, sysbuf);
-		collectMemInfo(1000000, sysbuf);
+		collectCpuInfo(logicalCoreCount, toMs, sysbuf);
+		collectMemInfo(sysbuf);
+		usleep(1000000);
 	}
 }
