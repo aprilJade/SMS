@@ -5,15 +5,20 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <string.h>
-#define DEBUG 1
-#define SYS_INFO_BUF_SIZE 512
-#define MEM_INFO_BUF_SIZE 512
-#define SYSTEM_INFO		"/proc/stat"
-#define PROCESS_INFO	"/proc/%d/stat"
-#define MEMORY_INFO		"/proc/meminfo"
-#define DISK_INFO		"/proc/diskstats"
-#define NET_INFO		"/proc/net/dev"
+#include <pwd.h>
 
+#define DEBUG 1
+#define BUFFER_SIZE 512
+
+enum e_procState
+{
+	RUNNING = 'R',
+	SLEEPING = 'S',			// can interrupt
+	DISK_SLEEPING = 'D',	// can't interrupt
+	ZOMBIE = 'Z',
+	STOPPED = 'T',
+	IDLE = 'I',
+};
 
 void collectCpuInfo(long cpuCnt, long timeConversion, char* rdBuf)
 {
@@ -27,14 +32,14 @@ void collectCpuInfo(long cpuCnt, long timeConversion, char* rdBuf)
 		perror("agent");
 		return ;
 	}
-	readSize = read(fd, rdBuf, SYS_INFO_BUF_SIZE);
-	if (readSize != SYS_INFO_BUF_SIZE)
+	readSize = read(fd, rdBuf, BUFFER_SIZE);
+	if (readSize == -1)
 	{
 		// TODO: Handling read error
 		perror("agent");
 		return ;
 	}
-	rdBuf[SYS_INFO_BUF_SIZE] = 0;
+	rdBuf[readSize] = 0;
 	for (int i = 0; i < cpuCnt; i++)
 	{
 		while (*rdBuf++ != ' ');
@@ -66,7 +71,7 @@ void collectMemInfo(char* buf)
 		perror("agent");
 		return ;
 	}
-	readSize = read(fd, buf, MEM_INFO_BUF_SIZE);
+	readSize = read(fd, buf, BUFFER_SIZE);
 	if (readSize == -1)
 	{
 		// TODO: handling read error
@@ -107,7 +112,7 @@ void collectNetInfo(char* buf)
 		perror("agent");
 		return ;
 	}
-	int readSize = read(fd, buf, 512);
+	int readSize = read(fd, buf, BUFFER_SIZE);
 	if (readSize == -1)
 	{
 		// TODO: handling read error
@@ -151,18 +156,160 @@ void collectNetInfo(char* buf)
 	}
 }
 
+size_t getMaxPid()
+{
+	int fd = open("/proc/sys/kernel/pid_max", O_RDONLY);
+	if (fd == -1)
+	{
+		perror("agent");
+		return -1;
+	}
+	char buf[16] = { 0, };
+	int readSize = read(fd, buf, 16);
+	if (readSize == -1)
+	{
+		perror("agent");
+		close(fd);
+		return -1;
+	}
+	return (atol(buf));
+}
+
+void collectProcInfo(char *buf, size_t maxPid)
+{
+	char fileName[32] = { 0, };
+	int fd = 0;
+	int readSize = 0;
+	int cnt;
+	char *pbuf;
+	struct passwd *pwd;
+	char* userName;
+	char* cmdLine;
+
+	// version 1...
+	for (int i = 1; i <= maxPid; i++)
+	{
+		sprintf(fileName, "/proc/%d/stat", i);
+		if (access(fileName, F_OK) == 0)
+		{
+			fd = open(fileName, O_RDONLY);
+			if (fd == -1)
+			{
+				// TODO: handling open error
+				perror("agent");
+				return ;
+			}
+			pbuf = buf;
+			readSize = read(fd, buf, 512);
+			if (readSize == -1)
+			{
+				// TODO: handling read error
+				perror("agent");
+				return ;
+			}
+			pbuf[readSize] = 0;
+			char procName[64] = { 0, };
+			size_t pid = atol(pbuf);
+			while (*pbuf++ != '(');
+			for (int j = 0; *pbuf != ')'; j++)
+				procName[j] = *pbuf++;
+			pbuf += 2;
+			u_char state = *pbuf++;
+			// TODO: Clarify what every running process means..
+			// if (state != RUNNING)
+			// {
+			// 	close(fd);
+			// 	continue;
+			// }
+			size_t ppid = atol(pbuf);
+			cnt = 0;
+			while (cnt < 11)
+			{
+				while (*pbuf++ != ' ');
+				cnt++;
+			}
+			size_t utime = atol(pbuf);
+			while (*pbuf++ != ' ');
+			size_t stime = atol(pbuf);
+			while (*pbuf++ != ' ');
+			size_t cutime = atol(pbuf);
+			while (*pbuf++ != ' ');
+			size_t cstime = atol(pbuf);
+			while (*pbuf++ != ' ');
+			close(fd);
+
+			int fileNameLen = strlen(fileName);
+			fileName[fileNameLen++] = 'u';
+			fileName[fileNameLen++] = 's';
+			fileName[fileNameLen] = '\0';
+			fd = open(fileName, O_RDONLY);
+			if (fd == -1)
+			{
+				// TODO: handling open error
+				perror("agent");
+				return ;
+			}
+			readSize = read(fd, buf, 512);
+			if (readSize == -1)
+			{
+				// TODO: handling read error
+				perror("agent");
+				return ;
+			}
+			buf[readSize] = 0;
+			pbuf = buf;
+			for (int j = 0; j < 8; j++)
+				while (*pbuf++ != '\n');
+			pbuf += 4;
+			size_t uid = atol(pbuf);
+			pwd = getpwuid(uid);
+			userName = strdup(pwd->pw_name);
+			close(fd);
+#if DEBUG
+			//printf("Name: %s\tPID: %ld\tPPID: %ld\tutime: %ld\tstime: %ld\tcutime: %ld\tcstime: %ld\tUID: %ld\t",
+			//	procName, pid, ppid, utime, stime, cutime, cstime, uid);
+			//printf("user name: %s\n", pwd->pw_name);
+			//printf("%c\n", state);
+#endif
+			free(userName);
+			sprintf(fileName, "/proc/%d/cmdline");
+			fd = open(fileName, O_RDONLY);
+			if (fd == -1)
+			{
+				// TODO: handling open error
+				perror("agent");
+				return ;
+			}
+			readSize = read(fd, buf, BUFFER_SIZE);
+			if (readSize == -1)
+			{
+				// TODO: handling read error
+				perror("agent");
+				return ;
+			}
+			if (readSize != 0)
+			{
+				buf[readSize] = 0;
+				cmdLine = strdup(buf);
+			}
+		}
+	}
+}
+
 int main(void)
 {
-	char sysbuf[SYS_INFO_BUF_SIZE + 1] = { 0, };
+	char sysbuf[BUFFER_SIZE + 1] = { 0, };
 	long logicalCoreCount = sysconf(_SC_NPROCESSORS_ONLN);
 	long oneTick = sysconf(_SC_CLK_TCK);
 	long toMs = 1000 / oneTick;
-	//int netInterfaceCnt = getNetInterfaceCount();
+
 	while(1)
 	{
-		collectCpuInfo(logicalCoreCount, toMs, sysbuf);
-		collectMemInfo(sysbuf);
-		collectNetInfo(sysbuf);
+		//collectCpuInfo(logicalCoreCount, toMs, sysbuf);
+		//collectMemInfo(sysbuf);
+		//collectNetInfo(sysbuf);
+		collectProcInfo(sysbuf, getMaxPid());
+		return 0;
 		sleep(1);
 	}
 }

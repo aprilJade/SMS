@@ -1,5 +1,5 @@
 NAME			=	agent
-CFLAG			=	-Wall -Wextra -Werror -g -fsanitize=address
+CFLAG			=	-g -fsanitize=address
 INCLUDES		=	-I./includes/
 SRC_DIR			=	./srcs
 OBJ_DIR			=	./objs
