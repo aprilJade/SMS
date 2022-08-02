@@ -1,5 +1,5 @@
 NAME			=	agent
-CFLAG			=	-Wall -Wextra -Werror
+CFLAG			=	-Wall -Wextra -Werror -g -fsanitize=address
 INCLUDES		=	-I./includes/
 SRC_DIR			=	./srcs
 OBJ_DIR			=	./objs
@@ -16,7 +16,7 @@ $(shell mkdir $(OBJ_DIR))
 endif
 
 $(OBJ_DIR)/%.o	: $(SRC_DIR)/%.c
-	$(CC) $(FLAG) -c $< -o $@ $(INCLUDES) 
+	$(CC) $(CFLAG) -c $< -o $@ $(INCLUDES) 
 
 $(NAME): $(OBJECTS)
 	cc $(CFLAG) $(INCLUDES) -o $(NAME) $(OBJECTS)

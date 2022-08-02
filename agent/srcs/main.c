@@ -114,21 +114,55 @@ void collectNetInfo(char* buf)
 		perror("agent");
 		return ;
 	}
-	buf[512] = 0;
+	buf[readSize] = 0;
+	while (*buf++ != '\n');
+	while (*buf++ != '\n');
+	char niName[16] = { 0, };
 
+	while (*buf)
+	{
+		while (*buf == ' ')
+			buf++;
+		for (int i = 0; *buf != ':'; i++)
+			niName[i] = *buf++;
+		buf++;
+		size_t recvBytes = atol(buf);
+		while (*buf++ == ' ');
+		while (*buf++ != ' ');
+		size_t recvPacketCnt = atol(buf);
+		for (int i = 0; i < 7; i++)
+		{
+			while (*buf++ == ' ');
+			while (*buf++ != ' ');
+		}
+		size_t sendBytes = atol(buf);
+		while (*buf++ == ' ');
+		while (*buf++ != ' ');
+		size_t sendPacketCnt = atol(buf);
+		while (*buf != '\n' && *buf != '\0')
+			buf++;
+		if (*buf == '\0')
+			break;
+		buf++;
+#if DEBUG
+		printf("name: %12s\trecv bytes: %12ld B\trecv packet: %8ld\tsend bytes: %12ld B\tsend packet: %8ld\n",
+			niName, recvBytes, recvPacketCnt, sendBytes, sendPacketCnt);
+#endif
+	}
 }
 
 int main(void)
 {
-	char sysbuf[SYS_INFO_BUF_SIZE] = { 0, };
+	char sysbuf[SYS_INFO_BUF_SIZE + 1] = { 0, };
 	long logicalCoreCount = sysconf(_SC_NPROCESSORS_ONLN);
 	long oneTick = sysconf(_SC_CLK_TCK);
 	long toMs = 1000 / oneTick;
-	
+	//int netInterfaceCnt = getNetInterfaceCount();
 	while(1)
 	{
 		collectCpuInfo(logicalCoreCount, toMs, sysbuf);
 		collectMemInfo(sysbuf);
-		usleep(1000000);
+		collectNetInfo(sysbuf);
+		sleep(1);
 	}
 }
