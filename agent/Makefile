@@ -1,12 +1,12 @@
-NAME			=	agent
-CFLAG			=	-g -fsanitize=address
-INCLUDES		=	-I./includes/
-LIB				=	-lpthread
-SRC_DIR			=	./srcs
-OBJ_DIR			=	./objs
-SRCS	=	$(notdir $(wildcard $(SRC_DIR)/*.c))
-OBJS	=	$(SRCS:.c=.o)
-OBJECTS	=	$(patsubst %.o, $(OBJ_DIR)/%.o, $(OBJS))
+NAME		=	agent
+CFLAG		=	-g -fsanitize=address
+INCLUDES	=	-I./includes/
+LIB			=	-lpthread
+SRC_DIR		=	./srcs
+OBJ_DIR		=	./objs
+SRCS		=	$(notdir $(wildcard $(SRC_DIR)/*.c))
+OBJS		=	$(SRCS:.c=.o)
+OBJECTS		=	$(patsubst %.o, $(OBJ_DIR)/%.o, $(OBJS))
 
 ifdef DEBUG
 	CFLAG += -g -fsanitize=address
