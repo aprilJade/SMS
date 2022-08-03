@@ -7,7 +7,7 @@
 typedef struct Queue
 {
     void    *pData;
-    Queue   *next;    
+    struct Queue   *next;    
 } Queue;
 
 void*   qPop(Queue* queue);

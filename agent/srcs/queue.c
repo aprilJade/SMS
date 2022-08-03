@@ -20,7 +20,7 @@ void    qAddTail(Queue* queue, const void* data)
     while (queue->next)
         queue = queue->next;
     Queue* newNode = (Queue *)malloc(sizeof(Queue));
-    newNode->pData = data;
+    newNode->pData = (void *)data;
     newNode->next = NULL;
     queue->next = newNode;
 }
