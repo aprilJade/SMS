@@ -10,7 +10,7 @@ typedef struct Queue
     Queue   *next;    
 } Queue;
 
-void*   qGetHead(Queue* queue);
+void*   qPop(Queue* queue);
 void    qAddTail(Queue* queue, const void* data);
 bool    qIsEmpty(Queue* queue);
 size_t  qGetCount(Queue* queue);

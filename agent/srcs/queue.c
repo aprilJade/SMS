@@ -2,21 +2,16 @@
 #include <assert.h>
 #include <stdlib.h>
 
-static void qDeleteHead(Queue* queue, void (*del)(void *))
-{
-    assert(queue != NULL);
-    Queue* tmp = queue->next;
-    queue->next = tmp->next;
-    del(tmp->pData);
-    free(tmp);
-}
-
-void*   qGetHead(Queue* queue)
+void*   qPop(Queue* queue)
 {
     assert(queue != NULL);
     if (queue->pData == NULL)
         return NULL;
-    return (queue->next->pData);
+    Queue* tmp = queue->next;
+    queue->next = tmp->next;
+    void* pd = tmp->pData;
+    free(tmp);
+    return (pd);
 }
 
 void    qAddTail(Queue* queue, const void* data)
