@@ -6,7 +6,7 @@ typedef unsigned int uint;
 typedef unsigned short ushort;
 typedef unsigned char uchar;
 
-typedef struct SCpuInfo
+typedef struct SCpuInfoPacket
 {
     uint signature;
     uint collectTime;
@@ -14,9 +14,9 @@ typedef struct SCpuInfo
     uint sysCpuRunTime;
     uint idleTime;
     uint waitTime;
-} SCpuInfo;
+} typedef struct SCpuInfoPacket;
 
-typedef struct SMemInfo
+typedef struct SMemInfoPacket
 {
     uint signature;
     uint collectTime;
@@ -26,10 +26,10 @@ typedef struct SMemInfo
     uint memUsed;
     uint swapTotal;
     uint swapFree;
-} SMemInfo;
+} SMemInfoPacket;
 
 #pragma pack(push, 1)
-typedef struct SProcInfo
+typedef struct SProcInfoPacket
 {
     uint signature;
     uint collectTime;
@@ -42,10 +42,10 @@ typedef struct SProcInfo
     uchar userName[32];
     uchar procName[16];
     ushort cmdlineLen;
-} SProcInfo;
+} SProcInfoPacket;
 #pragma pack(pop)
 
-typedef struct SNetInfo
+typedef struct SNetInfoPacket
 {
     uint signature;
     uint collectTime;
@@ -54,6 +54,6 @@ typedef struct SNetInfo
     uint recvPackets;
     ulonglong sendBytes;
     uint sendPackets;
-} SNetInfo;
+} SNetInfoPacket;
 
 #endif

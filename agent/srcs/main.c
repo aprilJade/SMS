@@ -1,4 +1,5 @@
 #include <unistd.h>
+#include <pthread.h>
 #include "collector.h"
 
 int main(void)
@@ -10,10 +11,14 @@ int main(void)
 
 	while(1)
 	{
-		collectCpuInfo(logicalCoreCount, toMs, sysbuf);
-		collectMemInfo(sysbuf);
-		collectNetInfo(sysbuf);
-		collectProcInfo(sysbuf, getMaxPid());
+		collectCpuInfo(toMs, sysbuf);
+		//scollectMemInfo(sysbuf);
+		//scollectNetInfo(sysbuf);
+		//scollectProcInfo(sysbuf, getMaxPid());
 		sleep(1);
 	}
+
+	pthread_t tid;
+	// send basic info
+	// logical core count, oneTick, toMs, Total memory, Total swap space, 
 }

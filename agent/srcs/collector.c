@@ -3,8 +3,10 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <pwd.h>
+#include <string.h>
+#include <stdio.h>
 
-void collectCpuInfo(long cpuCnt, long timeConversion, char* rdBuf)
+void collectEachCpuInfo(long cpuCnt, long timeConversion, char* rdBuf)
 {
 	int	fd;
 	int readSize = 0;
@@ -24,19 +26,56 @@ void collectCpuInfo(long cpuCnt, long timeConversion, char* rdBuf)
 		return ;
 	}
 	rdBuf[readSize] = 0;
+    while (*rdBuf++ != '\n');
 	for (int i = 0; i < cpuCnt; i++)
 	{
 		while (*rdBuf++ != ' ');
-		size_t userModeRunningTime = atoll(rdBuf) * timeConversion;
+		size_t userModeRunningTime = atol(rdBuf) * timeConversion;
 		while (*rdBuf++ != ' ');
-		size_t sysModeRunningTime = atoll(rdBuf) * timeConversion;
+		size_t sysModeRunningTime = atol(rdBuf) * timeConversion;
 		while (*rdBuf++ != ' ');
 		while (*rdBuf++ != ' ');
-		size_t idleTime = atoll(rdBuf) * timeConversion;
+		size_t idleTime = atol(rdBuf) * timeConversion;
 		while (*rdBuf++ != ' ');
-		size_t waitTime = atoll(rdBuf) * timeConversion;
+		size_t waitTime = atol(rdBuf) * timeConversion;
 		while (*rdBuf++ != '\n');
+        printf("cpu%d\tumrt: %10ld\tsmrt: %10ld\tidle: %10ld\twait: %10ld\n",
+         i, userModeRunningTime, sysModeRunningTime, idleTime, waitTime);
 	}
+	close(fd);
+}
+
+void collectCpuInfo(long timeConversion, char* rdBuf)
+{
+    int	fd;
+	int readSize = 0;
+	fd = open("/proc/stat", O_RDONLY);
+	if (fd == -1)
+	{
+		// TODO: Handling open error
+		perror("agent");
+		return ;
+	}
+	readSize = read(fd, rdBuf, BUFFER_SIZE);
+	if (readSize == -1)
+	{
+		// TODO: Handling read error
+		perror("agent");
+		return ;
+	}
+	rdBuf[readSize] = 0;
+    while (*rdBuf++ != ' ');
+    size_t userModeRunningTime = atol(rdBuf) * timeConversion;
+    while (*rdBuf++ != ' ');
+    size_t sysModeRunningTime = atol(rdBuf) * timeConversion;
+    while (*rdBuf++ != ' ');
+    while (*rdBuf++ != ' ');
+    size_t idleTime = atol(rdBuf) * timeConversion;
+    while (*rdBuf++ != ' ');
+    size_t waitTime = atol(rdBuf) * timeConversion;
+    while (*rdBuf++ != '\n');
+    printf("umrt: %10ld\tsmrt: %10ld\tidle: %10ld\twait: %10ld\n",
+        userModeRunningTime, sysModeRunningTime, idleTime, waitTime);
 	close(fd);
 }
 
@@ -62,20 +101,20 @@ void collectMemInfo(char* buf)
 	if (memTotal == 0)
 	{
 		while (*buf++ != ' ');
-		memTotal = atoll(buf);
+		memTotal = atol(buf);
 	}
 	while (*buf++ != '\n');
 	while (*buf++ != ' ');
-	size_t memFree = atoll(buf);
+	size_t memFree = atol(buf);
 
 	while (*buf++ != '\n');
 	while (*buf++ != '\n');
 	while (*buf++ != ' ');
-	size_t memBuffers = atoll(buf);
+	size_t memBuffers = atol(buf);
 	
 	while (*buf++ != '\n');
 	while (*buf++ != ' ');
-	size_t memCached = atoll(buf);
+	size_t memCached = atol(buf);
 	for (int i = 0; i < 10; i++)
 		while (*buf++ != '\n');
 	while (*buf++ != ' ');
@@ -260,6 +299,7 @@ void collectProcInfo(char *buf, size_t maxPid)
 				buf[readSize] = 0;
 				cmdLine = strdup(buf);
 			}
+            close(fd);
 		}
 	}
 }
