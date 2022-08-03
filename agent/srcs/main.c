@@ -10,16 +10,6 @@
 #define DEBUG 1
 #define BUFFER_SIZE 512
 
-enum e_procState
-{
-	RUNNING = 'R',
-	SLEEPING = 'S',			// can interrupt
-	DISK_SLEEPING = 'D',	// can't interrupt
-	ZOMBIE = 'Z',
-	STOPPED = 'T',
-	IDLE = 'I',
-};
-
 void collectCpuInfo(long cpuCnt, long timeConversion, char* rdBuf)
 {
 	int	fd;
@@ -195,7 +185,6 @@ void collectProcInfo(char *buf, size_t maxPid)
 	char* userName;
 	char* cmdLine;
 
-	// version 1...
 	for (int i = 1; i <= maxPid; i++)
 	{
 		sprintf(fileName, "/proc/%d/stat", i);
@@ -224,12 +213,6 @@ void collectProcInfo(char *buf, size_t maxPid)
 				procName[j] = *pbuf++;
 			pbuf += 2;
 			u_char state = *pbuf++;
-			// TODO: Clarify what every running process means..
-			// if (state != RUNNING)
-			// {
-			// 	close(fd);
-			// 	continue;
-			// }
 			size_t ppid = atol(pbuf);
 			cnt = 0;
 			while (cnt < 11)
@@ -275,10 +258,10 @@ void collectProcInfo(char *buf, size_t maxPid)
 			userName = strdup(pwd->pw_name);
 			close(fd);
 #if DEBUG
-			//printf("Name: %s\tPID: %ld\tPPID: %ld\tutime: %ld\tstime: %ld\tcutime: %ld\tcstime: %ld\tUID: %ld\t",
-			//	procName, pid, ppid, utime, stime, cutime, cstime, uid);
-			//printf("user name: %s\n", pwd->pw_name);
-			//printf("%c\n", state);
+			printf("Name: %s\tPID: %ld\tPPID: %ld\tutime: %ld\tstime: %ld\tcutime: %ld\tcstime: %ld\tUID: %ld\t",
+				procName, pid, ppid, utime, stime, cutime, cstime, uid);
+			printf("user name: %s\n", pwd->pw_name);
+			printf("%c\n", state);
 #endif
 			free(userName);
 			sprintf(fileName, "/proc/%d/cmdline", i);
@@ -315,9 +298,9 @@ int main(void)
 	while(1)
 	{
 		//collectCpuInfo(logicalCoreCount, toMs, sysbuf);
-		collectMemInfo(sysbuf);
+		//collectMemInfo(sysbuf);
 		//collectNetInfo(sysbuf);
-		// collectProcInfo(sysbuf, getMaxPid());
+		collectProcInfo(sysbuf, getMaxPid());
 		sleep(1);
 	}
 }

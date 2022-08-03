@@ -1,6 +1,7 @@
 NAME			=	agent
 CFLAG			=	-g -fsanitize=address
 INCLUDES		=	-I./includes/
+LIB				=	-lpthread
 SRC_DIR			=	./srcs
 OBJ_DIR			=	./objs
 SRCS	=	$(notdir $(wildcard $(SRC_DIR)/*.c))
@@ -16,15 +17,15 @@ $(shell mkdir $(OBJ_DIR))
 endif
 
 $(OBJ_DIR)/%.o	: $(SRC_DIR)/%.c
-	$(CC) $(CFLAG) -c $< -o $@ $(INCLUDES) 
+	$(CC) $(CFLAG) $(LIB) -c $< -o $@ $(INCLUDES) 
 
 $(NAME): $(OBJECTS)
-	cc $(CFLAG) $(INCLUDES) -o $(NAME) $(OBJECTS)
+	cc $(CFLAG) $(LIB) $(INCLUDES) -o $(NAME) $(OBJECTS)
 
 all: $(NAME)
 
 clean:
-	rm -rf $(OBJECTS)
+	rm -rf $(OBJ_DIR)
 
 fclean: clean
 	rm -rf $(NAME)
