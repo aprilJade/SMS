@@ -20,7 +20,7 @@ typedef struct SCpuInfoPacket
 typedef struct SMemInfoPacket
 {
     uint signature;
-    uint collectTime;
+    ulonglong collectTime;
     uint memTotal;
     uint memFree;
     uint memAvail;

@@ -92,11 +92,10 @@ void collectCpuInfo(long timeConversion, char* buf, SCpuInfoPacket* packet)
 	close(fd);	
 }
 
-void collectMemInfo(char* buf)
+void collectMemInfo(char* buf, SMemInfoPacket* packet)
 {
 	int fd = open("/proc/meminfo", O_RDONLY);
 	int readSize;
-	static size_t memTotal;
 	if (fd == -1)
 	{
 		// TODO: handling open error
@@ -111,16 +110,18 @@ void collectMemInfo(char* buf)
 		return ;
 	}
 	buf[readSize] = 0;
-	if (memTotal == 0)
-	{
-		while (*buf++ != ' ');
-		memTotal = atol(buf);
-	}
-	while (*buf++ != '\n');
+	
 	while (*buf++ != ' ');
-	size_t memFree = atol(buf);
+	packet->memTotal = atol(buf);
 
 	while (*buf++ != '\n');
+	while (*buf++ != ' ');
+	packet->memFree = atol(buf);
+	
+	while (*buf++ != '\n');
+	while (*buf++ != ' ');
+	packet->memAvail = atol(buf);
+
 	while (*buf++ != '\n');
 	while (*buf++ != ' ');
 	size_t memBuffers = atol(buf);
@@ -128,14 +129,16 @@ void collectMemInfo(char* buf)
 	while (*buf++ != '\n');
 	while (*buf++ != ' ');
 	size_t memCached = atol(buf);
+
+	packet->memUsed = packet->memTotal - packet->memFree - memBuffers - memCached;
 	for (int i = 0; i < 10; i++)
 		while (*buf++ != '\n');
 	while (*buf++ != ' ');
-	size_t swapTotal = atol(buf);
+	packet->swapTotal = atol(buf);
 
 	while (*buf++ != '\n');
 	while (*buf++ != ' ');
-	size_t swapFree = atol(buf);
+	packet->swapFree = atol(buf);
 	close(fd);
 }
 

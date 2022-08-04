@@ -80,11 +80,12 @@ int main(void)
         switch (pSig[3])
         {
             case 'c':
-                printf("Recieve packets: CPU information\n");
+                printf("Recieved packets: CPU information\n");
                 break;
             case 'p':
                 break;
             case 'm':
+                printf("Received packet: Memory information\n");
                 break;
             case 'n':
                 break;
