@@ -1,4 +1,4 @@
-NAME		=	server
+NAME		=	agent
 CFLAG		=	-g
 INCLUDES	=	-I./includes/
 LIB			=	-lpthread
