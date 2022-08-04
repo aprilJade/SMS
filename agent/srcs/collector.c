@@ -5,6 +5,20 @@
 #include <pwd.h>
 #include <string.h>
 #include <stdio.h>
+#include "packets.h"
+#include <assert.h>
+
+// TODO: Calculate CPU usage about OS....
+// Formula: Cpu usage = (CPU running time) / (Logical CPU core count) / (Wall time)
+// CPU running time: get from /proc/stat
+// Logical CPU: get using sysconf()
+// Wall time: get using gettimeofday()
+//
+// TODO: Calculate CPU usage per process...
+// Formula: same as upper one
+// CPU running time: get from /proc/[pid]/stat utime + stime
+// Logical CPU: get using sysconf()
+// Wall time: get using gettimeofday()
 
 void collectEachCpuInfo(long cpuCnt, long timeConversion, char* rdBuf)
 {
@@ -45,8 +59,9 @@ void collectEachCpuInfo(long cpuCnt, long timeConversion, char* rdBuf)
 	close(fd);
 }
 
-void collectCpuInfo(long timeConversion, char* rdBuf)
+void collectCpuInfo(long timeConversion, char* buf, SCpuInfoPacket* packet)
 {
+	assert(packet != NULL);
     int	fd;
 	int readSize = 0;
 	fd = open("/proc/stat", O_RDONLY);
@@ -56,27 +71,25 @@ void collectCpuInfo(long timeConversion, char* rdBuf)
 		perror("agent");
 		return ;
 	}
-	readSize = read(fd, rdBuf, BUFFER_SIZE);
+	readSize = read(fd, buf, BUFFER_SIZE);
 	if (readSize == -1)
 	{
 		// TODO: Handling read error
 		perror("agent");
 		return ;
 	}
-	rdBuf[readSize] = 0;
-    while (*rdBuf++ != ' ');
-    size_t userModeRunningTime = atol(rdBuf) * timeConversion;
-    while (*rdBuf++ != ' ');
-    size_t sysModeRunningTime = atol(rdBuf) * timeConversion;
-    while (*rdBuf++ != ' ');
-    while (*rdBuf++ != ' ');
-    size_t idleTime = atol(rdBuf) * timeConversion;
-    while (*rdBuf++ != ' ');
-    size_t waitTime = atol(rdBuf) * timeConversion;
-    while (*rdBuf++ != '\n');
-    printf("umrt: %10ld\tsmrt: %10ld\tidle: %10ld\twait: %10ld\n",
-        userModeRunningTime, sysModeRunningTime, idleTime, waitTime);
-	close(fd);
+	buf[readSize] = 0;
+    while (*buf++ != ' ');
+    packet->usrCpuRunTime = atol(buf) * timeConversion;
+    while (*buf++ != ' ');
+    packet->sysCpuRunTime = atol(buf) * timeConversion;
+    while (*buf++ != ' ');
+    while (*buf++ != ' ');
+    packet->idleTime = atol(buf) * timeConversion;
+    while (*buf++ != ' ');
+    packet->waitTime = atol(buf) * timeConversion;
+    while (*buf++ != '\n');
+	close(fd);	
 }
 
 void collectMemInfo(char* buf)
