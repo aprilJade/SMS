@@ -26,7 +26,7 @@ void* serverCpuInfoRoutine(void* param)
     SServRoutineParam* pParam = (SServRoutineParam*)param;
     int readSize;
     char buf[128] = { 0, };
-    SCpuInfoPacket* packet;
+    SCpuInfoPacket* packet = (SCpuInfoPacket*)buf;
     while (1)
     {
         if ((readSize = read(pParam->clientSock, buf, sizeof(SCpuInfoPacket))) == -1)
@@ -41,7 +41,6 @@ void* serverCpuInfoRoutine(void* param)
             close(pParam->clientSock);
             return 0;
         }
-        packet = (SCpuInfoPacket*)buf;
         // TODO: Store to DB
 #if DETAIL_PRINT_CPU
         printf("Receive cpu info packet: %d\n\
@@ -69,7 +68,7 @@ void* serverMemInfoRoutine(void* param)
     SServRoutineParam* pParam = (SServRoutineParam*)param;
     int readSize;
     char buf[128] = { 0, };
-    SMemInfoPacket* packet;
+    SMemInfoPacket* packet = (SMemInfoPacket*)buf;
     while (1)
     {
         if ((readSize = read(pParam->clientSock, buf, sizeof(SMemInfoPacket))) == -1)
@@ -84,7 +83,6 @@ void* serverMemInfoRoutine(void* param)
             close(pParam->clientSock);
             return 0;
         }
-        packet = (SMemInfoPacket*)buf;
         // TODO: Store to DB
 #if DETAIL_PRINT_MEM
         printf("Receive mem info packet: %d bytes\n\
