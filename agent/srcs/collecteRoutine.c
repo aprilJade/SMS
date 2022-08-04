@@ -73,7 +73,6 @@ void* cpuInfoRoutine(void* param)
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 #if !NO_SLEEP
-        printf("cpu packet sended count: %ld\n", sendPacketCount);
         usleep(pParam->collectPeriod * 1000 - elapseTime);
 #endif
         // TODO: Check TCP connection
@@ -137,7 +136,6 @@ void* memInfoRoutine(void* param)
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 #if !NO_SLEEP
-        printf("mem packet sended count: %ld\n", sendPacketCount);
         usleep(pParam->collectPeriod * 1000 - elapseTime);
 #endif
         // TODO: Check TCP connection
@@ -206,7 +204,6 @@ void* netInfoRoutine(void* param)
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 #if !NO_SLEEP
-        printf("Net packet sended count: %ld\n", sendPacketCount);
         usleep(pParam->collectPeriod * 1000 - elapseTime);
 #endif
         // TODO: Check TCP connection
@@ -300,7 +297,6 @@ void* procInfoRoutine(void* param)
             }
         }
 #if !NO_SLEEP
-        printf("Proc packet sended count: %ld\n", sendPacketCount);
         usleep(pParam->collectPeriod * 1000 - elapseTime);
 #endif
         // TODO: Check TCP connection

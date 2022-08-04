@@ -6,9 +6,9 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#define DETAIL_PRINT_CPU 0
-#define DETAIL_PRINT_MEM 0
-#define DETAIL_PRINT_NET 0
+#define DETAIL_PRINT_CPU 1
+#define DETAIL_PRINT_MEM 1
+#define DETAIL_PRINT_NET 1
 #define DETAIL_PRINT_PROC 0
 
 void initRoutineFuncTable(void **funcTable)
@@ -20,9 +20,8 @@ void initRoutineFuncTable(void **funcTable)
     funcTable[PROC_INFO] = serverProcInfoRoutine;
 }
 
-void* serverCpuInfoRoutine(void* param)
+int serverCpuInfoRoutine(SServRoutineParam* param)
 {
-    size_t receivedPacketCount = 0;
     assert(param != NULL);
     printf("Start serverCpuInfoRoutine\n");
     SServRoutineParam* pParam = (SServRoutineParam*)param;
@@ -35,15 +34,14 @@ void* serverCpuInfoRoutine(void* param)
         {
             printf("Fail to receive...!\n");
             close(pParam->clientSock);
-            return 0;
+            return 1;
         }
         if (readSize == 0)
         {
-            printf("Received: EOF\n");
+            printf("Disconnected from agent side.\n");
             close(pParam->clientSock);
             return 0;
         }
-        receivedPacketCount++;
         // TODO: Store to DB
 #if DETAIL_PRINT_CPU
         printf("Receive cpu info packet: %d\n\
@@ -58,15 +56,12 @@ void* serverCpuInfoRoutine(void* param)
                 packet->sysCpuRunTime,
                 packet->idleTime,
                 packet->waitTime);
-#else
-        printf("cpu packet received count: %ld\n", receivedPacketCount);
 #endif
     }
 }
 
-void* serverMemInfoRoutine(void* param)
+int serverMemInfoRoutine(SServRoutineParam* param)
 {
-    size_t receivedPacketCount = 0;
     assert(param != NULL);    
     printf("Start serverMemInfoRoutine\n");
     SServRoutineParam* pParam = (SServRoutineParam*)param;
@@ -79,15 +74,14 @@ void* serverMemInfoRoutine(void* param)
         {
             printf("Fail to receive...!\n");
             close(pParam->clientSock);
-            return 0;
+            return 1;
         }
         if (readSize == 0)
         {
-            printf("Received: EOF\n");
+            printf("Disconnected from agent side.\n");
             close(pParam->clientSock);
             return 0;
         }
-        receivedPacketCount++;
         // TODO: Store to DB
 #if DETAIL_PRINT_MEM
         printf("Receive mem info packet: %d bytes\n\
@@ -106,15 +100,12 @@ void* serverMemInfoRoutine(void* param)
                 packet->memAvail,
                 packet->swapTotal,
                 packet->swapFree);
-#else
-        printf("mem packet received count: %ld\n", receivedPacketCount);
 #endif
     }
 }
 
-void* serverNetInfoRoutine(void* param)
+int serverNetInfoRoutine(SServRoutineParam* param)
 {
-    size_t receivedPacketCount = 0;
     assert(param != NULL);    
     printf("Start serverNetInfoRoutine\n");
     SServRoutineParam* pParam = (SServRoutineParam*)param;
@@ -128,15 +119,14 @@ void* serverNetInfoRoutine(void* param)
         {
             printf("Fail to receive...!\n");
             close(pParam->clientSock);
-            return 0;
+            return 1;
         }
         if (readSize == 0)
         {
-            printf("Received: EOF\n");
+            printf("Disconnected from agent side.\n");
             close(pParam->clientSock);
             return 0;
         }
-        receivedPacketCount++;
         // TODO: Store to DB
 #if DETAIL_PRINT_NET
         printf("Receive net info packet: %d bytes\n\
@@ -153,15 +143,12 @@ void* serverNetInfoRoutine(void* param)
                 packet->recvPackets,
                 packet->sendBytes,
                 packet->sendPackets);
-#else
-        printf("net packet received count: %ld\n", receivedPacketCount);
 #endif
     }
 }
 
-void* serverProcInfoRoutine(void* param)
+int serverProcInfoRoutine(SServRoutineParam* param)
 {
-    size_t receivedPacketCount = 0;
     assert(param != NULL);    
     printf("Start serverProcInfoRoutine\n");
     SServRoutineParam* pParam = (SServRoutineParam*)param;
@@ -175,17 +162,16 @@ void* serverProcInfoRoutine(void* param)
         {
             printf("Fail to receive...!\n");
             close(pParam->clientSock);
-            return 0;
+            return 1;
         }
         if (readSize == 0)
         {
-            printf("Received: EOF\n");
+            printf("Disconnected from agent side.\n");
             close(pParam->clientSock);
             return 0;
         }
-        receivedPacketCount++;
         // TODO: Store to DB
-#if DETAIL_PRINT_NET
+#if DETAIL_PRINT_PROC
         printf("Receive net info packet: %d bytes\n\
                 Collect Time: %lld ms\n\
                 Network Interface: %s\n\
@@ -200,8 +186,6 @@ void* serverProcInfoRoutine(void* param)
                 packet->recvPackets,
                 packet->sendBytes,
                 packet->sendPackets);
-#else
-        printf("proc packet received count: %ld\n", receivedPacketCount);
 #endif
     }
 }

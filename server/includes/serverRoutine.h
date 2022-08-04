@@ -17,9 +17,9 @@ enum eRoutine
 };
 
 void initRoutineFuncTable(void **funcTable);
-void* serverCpuInfoRoutine(void* param);
-void* serverMemInfoRoutine(void* param);
-void* serverNetInfoRoutine(void* param);
-void* serverProcInfoRoutine(void* param);
+int serverCpuInfoRoutine(SServRoutineParam* param);
+int serverMemInfoRoutine(SServRoutineParam* param);
+int serverNetInfoRoutine(SServRoutineParam* param);
+int serverProcInfoRoutine(SServRoutineParam* param);
 
 #endif

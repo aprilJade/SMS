@@ -5,7 +5,6 @@
 #include <string.h>
 #include "../../agent/includes/packets.h"
 #include <unistd.h>
-#include <pthread.h>
 #include <assert.h>
 #include "serverRoutine.h"
 #include <stdlib.h>
@@ -15,12 +14,6 @@
 
 int main(void)
 {
-    char* msgs[256];
-    msgs[CPU_INFO] = "CPU information";
-    msgs[MEM_INFO] = "Memory information";
-    msgs[PROC_INFO] = "Process information";
-    msgs[NET_INFO] = "Network information";
-
     printf("Simple SMS server...\n");
     printf("This server just print received data.\n");
     printf("Parse received data and print it.\n");
@@ -49,13 +42,13 @@ int main(void)
     }
     printf("Wait to connect....\n");
     socklen_t len = sizeof(clientAddr);
-    SInitialPacket* initialPacket;
+    char* signature;
     void* routineFunctions[256] = { 0, };
     initRoutineFuncTable(routineFunctions);
-    void* (*routine)(void*);
-    pthread_t tid[CONNECTION_COUNT];
-    int readSize;
+    int (*routine)(SServRoutineParam*);
     char buf[128] = { 0, };
+    SInitialPacket* packet = (SInitialPacket*)buf;
+    SServRoutineParam param;
     pid_t pid[CONNECTION_COUNT];
     for (int i = 0; i < CONNECTION_COUNT; i++)
     {
@@ -73,25 +66,22 @@ int main(void)
             close(servFd);
             return 1;
         }
-        if ((readSize = read(clientFd, buf, 128)) == -1)
+        if (read(clientFd, buf, 128) == -1)
         {
             printf("Fail to receive...!\n");
             close(clientFd);
         }
-        SInitialPacket* packet = (SInitialPacket*)buf;
-        char* signature = (char*)&packet->signature;
+        signature = (char*)&packet->signature;
         routine = routineFunctions[signature[3]];
         if (routine == NULL)
         {
             printf("Undefined Signature!!: ");
             write(1, signature, 4);
             putchar('\n');
+            close(clientFd);
             continue;
         }
-        //printf("%d: Connected for accept %s.\n", i, msgs[signature[3]]);
-        SServRoutineParam param;
         param.clientSock = clientFd;
-        //pthread_create(&tid[i], NULL, routine, &param);
         pid[i] = fork();
         if (pid[i] == -1)
         {
@@ -99,15 +89,10 @@ int main(void)
             return 1;
         }
         if (pid[i] == 0)
-        {
-            routine(&param);
-            exit(0);
-        }
+            exit(routine(&param));
         else
             close(clientFd);
     }
-    //for (int i = 0; i < CONNECTION_COUNT; i++)
-    //    pthread_join(tid[i], NULL);
     for (int i = 0; i < CONNECTION_COUNT; i++)
         wait(&pid[i]);
 }   
