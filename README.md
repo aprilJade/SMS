@@ -30,12 +30,12 @@ make
   - [ ] 데이터 수집하여 패킷으로 만들고 송신하기 (각 정보별로 스레드 동작)
     - [x] ~CPU 정보~
     - [x] ~메모리 정보~
-    - [ ] 네트워크 정보
-      - [ ] 지금은 NIC가 하나인 경우만 체크하나 복수의 네트워크 정보 수집하도록 변경
+    - [x] ~네트워크 정보~
     - [ ] 프로세스 정보
   - [ ] 추후 구현
     - [ ] Disk 정보
     - [ ] 각 Logical Core별 정보 (running time, idle time, wait time, usage)
+    - [ ] 지금은 NIC가 하나인 경우만 체크하나 복수의 네트워크 인터페이스의 정보를 수집하도록 변경
   - [ ] 데이터 수집 시 특정 자료구조에 담아두고 Delta, Average 계산
     - [ ] CPU usage
     - [ ] CPU usage per process
