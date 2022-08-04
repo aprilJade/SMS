@@ -6,7 +6,7 @@
 #include <unistd.h>
 
 #define HOST "127.0.0.1"
-#define PORT 4242
+#define PORT 4243
 
 int main(void)
 {
@@ -57,6 +57,7 @@ int main(void)
     int readSize;
     char buf[4096] = { 0, };
     SCpuInfoPacket* packet;
+    char* pSig;
     while (1)
     {
         if ((readSize = read(clientFd, buf, 4096)) == -1)
@@ -75,11 +76,27 @@ int main(void)
         }
         packet = (SCpuInfoPacket*)buf;
         // TODO: Store to DB
-        printf("<Received packet data>\n");
-        printf("CPU running time (user mode): %d\n", packet->usrCpuRunTime);
-        printf("CPU running time (system mode): %d\n", packet->sysCpuRunTime);
-        printf("CPU idle time: %d\n", packet->idleTime);
-        printf("CPU I/O wait time: %d\n", packet->waitTime);
-        printf("Collcet Time: %lld\n", packet->collectTime);
+        pSig = (char *)&packet->signature;
+        switch (pSig[3])
+        {
+            case 'c':
+                printf("Recieve packets: CPU information\n");
+                break;
+            case 'p':
+                break;
+            case 'm':
+                break;
+            case 'n':
+                break;
+            default:
+                printf("Undefined packet\n");
+                break;
+        }
+        // printf("<Received packet data>\n");
+        // printf("CPU running time (user mode): %d\n", packet->usrCpuRunTime);
+        // printf("CPU running time (system mode): %d\n", packet->sysCpuRunTime);
+        // printf("CPU idle time: %d\n", packet->idleTime);
+        // printf("CPU I/O wait time: %d\n", packet->waitTime);
+        // printf("Collcet Time: %lld\n", packet->collectTime);
     }
 }

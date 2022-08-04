@@ -8,6 +8,8 @@
 #include "tcpCtrl.h"
 
 #define PRINT 1
+#define HOST "127.0.0.1"
+#define PORT 4243
 
 void* cpuInfoRoutine(void* param)
 {
@@ -17,7 +19,7 @@ void* cpuInfoRoutine(void* param)
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
     SCpuInfoPacket packet;
-    int sockFd = ConnectToServer("127.0.0.1", 4242);
+    int sockFd = ConnectToServer(HOST, PORT);
     SRoutineParam* pParam = (SRoutineParam*)param;
     if (sockFd == -1)
     {
