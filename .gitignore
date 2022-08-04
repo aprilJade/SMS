@@ -3,3 +3,4 @@
 */agent
 *.o
 objs/
+*/server
