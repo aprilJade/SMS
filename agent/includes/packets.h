@@ -43,10 +43,9 @@ typedef struct SProcInfoPacket
     uint ppid;
     uint utime;
     uint stime;
-    uint cutime;
-    uint cstime;
     uchar userName[32];
     uchar procName[16];
+    uchar state;
     ushort cmdlineLen;
 } SProcInfoPacket;
 #pragma pack(pop)

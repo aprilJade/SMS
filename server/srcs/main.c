@@ -10,7 +10,7 @@
 
 #define HOST "127.0.0.1"
 #define PORT 4243
-#define CONNECTION_COUNT 3
+#define CONNECTION_COUNT 2
 
 int main(void)
 {
@@ -28,7 +28,7 @@ int main(void)
 
     struct sockaddr_in servAddr;
     struct sockaddr_in clientAddr;
-    servFd = socket(PF_INET, SOCK_STREAM, 0);
+    servFd = socket(PF_INET, SOCK_NONBLOCK, 0);
     if (servFd == -1)
     {
         perror("server");

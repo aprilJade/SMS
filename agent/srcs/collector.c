@@ -181,131 +181,104 @@ void collectNetInfo(char* buf, SNetInfoPacket* packet)
 	packet->sendPackets = atol(buf);
 }
 
-size_t getMaxPid()
-{
-	int fd = open("/proc/sys/kernel/pid_max", O_RDONLY);
-	if (fd == -1)
-	{
-		perror("agent");
-		return -1;
-	}
-	char buf[16] = { 0, };
-	int readSize = read(fd, buf, 16);
-	if (readSize == -1)
-	{
-		perror("agent");
-		close(fd);
-		return -1;
-	}
-	return (atol(buf));
-}
-
-void collectProcInfo(char *buf, size_t maxPid)
+void collectProcInfo(char* path, char *buf, SProcInfoPacket* packet)
 {
 	char fileName[32] = { 0, };
 	int fd = 0;
 	int readSize = 0;
 	int cnt;
 	char *pbuf;
-	struct passwd *pwd;
-	char* userName;
 	char* cmdLine;
-
-	for (int i = 1; i <= maxPid; i++)
+	struct passwd *pwd;
+	
+	sprintf(fileName, "%s/stat", path);
+	fd = open(fileName, O_RDONLY);
+	if (fd == -1)
 	{
-		sprintf(fileName, "/proc/%d/stat", i);
-		if (access(fileName, F_OK) == 0)
-		{
-			fd = open(fileName, O_RDONLY);
-			if (fd == -1)
-			{
-				// TODO: handling open error
-				perror("agent");
-				return ;
-			}
-			pbuf = buf;
-			readSize = read(fd, buf, 512);
-			if (readSize == -1)
-			{
-				// TODO: handling read error
-				perror("agent");
-				return ;
-			}
-			pbuf[readSize] = 0;
-			char procName[64] = { 0, };
-			size_t pid = atol(pbuf);
-			while (*pbuf++ != '(');
-			for (int j = 0; *pbuf != ')'; j++)
-				procName[j] = *pbuf++;
-			pbuf += 2;
-			u_char state = *pbuf++;
-			size_t ppid = atol(pbuf);
-			cnt = 0;
-			while (cnt < 11)
-			{
-				while (*pbuf++ != ' ');
-				cnt++;
-			}
-			size_t utime = atol(pbuf);
-			while (*pbuf++ != ' ');
-			size_t stime = atol(pbuf);
-			while (*pbuf++ != ' ');
-			size_t cutime = atol(pbuf);
-			while (*pbuf++ != ' ');
-			size_t cstime = atol(pbuf);
-			while (*pbuf++ != ' ');
-			close(fd);
-
-			int fileNameLen = strlen(fileName);
-			fileName[fileNameLen++] = 'u';
-			fileName[fileNameLen++] = 's';
-			fileName[fileNameLen] = '\0';
-			fd = open(fileName, O_RDONLY);
-			if (fd == -1)
-			{
-				// TODO: handling open error
-				perror("agent");
-				return ;
-			}
-			readSize = read(fd, buf, 512);
-			if (readSize == -1)
-			{
-				// TODO: handling read error
-				perror("agent");
-				return ;
-			}
-			buf[readSize] = 0;
-			pbuf = buf;
-			for (int j = 0; j < 8; j++)
-				while (*pbuf++ != '\n');
-			pbuf += 4;
-			size_t uid = atol(pbuf);
-			pwd = getpwuid(uid);
-			userName = strdup(pwd->pw_name);
-			close(fd);
-
-			free(userName);
-			sprintf(fileName, "/proc/%d/cmdline", i);
-			fd = open(fileName, O_RDONLY);
-			if (fd == -1)
-			{
-				// TODO: handling open error
-				perror("agent");
-				return ;
-			}
-			readSize = read(fd, buf, BUFFER_SIZE);
-			if (readSize == -1)
-			{
-				// TODO: handling read error
-				perror("agent");
-				return ;
-			}
-			if (readSize != 0)
-			{
-				buf[readSize] = 0;
-				cmdLine = strdup(buf);
-			}
-            close(fd);
-		}
+		// TODO: handling open error
+		perror("agent");
+		return ;
 	}
+	pbuf = buf;
+	readSize = read(fd, buf, 512);
+	if (readSize == -1)
+	{
+		// TODO: handling read error
+		perror("agent");
+		return ;
+	}
+	pbuf[readSize] = 0;
+
+	packet->pid = atoi(pbuf);
+	while (*pbuf++ != '(');
+	for (int j = 0; *pbuf != ')' && j < 16; j++)
+		packet->procName[j] = *pbuf++;
+	while (*pbuf++ != ')');
+	pbuf++;
+	packet->state = *pbuf++;
+	packet->ppid = atoi(pbuf);
+
+	cnt = 0;
+	while (cnt < 11)
+	{
+		while (*pbuf++ != ' ');
+		cnt++;
+	}
+	// utime is divided by clock tick
+	packet->utime = atoi(pbuf) * 1000;
+
+	while (*pbuf++ != ' ');
+	packet->stime = atoi(pbuf) * 1000;
+	close(fd);
+
+	int fileNameLen = strlen(fileName);
+	fileName[fileNameLen++] = 'u';
+	fileName[fileNameLen++] = 's';
+	fileName[fileNameLen] = '\0';
+	fd = open(fileName, O_RDONLY);
+	if (fd == -1)
+	{
+		// TODO: handling open error
+		perror("agent");
+		return ;
+	}
+	readSize = read(fd, buf, 512);
+	if (readSize == -1)
+	{
+		// TODO: handling read error
+		perror("agent");
+		return ;
+	}
+	buf[readSize] = 0;
+
+	pbuf = buf;
+	for (int j = 0; j < 8; j++)
+		while (*pbuf++ != '\n');
+	pbuf += 4;
+	size_t uid = atol(pbuf);
+	pwd = getpwuid(uid);
+	strcpy(packet->userName, pwd->pw_name);
+	close(fd);
+
+	sprintf(fileName, "%s/cmdline", path);
+	fd = open(fileName, O_RDONLY);
+	if (fd == -1)
+	{
+		// TODO: handling open error
+		perror("agent");
+		return ;
+	}
+	readSize = read(fd, buf, BUFFER_SIZE);
+	if (readSize == -1)
+	{
+		// TODO: handling read error
+		perror("agent");
+		return ;
+	}
+	if (readSize != 0)
+	{
+		buf[readSize] = 0;
+		cmdLine = strdup(buf);
+	}
+	close(fd);
 }

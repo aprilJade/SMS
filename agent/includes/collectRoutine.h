@@ -16,5 +16,6 @@ void initRoutineParam(SRoutineParam* target);
 void* cpuInfoRoutine(void* param);
 void* memInfoRoutine(void* param);
 void* netInfoRoutine(void* param);
+void* procInfoRoutine(void* param);
 
 #endif

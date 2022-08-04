@@ -5,8 +5,10 @@
 #include <sys/time.h>
 #include <string.h>
 #include <stdio.h>
+#include <dirent.h>
 #include "tcpCtrl.h"
 
+#define NO_SLEEP 0
 #define PRINT_CPU 0
 #define PRINT_MEM 0
 #define PRINT_NET 0
@@ -18,6 +20,7 @@
 
 void* cpuInfoRoutine(void* param)
 {
+    size_t sendPacketCount = 0;
     // TODO: handle exit condition
     ulonglong prevTime, postTime, elapseTime;
 	long toMs = 1000 / sysconf(_SC_CLK_TCK);
@@ -40,18 +43,13 @@ void* cpuInfoRoutine(void* param)
         perror("agent");
         return 0;
     }
+    memset(&packet, 0, sizeof(SCpuInfoPacket));
+    memcpy(&packet.signature, SIGNATURE_CPU, 4);
     while (1)
     {
-        memset(&packet, 0, sizeof(SCpuInfoPacket));
-        if (gettimeofday(&timeVal, NULL) == -1)
-        {
-            // TODO: handling error
-            perror("agent");
-            return 0;
-        }    
-        prevTime = timeVal.tv_sec * 1000 + timeVal.tv_usec / 1000;
-        packet.collectTime = prevTime;
-        memcpy(&packet.signature, SIGNATURE_CPU, 4);
+        gettimeofday(&timeVal, NULL);
+        prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
+        packet.collectTime = prevTime / 1000;
         collectCpuInfo(toMs, buf, &packet);
 #if PRINT_CPU
         // TODO: Convert printf to log
@@ -61,6 +59,7 @@ void* cpuInfoRoutine(void* param)
         printf("CPU idle time: %d ms\n", packet.idleTime);
         printf("CPU I/O wait time: %d ms\n", packet.waitTime);
         printf("Collect starting time: %lld ms\n", packet.collectTime);
+        printf("Send cpu info packet.\n");
 #endif
         if (write(sockFd, &packet, sizeof(SCpuInfoPacket)) == -1)
         {
@@ -68,17 +67,15 @@ void* cpuInfoRoutine(void* param)
             perror("agent");
             return 0;
         }
+        sendPacketCount++;
         // TODO: Caching.... packet data
-        if (gettimeofday(&timeVal, NULL) == -1)
-        {
-            // TODO: handling error
-            perror("agent");
-            return 0;
-        }    
-        printf("Send cpu info packet.\n");
-        postTime = timeVal.tv_sec * 1000  + timeVal.tv_usec / 1000;
+        gettimeofday(&timeVal, NULL);
+        postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
+#if !NO_SLEEP
+        printf("cpu packet sended count: %ld\n", sendPacketCount);
         usleep(pParam->collectPeriod * 1000 - elapseTime);
+#endif
         // TODO: Check TCP connection
         // If disconnected, reconnect!
     }
@@ -86,8 +83,8 @@ void* cpuInfoRoutine(void* param)
 
 void* memInfoRoutine(void* param)
 {
+    size_t sendPacketCount = 0;
     ulonglong prevTime, postTime, elapseTime;
-	long toMs = 1000 / sysconf(_SC_CLK_TCK);
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
     SMemInfoPacket packet;
@@ -107,18 +104,13 @@ void* memInfoRoutine(void* param)
         perror("agent");
         return 0;
     }
+    memset(&packet, 0, sizeof(SMemInfoPacket));
+    memcpy(&packet.signature, SIGNATURE_MEM, 4);
     while(1)
     {
-        memset(&packet, 0, sizeof(SMemInfoPacket));
-        if (gettimeofday(&timeVal, NULL) == -1)
-        {
-            // TODO: handling error
-            perror("agent");
-            return 0;
-        }    
-        prevTime = timeVal.tv_sec * 1000 + timeVal.tv_usec / 1000;
-        packet.collectTime = prevTime;
-        memcpy(&packet.signature, SIGNATURE_MEM, 4);
+        gettimeofday(&timeVal, NULL);
+        prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
+        packet.collectTime = prevTime / 1000;
         collectMemInfo(buf, &packet);
 #if PRINT_MEM
         printf("<Memory information>\n");
@@ -136,17 +128,18 @@ void* memInfoRoutine(void* param)
             perror("agent");
             return 0;
         }
+        sendPacketCount++;
+#if PRINT_MEM
         printf("Send memory info packet.\n");
+#endif
         // TODO: Caching.... packet data
-        if (gettimeofday(&timeVal, NULL) == -1)
-        {
-            // TODO: handling error
-            perror("agent");
-            return 0;
-        }    
-        postTime = timeVal.tv_sec * 1000  + timeVal.tv_usec / 1000;
+        gettimeofday(&timeVal, NULL);
+        postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
+#if !NO_SLEEP
+        printf("mem packet sended count: %ld\n", sendPacketCount);
         usleep(pParam->collectPeriod * 1000 - elapseTime);
+#endif
         // TODO: Check TCP connection
         // If disconnected, reconnect!
     }
@@ -154,8 +147,8 @@ void* memInfoRoutine(void* param)
 
 void* netInfoRoutine(void* param)
 {
+    size_t sendPacketCount = 0;
     ulonglong prevTime, postTime, elapseTime;
-	long toMs = 1000 / sysconf(_SC_CLK_TCK);
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
     SNetInfoPacket packet;
@@ -175,18 +168,13 @@ void* netInfoRoutine(void* param)
         perror("agent");
         return 0;
     }
+    memset(&packet, 0, sizeof(SNetInfoPacket));
+    memcpy(&packet.signature, SIGNATURE_NET, 4);
     while(1)
     {
-        memset(&packet, 0, sizeof(SNetInfoPacket));
-        if (gettimeofday(&timeVal, NULL) == -1)
-        {
-            // TODO: handling error
-            perror("agent");
-            return 0;
-        }    
-        prevTime = timeVal.tv_sec * 1000 + timeVal.tv_usec / 1000;
-        packet.collectTime = prevTime;
-        memcpy(&packet.signature, SIGNATURE_NET, 4);
+        gettimeofday(&timeVal, NULL);
+        prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
+        packet.collectTime = prevTime / 1000;
         collectNetInfo(buf, &packet);
 #if PRINT_NET
         printf("Collected net info packet\n\
@@ -209,17 +197,112 @@ void* netInfoRoutine(void* param)
             perror("agent");
             return 0;
         }
+        sendPacketCount++;
+#if PRINT_NET
         printf("Send network info packet.\n");
+#endif
         // TODO: Caching.... packet data
-        if (gettimeofday(&timeVal, NULL) == -1)
-        {
-            // TODO: handling error
-            perror("agent");
-            return 0;
-        }    
-        postTime = timeVal.tv_sec * 1000  + timeVal.tv_usec / 1000;
+        gettimeofday(&timeVal, NULL);
+        postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
+#if !NO_SLEEP
+        printf("Net packet sended count: %ld\n", sendPacketCount);
         usleep(pParam->collectPeriod * 1000 - elapseTime);
+#endif
+        // TODO: Check TCP connection
+        // If disconnected, reconnect!
+    }
+}
+
+void* procInfoRoutine(void* param)
+{
+    size_t sendPacketCount = 0;
+    ulonglong prevTime, postTime, elapseTime;
+    char buf[BUFFER_SIZE + 1] = { 0, };
+    struct timeval timeVal;
+    SProcInfoPacket packet;
+    SRoutineParam* pParam = (SRoutineParam*)param;
+    int sockFd = ConnectToServer(HOST, PORT);
+    if (sockFd == -1)
+    {
+        // TODO: handle error
+        printf("Fail to connect to server\n");
+        return 0;
+    }
+    SInitialPacket initPacket;
+    memcpy(&initPacket.signature, SIGNATURE_PROC, 4);
+    if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
+    {
+        // TODO: handle error
+        perror("agent");
+        return 0;
+    }
+    DIR* dir;
+    struct dirent* entry;
+    char path[260];
+    memset(&packet, 0, sizeof(SProcInfoPacket));
+    memcpy(&packet.signature, SIGNATURE_PROC, 4);
+    while(1)
+    {
+        dir = opendir("/proc");
+        if (dir == NULL)
+            return 0;
+        while ((entry = readdir(dir)) != NULL)
+        {
+            if (entry->d_type == DT_DIR)
+            {
+                if (atoi(entry->d_name) < 1)
+                    continue;
+                snprintf(path, 262, "/proc/%s", entry->d_name);
+                if (gettimeofday(&timeVal, NULL) == -1)
+                {
+                    // TODO: handling error
+                    perror("agent");
+                    return 0;
+                }    
+                prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
+                packet.collectTime = prevTime / 1000;
+                if (access(path, F_OK) == 0)
+                    collectProcInfo(path, buf, &packet);
+                else
+                    continue;
+                if (write(sockFd, &packet, sizeof(SProcInfoPacket)) == -1)
+                {
+                    // TODO: handle error
+                    perror("agent");
+                    return 0;
+                }
+                sendPacketCount++;
+#if PRINT_PROC
+                printf("Send process info packet: %d\n", packet.pid);
+                printf("Collect process info\n\
+                        Collect Time: %lld\n\
+                        PID: %d\n\
+                        PPID: %d\n\
+                        Running Time (user): %d\n\
+                        Running Time (system): %d\n\
+                        User name: %s\n\
+                        Process Name: %s\n\
+                        State: %c\n",
+                        packet.collectTime,
+                        packet.pid,
+                        packet.ppid,
+                        packet.utime,
+                        packet.stime,
+                        packet.userName,
+                        packet.procName,
+                        packet.state);
+#endif
+                // TODO: Caching.... packet data
+                gettimeofday(&timeVal, NULL);
+                postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
+                elapseTime = postTime - prevTime;
+            }
+        }
+#if !NO_SLEEP
+        printf("Proc packet sended count: %ld\n", sendPacketCount);
+        usleep(pParam->collectPeriod * 1000 - elapseTime);
+#endif
         // TODO: Check TCP connection
         // If disconnected, reconnect!
     }

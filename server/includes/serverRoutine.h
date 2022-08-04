@@ -20,5 +20,6 @@ void initRoutineFuncTable(void **funcTable);
 void* serverCpuInfoRoutine(void* param);
 void* serverMemInfoRoutine(void* param);
 void* serverNetInfoRoutine(void* param);
+void* serverProcInfoRoutine(void* param);
 
 #endif
