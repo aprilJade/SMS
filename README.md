@@ -1,6 +1,17 @@
 # SMS
 System Monitoring System의 약자입니다. 대상 OS를 모니터링하여 분석하는 시스템입니다.
 
+# 실행방법
+1. 해당 레포지토리를 클론해주세요.
+`$ git clone https://github.com/aprilJade/SMS.git`
+2. 빌드 후 server 실행 후 agent를 실행해주세요.
+```
+$ cd SMS
+$ make
+$ ./server/server
+$ ./agent/agent
+```
+
 # Todo List
 생각 나는 것을 위주로 적어가고 있습니다. 완전한 것은 아니고 계속 변경될 여지가 있습니다.
 또한 추후 추가되거나 삭제될 리스트가 있을 수 있습니다.
