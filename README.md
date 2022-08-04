@@ -3,12 +3,14 @@ System Monitoring System의 약자입니다. 대상 OS를 모니터링하여 분
 
 # 실행방법
 1. 해당 레포지토리를 클론해주세요.
+ 
 `$ git clone https://github.com/aprilJade/SMS.git`
+
 2. 빌드 후 서버를 실행해주세요.
 ```
-$ cd SMS
-$ make
-$ ./server/server
+cd SMS
+make
+./server/server
 ```
 3. 이후 새로운 터미널을 켜고 agent를 실행해주세요.
 ```
