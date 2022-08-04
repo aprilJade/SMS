@@ -7,7 +7,7 @@
 void collectEachCpuInfo(long cpuCnt, long timeConversion, char* rdBuf);
 void collectCpuInfo(long timeConversion, char* rdBuf, SCpuInfoPacket* packet);
 void collectMemInfo(char* buf, SMemInfoPacket* packet);
-void collectNetInfo(char* buf);
+void collectNetInfo(char* buf, SNetInfoPacket* packet);
 void collectProcInfo(char *buf, size_t maxPid);
 size_t getMaxPid();
 

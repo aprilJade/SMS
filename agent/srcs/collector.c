@@ -142,7 +142,7 @@ void collectMemInfo(char* buf, SMemInfoPacket* packet)
 	close(fd);
 }
 
-void collectNetInfo(char* buf)
+void collectNetInfo(char* buf, SNetInfoPacket* packet)
 {
 	int fd = open("/proc/net/dev", O_RDONLY);
 	if (fd == -1)
@@ -161,34 +161,26 @@ void collectNetInfo(char* buf)
 	buf[readSize] = 0;
 	while (*buf++ != '\n');
 	while (*buf++ != '\n');
-	char niName[16] = { 0, };
-
-	while (*buf)
+	while (*buf++ != '\n');
+	while (*buf == ' ')
+		buf++;
+	memset(packet->netIfName, 0, 16);
+	for (int i = 0; *buf != ':'; i++)
+		packet->netIfName[i] = *buf++;
+	buf++;
+	packet->recvBytes = atol(buf);
+	while (*buf++ == ' ');
+	while (*buf++ != ' ');
+	packet->recvPackets = atol(buf);
+	for (int i = 0; i < 7; i++)
 	{
-		while (*buf == ' ')
-			buf++;
-		for (int i = 0; *buf != ':'; i++)
-			niName[i] = *buf++;
-		buf++;
-		size_t recvBytes = atol(buf);
 		while (*buf++ == ' ');
 		while (*buf++ != ' ');
-		size_t recvPacketCnt = atol(buf);
-		for (int i = 0; i < 7; i++)
-		{
-			while (*buf++ == ' ');
-			while (*buf++ != ' ');
-		}
-		size_t sendBytes = atol(buf);
-		while (*buf++ == ' ');
-		while (*buf++ != ' ');
-		size_t sendPacketCnt = atol(buf);
-		while (*buf != '\n' && *buf != '\0')
-			buf++;
-		if (*buf == '\0')
-			break;
-		buf++;
 	}
+	packet->sendBytes = atol(buf);
+	while (*buf++ == ' ');
+	while (*buf++ != ' ');
+	packet->sendPackets = atol(buf);
 }
 
 size_t getMaxPid()

@@ -10,7 +10,7 @@
 
 #define HOST "127.0.0.1"
 #define PORT 4243
-#define CONNECTION_COUNT 2
+#define CONNECTION_COUNT 3
 
 int main(void)
 {
@@ -91,7 +91,6 @@ int main(void)
         printf("%d: Connected for accept %s.\n", i, msgs[signature[3]]);
         param.clientSock = clientFd;
         pthread_create(&tid[i], NULL, routine, &param);
-        // pthread_detach(tid[i]);
     }
     for (int i = 0; i < CONNECTION_COUNT; i++)
         pthread_join(tid[i], NULL);

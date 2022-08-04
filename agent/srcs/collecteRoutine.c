@@ -33,7 +33,7 @@ void* cpuInfoRoutine(void* param)
         return 0;
     }
     SInitialPacket initPacket;
-    memcpy(&initPacket.signature, "SMSc", 4);
+    memcpy(&initPacket.signature, SIGNATURE_CPU, 4);
     if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
     {
         // TODO: handle error
@@ -100,7 +100,7 @@ void* memInfoRoutine(void* param)
         return 0;
     }
     SInitialPacket initPacket;
-    memcpy(&initPacket.signature, "SMSm", 4);
+    memcpy(&initPacket.signature, SIGNATURE_MEM, 4);
     if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
     {
         // TODO: handle error
@@ -137,6 +137,74 @@ void* memInfoRoutine(void* param)
             return 0;
         }
         printf("Send memory info packet.\n");
+        // TODO: Caching.... packet data
+        if (gettimeofday(&timeVal, NULL) == -1)
+        {
+            // TODO: handling error
+            perror("agent");
+            return 0;
+        }    
+        postTime = timeVal.tv_sec * 1000  + timeVal.tv_usec / 1000;
+        elapseTime = postTime - prevTime;
+        usleep(pParam->collectPeriod * 1000 - elapseTime);
+        // TODO: Check TCP connection
+        // If disconnected, reconnect!
+    }
+}
+
+void* netInfoRoutine(void* param)
+{
+    ulonglong prevTime, postTime, elapseTime;
+	long toMs = 1000 / sysconf(_SC_CLK_TCK);
+    char buf[BUFFER_SIZE + 1] = { 0, };
+    struct timeval timeVal;
+    SNetInfoPacket packet;
+    SRoutineParam* pParam = (SRoutineParam*)param;
+    int sockFd = ConnectToServer(HOST, PORT);
+    if (sockFd == -1)
+    {
+        // TODO: handle error
+        printf("Fail to connect to server\n");
+        return 0;
+    }
+    SInitialPacket initPacket;
+    memcpy(&initPacket.signature, SIGNATURE_NET, 4);
+    if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
+    {
+        // TODO: handle error
+        perror("agent");
+        return 0;
+    }
+    while(1)
+    {
+        memset(&packet, 0, sizeof(SNetInfoPacket));
+        if (gettimeofday(&timeVal, NULL) == -1)
+        {
+            // TODO: handling error
+            perror("agent");
+            return 0;
+        }    
+        prevTime = timeVal.tv_sec * 1000 + timeVal.tv_usec / 1000;
+        packet.collectTime = prevTime;
+        memcpy(&packet.signature, SIGNATURE_NET, 4);
+        collectNetInfo(buf, &packet);
+#if PRINT
+        printf("<Memory information>\n");
+        printf("Total memory: %d kB\n", packet.memTotal);
+        printf("Free memory: %d kB\n", packet.memFree);
+        printf("Used memory: %d kB\n", packet.memUsed);
+        printf("Available memory: %d kB\n", packet.memAvail);
+        printf("Total swap: %d kB\n", packet.swapTotal);
+        printf("Free swap: %d kB\n", packet.swapFree);
+        printf("Collecting start time: %lld\n\n", packet.collectTime);
+#endif
+        if (write(sockFd, &packet, sizeof(SNetInfoPacket)) == -1)
+        {
+            // TODO: handle error
+            perror("agent");
+            return 0;
+        }
+        printf("Send network info packet.\n");
         // TODO: Caching.... packet data
         if (gettimeofday(&timeVal, NULL) == -1)
         {
