@@ -10,9 +10,8 @@ int main(void)
 	// TODO: set routine parameter using argv!
 	SRoutineParam param;
 	param.collectPeriod = 2500;
-	
-	pthread_create(&tid, NULL, &cpuInfoRoutine, &param);
-	int *ret;
-	pthread_join(tid, &ret);
+
+	pthread_create(&tid, NULL, &cpuInfoRoutine, (void*)&param);
+	pthread_join(tid, NULL);
 	return 0; 
 }

@@ -8,9 +8,8 @@
 #include "tcpCtrl.h"
 
 #define PRINT 1
-#define ONE_SECONDS_US 1000000
 
-int cpuInfoRoutine(SRoutineParam* param)
+void* cpuInfoRoutine(void* param)
 {
     // TODO: handle exit condition
     ulonglong prevTime, postTime, elapseTime;
@@ -19,11 +18,12 @@ int cpuInfoRoutine(SRoutineParam* param)
     struct timeval timeVal;
     SCpuInfoPacket packet;
     int sockFd = ConnectToServer("127.0.0.1", 4242);
+    SRoutineParam* pParam = (SRoutineParam*)param;
     if (sockFd == -1)
     {
         // TODO: handle error
         printf("Fail to connect to server\n");
-        return 1;
+        return 0;
     }
     while (1)
     {
@@ -32,7 +32,7 @@ int cpuInfoRoutine(SRoutineParam* param)
         {
             // TODO: handling error
             perror("agent");
-            return 1;
+            return 0;
         }    
         prevTime = timeVal.tv_sec * 1000 + timeVal.tv_usec / 1000;
         packet.collectTime = prevTime;
@@ -51,17 +51,18 @@ int cpuInfoRoutine(SRoutineParam* param)
         {
             // TODO: handle error
             perror("agent");
-            return 1;
+            return 0;
         }
+        // TODO: Caching.... packet data
         if (gettimeofday(&timeVal, NULL) == -1)
         {
             // TODO: handling error
             perror("agent");
-            return 1;
+            return 0;
         }    
         postTime = timeVal.tv_sec * 1000  + timeVal.tv_usec / 1000;
         elapseTime = postTime - prevTime;
-        usleep(param->collectPeriod * 1000 - elapseTime);
+        usleep(pParam->collectPeriod * 1000 - elapseTime);
         // TODO: Check TCP connection
         // If disconnected, reconnect!
     }

@@ -1,5 +1,5 @@
-NAME		=	agent
-CFLAG		=	-g -fsanitize=address
+NAME		=	server
+CFLAG		=	-g
 INCLUDES	=	-I./includes/
 LIB			=	-lpthread
 SRC_DIR		=	./srcs

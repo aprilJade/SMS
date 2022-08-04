@@ -9,6 +9,6 @@ typedef struct SRoutineParam
 } SRoutineParam;
 
 void initRoutineParam(SRoutineParam* target);
-int cpuInfoRoutine(SRoutineParam* param);
+void* cpuInfoRoutine(void* param);
 
 #endif
