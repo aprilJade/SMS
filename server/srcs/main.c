@@ -53,7 +53,6 @@ int main(void)
     initRoutineFuncTable(routineFunctions);
     void* (*routine)(void*);
     pthread_t tid[CONNECTION_COUNT];
-    SServRoutineParam param;
     int readSize;
     char buf[128] = { 0, };
 
@@ -89,6 +88,7 @@ int main(void)
             continue;
         }
         printf("%d: Connected for accept %s.\n", i, msgs[signature[3]]);
+        SServRoutineParam param;
         param.clientSock = clientFd;
         pthread_create(&tid[i], NULL, routine, &param);
     }

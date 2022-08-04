@@ -6,6 +6,11 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#define DETAIL_PRINT_CPU 0
+#define DETAIL_PRINT_MEM 1
+#define DETAIL_PRINT_NET 0
+#define DETAIL_PRINT_PROC 0
+
 void initRoutineFuncTable(void **funcTable)
 {
     // Add remain routines...
@@ -38,7 +43,22 @@ void* serverCpuInfoRoutine(void* param)
         }
         packet = (SCpuInfoPacket*)buf;
         // TODO: Store to DB
+#if DETAIL_PRINT_CPU
+        printf("Receive cpu info packet: %d\n\
+                Collect Time: %lld ms\n\
+                Running Time (user): %d ms\n\
+                Running Time (system): %d ms\n\
+                Idle Time: %d ms\n\
+                Wait Time: %d ms\n\n",
+                readSize, 
+                packet->collectTime, 
+                packet->usrCpuRunTime,
+                packet->sysCpuRunTime,
+                packet->idleTime,
+                packet->waitTime);
+#else
         printf("Receive cpu info packet: %d bytes\n", readSize);
+#endif
     }
 }
 
@@ -66,7 +86,26 @@ void* serverMemInfoRoutine(void* param)
         }
         packet = (SMemInfoPacket*)buf;
         // TODO: Store to DB
+#if DETAIL_PRINT_MEM
+        printf("Receive mem info packet: %d bytes\n\
+                Collect Time: %lld ms\n\
+                Total Memory: %d kB\n\
+                Free Memory: %d kB\n\
+                Used Memory: %d kB\n\
+                Available Memory: %d kB\n\
+                Total Swap Space: %d kB\n\
+                Free Swap Space: %d kB\n",
+                readSize,
+                packet->collectTime,
+                packet->memTotal,
+                packet->memFree,
+                packet->memUsed,
+                packet->memAvail,
+                packet->swapTotal,
+                packet->swapFree);
+#else
         printf("Receive mem info packet: %d bytes\n", readSize);
+#endif
     }
 }
 
@@ -75,9 +114,10 @@ void* serverNetInfoRoutine(void* param)
     assert(param != NULL);    
     printf("Start serverNetInfoRoutine\n");
     SServRoutineParam* pParam = (SServRoutineParam*)param;
-    int readSize;
+    int readSize = 0;
+    int totalSize = 0;
     char buf[128] = { 0, };
-    SNetInfoPacket* packet;
+    SNetInfoPacket* packet = (SNetInfoPacket*)buf;
     while (1)
     {
         if ((readSize = read(pParam->clientSock, buf, sizeof(SNetInfoPacket))) == -1)
@@ -92,8 +132,24 @@ void* serverNetInfoRoutine(void* param)
             close(pParam->clientSock);
             return 0;
         }
-        packet = (SNetInfoPacket*)buf;
         // TODO: Store to DB
+#if DETAIL_PRINT_NET
+        printf("Receive net info packet: %d bytes\n\
+                Collect Time: %lld ms\n\
+                Network Interface: %s\n\
+                Receive Bytes: %lld B\n\
+                Receive Packet Count: %d\n\
+                Send Bytes: %lld B\n\
+                Send Packet Count: %d\n",
+                readSize,
+                packet->collectTime,
+                packet->netIfName,
+                packet->recvBytes,
+                packet->recvPackets,
+                packet->sendBytes,
+                packet->sendPackets);
+#else
         printf("Receive net info packet: %d bytes\n", readSize);
+#endif
     }
 }

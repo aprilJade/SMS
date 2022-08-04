@@ -1,6 +1,10 @@
 #ifndef COLLECT_ROUTINE_H
 #define COLLECT_ROUTINE_H
 #include "packets.h"
+#define SIGNATURE_CPU "SMSc"
+#define SIGNATURE_MEM "SMSm"
+#define SIGNATURE_NET "SMSn"
+#define SIGNATURE_PROC "SMSp"
 
 typedef struct SRoutineParam
 {

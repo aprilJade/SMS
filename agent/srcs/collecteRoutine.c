@@ -7,11 +7,11 @@
 #include <stdio.h>
 #include "tcpCtrl.h"
 
-#define PRINT 0
-#define SIGNATURE_CPU "SMSc"
-#define SIGNATURE_MEM "SMSm"
-#define SIGNATURE_NET "SMSn"
-#define SIGNATURE_PROC "SMSp"
+#define PRINT_CPU 0
+#define PRINT_MEM 0
+#define PRINT_NET 0
+#define PRINT_PROC 0
+
 
 #define HOST "127.0.0.1"
 #define PORT 4243
@@ -53,7 +53,7 @@ void* cpuInfoRoutine(void* param)
         packet.collectTime = prevTime;
         memcpy(&packet.signature, SIGNATURE_CPU, 4);
         collectCpuInfo(toMs, buf, &packet);
-#if PRINT
+#if PRINT_CPU
         // TODO: Convert printf to log
         printf("<CPU information as OS resources>\n");
         printf("CPU running time (user mode): %d ms\n", packet.usrCpuRunTime);
@@ -120,7 +120,7 @@ void* memInfoRoutine(void* param)
         packet.collectTime = prevTime;
         memcpy(&packet.signature, SIGNATURE_MEM, 4);
         collectMemInfo(buf, &packet);
-#if PRINT
+#if PRINT_MEM
         printf("<Memory information>\n");
         printf("Total memory: %d kB\n", packet.memTotal);
         printf("Free memory: %d kB\n", packet.memFree);
@@ -188,15 +188,20 @@ void* netInfoRoutine(void* param)
         packet.collectTime = prevTime;
         memcpy(&packet.signature, SIGNATURE_NET, 4);
         collectNetInfo(buf, &packet);
-#if PRINT
-        printf("<Memory information>\n");
-        printf("Total memory: %d kB\n", packet.memTotal);
-        printf("Free memory: %d kB\n", packet.memFree);
-        printf("Used memory: %d kB\n", packet.memUsed);
-        printf("Available memory: %d kB\n", packet.memAvail);
-        printf("Total swap: %d kB\n", packet.swapTotal);
-        printf("Free swap: %d kB\n", packet.swapFree);
-        printf("Collecting start time: %lld\n\n", packet.collectTime);
+#if PRINT_NET
+        printf("Collected net info packet\n\
+                Collect Time: %lld ms\n\
+                Network Interface: %s\n\
+                Receive Bytes: %lld B\n\
+                Receive Packet Count: %d\n\
+                Send Bytes: %lld B\n\
+                Send Packet Count: %d\n",
+                packet.collectTime,
+                packet.netIfName,
+                packet.recvBytes,
+                packet.recvPackets,
+                packet.sendBytes,
+                packet.sendPackets);
 #endif
         if (write(sockFd, &packet, sizeof(SNetInfoPacket)) == -1)
         {

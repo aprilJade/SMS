@@ -38,7 +38,7 @@ typedef struct SMemInfoPacket
 typedef struct SProcInfoPacket
 {
     uint signature;
-    uint collectTime;
+    ulonglong collectTime;
     uint pid;
     uint ppid;
     uint utime;
@@ -54,7 +54,7 @@ typedef struct SProcInfoPacket
 typedef struct SNetInfoPacket
 {
     uint signature;
-    uint collectTime;
+    ulonglong collectTime;
     uchar netIfName[16];
     ulonglong recvBytes;
     uint recvPackets;

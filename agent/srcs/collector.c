@@ -162,8 +162,6 @@ void collectNetInfo(char* buf, SNetInfoPacket* packet)
 	while (*buf++ != '\n');
 	while (*buf++ != '\n');
 	while (*buf++ != '\n');
-	while (*buf == ' ')
-		buf++;
 	memset(packet->netIfName, 0, 16);
 	for (int i = 0; *buf != ':'; i++)
 		packet->netIfName[i] = *buf++;

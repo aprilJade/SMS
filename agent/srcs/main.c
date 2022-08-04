@@ -9,7 +9,7 @@ int main(void)
 	pthread_t cpuTid, memTid, netTid;
 	// TODO: set routine parameter using argv!
 	SRoutineParam param;
-	param.collectPeriod = 800;
+	param.collectPeriod = 2000;
 
 	pthread_create(&cpuTid, NULL, &cpuInfoRoutine, (void*)&param);
 	pthread_create(&memTid, NULL, &memInfoRoutine, (void*)&param);
