@@ -26,7 +26,6 @@ void* serverCpuInfoRoutine(void* param)
     assert(param != NULL);
     printf("Start serverCpuInfoRoutine\n");
     SServRoutineParam* pParam = (SServRoutineParam*)param;
-    printf("Read from socket: %d\n", pParam->clientSock);
     int readSize;
     char buf[128] = { 0, };
     SCpuInfoPacket* packet = (SCpuInfoPacket*)buf;
@@ -71,7 +70,6 @@ void* serverMemInfoRoutine(void* param)
     assert(param != NULL);    
     printf("Start serverMemInfoRoutine\n");
     SServRoutineParam* pParam = (SServRoutineParam*)param;
-    printf("Read from socket: %d\n", pParam->clientSock);
     int readSize;
     char buf[128] = { 0, };
     SMemInfoPacket* packet = (SMemInfoPacket*)buf;

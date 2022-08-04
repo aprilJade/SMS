@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 #include <arpa/inet.h>
 #include <string.h>
 #include "../../agent/includes/packets.h"
@@ -7,10 +8,10 @@
 #include <pthread.h>
 #include <assert.h>
 #include "serverRoutine.h"
-
+#include <stdlib.h>
 #define HOST "127.0.0.1"
 #define PORT 4243
-#define CONNECTION_COUNT 2
+#define CONNECTION_COUNT 3
 
 int main(void)
 {
@@ -28,7 +29,7 @@ int main(void)
 
     struct sockaddr_in servAddr;
     struct sockaddr_in clientAddr;
-    servFd = socket(PF_INET, SOCK_NONBLOCK, 0);
+    servFd = socket(PF_INET, SOCK_STREAM, 0);
     if (servFd == -1)
     {
         perror("server");
@@ -55,10 +56,10 @@ int main(void)
     pthread_t tid[CONNECTION_COUNT];
     int readSize;
     char buf[128] = { 0, };
-
+    pid_t pid[CONNECTION_COUNT];
     for (int i = 0; i < CONNECTION_COUNT; i++)
     {
-        if (listen(servFd, 42) == -1)
+        if (listen(servFd, CONNECTION_COUNT) == -1)
         {
             perror("server");
             close(servFd);
@@ -87,11 +88,26 @@ int main(void)
             putchar('\n');
             continue;
         }
-        printf("%d: Connected for accept %s.\n", i, msgs[signature[3]]);
+        //printf("%d: Connected for accept %s.\n", i, msgs[signature[3]]);
         SServRoutineParam param;
         param.clientSock = clientFd;
-        pthread_create(&tid[i], NULL, routine, &param);
+        //pthread_create(&tid[i], NULL, routine, &param);
+        pid[i] = fork();
+        if (pid[i] == -1)
+        {
+            perror("server");
+            return 1;
+        }
+        if (pid[i] == 0)
+        {
+            routine(&param);
+            exit(0);
+        }
+        else
+            close(clientFd);
     }
+    //for (int i = 0; i < CONNECTION_COUNT; i++)
+    //    pthread_join(tid[i], NULL);
     for (int i = 0; i < CONNECTION_COUNT; i++)
-        pthread_join(tid[i], NULL);
+        wait(&pid[i]);
 }   
