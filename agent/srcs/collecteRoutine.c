@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include "tcpCtrl.h"
 
-#define PRINT 1
+#define PRINT 0
 #define SIGNATURE_CPU "SMSc"
 #define SIGNATURE_MEM "SMSm"
 #define SIGNATURE_NET "SMSn"
@@ -30,6 +30,14 @@ void* cpuInfoRoutine(void* param)
     {
         // TODO: handle error
         printf("Fail to connect to server\n");
+        return 0;
+    }
+    SInitialPacket initPacket;
+    memcpy(&initPacket.signature, "SMSc", 4);
+    if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
+    {
+        // TODO: handle error
+        perror("agent");
         return 0;
     }
     while (1)
@@ -67,6 +75,7 @@ void* cpuInfoRoutine(void* param)
             perror("agent");
             return 0;
         }    
+        printf("Send cpu info packet.\n");
         postTime = timeVal.tv_sec * 1000  + timeVal.tv_usec / 1000;
         elapseTime = postTime - prevTime;
         usleep(pParam->collectPeriod * 1000 - elapseTime);
@@ -90,7 +99,14 @@ void* memInfoRoutine(void* param)
         printf("Fail to connect to server\n");
         return 0;
     }
-
+    SInitialPacket initPacket;
+    memcpy(&initPacket.signature, "SMSm", 4);
+    if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
+    {
+        // TODO: handle error
+        perror("agent");
+        return 0;
+    }
     while(1)
     {
         memset(&packet, 0, sizeof(SMemInfoPacket));
@@ -114,12 +130,13 @@ void* memInfoRoutine(void* param)
         printf("Free swap: %d kB\n", packet.swapFree);
         printf("Collecting start time: %lld\n\n", packet.collectTime);
 #endif
-        if (write(sockFd, &packet, sizeof(SCpuInfoPacket)) == -1)
+        if (write(sockFd, &packet, sizeof(SMemInfoPacket)) == -1)
         {
             // TODO: handle error
             perror("agent");
             return 0;
         }
+        printf("Send memory info packet.\n");
         // TODO: Caching.... packet data
         if (gettimeofday(&timeVal, NULL) == -1)
         {
@@ -130,5 +147,7 @@ void* memInfoRoutine(void* param)
         postTime = timeVal.tv_sec * 1000  + timeVal.tv_usec / 1000;
         elapseTime = postTime - prevTime;
         usleep(pParam->collectPeriod * 1000 - elapseTime);
+        // TODO: Check TCP connection
+        // If disconnected, reconnect!
     }
 }

@@ -2,14 +2,24 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <string.h>
-#include "packets.h"
+#include "../../agent/includes/packets.h"
 #include <unistd.h>
+#include <pthread.h>
+#include <assert.h>
+#include "serverRoutine.h"
 
 #define HOST "127.0.0.1"
 #define PORT 4243
+#define CONNECTION_COUNT 2
 
 int main(void)
 {
+    char* msgs[256];
+    msgs[CPU_INFO] = "CPU information";
+    msgs[MEM_INFO] = "Memory information";
+    msgs[PROC_INFO] = "Process information";
+    msgs[NET_INFO] = "Network information";
+
     printf("Simple SMS server...\n");
     printf("This server just print received data.\n");
     printf("Parse received data and print it.\n");
@@ -37,67 +47,52 @@ int main(void)
         return 1;
     }
     printf("Wait to connect....\n");
-    if (listen(servFd, 10) == -1)
-    {
-        perror("server");
-        close(servFd);
-        return 1;
-    }
     socklen_t len = sizeof(clientAddr);
-    clientFd = accept(servFd, (struct sockaddr*)&clientAddr, &len);
-    if (clientFd == -1)
-    {
-        printf("Fail to connect\n");
-        perror("server");
-        close(servFd);
-        return 1;
-    }
-    printf("Connected!\n");
-    printf("Start communication with agent.\n");
+    SInitialPacket* initialPacket;
+    void* routineFunctions[256] = { 0, };
+    initRoutineFuncTable(routineFunctions);
+    void* (*routine)(void*);
+    pthread_t tid[CONNECTION_COUNT];
+    SServRoutineParam param;
     int readSize;
-    char buf[4096] = { 0, };
-    SCpuInfoPacket* packet;
-    char* pSig;
-    while (1)
+    char buf[128] = { 0, };
+
+    for (int i = 0; i < CONNECTION_COUNT; i++)
     {
-        if ((readSize = read(clientFd, buf, 4096)) == -1)
+        if (listen(servFd, 42) == -1)
+        {
+            perror("server");
+            close(servFd);
+            return 1;
+        }
+        clientFd = accept(servFd, (struct sockaddr*)&clientAddr, &len);
+        if (clientFd == -1)
+        {
+            printf("Fail to connect\n");
+            perror("server");
+            close(servFd);
+            return 1;
+        }
+        if ((readSize = read(clientFd, buf, 128)) == -1)
         {
             printf("Fail to receive...!\n");
             close(clientFd);
-            close(servFd);
-            return 1;
         }
-        if (readSize == 0)
+        SInitialPacket* packet = (SInitialPacket*)buf;
+        char* signature = (char*)&packet->signature;
+        routine = routineFunctions[signature[3]];
+        if (routine == NULL)
         {
-            printf("Received: EOF\n");
-            close(clientFd);
-            close(servFd);
-            return 1;
+            printf("Undefined Signature!!: ");
+            write(1, signature, 4);
+            putchar('\n');
+            continue;
         }
-        packet = (SCpuInfoPacket*)buf;
-        // TODO: Store to DB
-        pSig = (char *)&packet->signature;
-        switch (pSig[3])
-        {
-            case 'c':
-                printf("Recieved packets: CPU information\n");
-                break;
-            case 'p':
-                break;
-            case 'm':
-                printf("Received packet: Memory information\n");
-                break;
-            case 'n':
-                break;
-            default:
-                printf("Undefined packet\n");
-                break;
-        }
-        // printf("<Received packet data>\n");
-        // printf("CPU running time (user mode): %d\n", packet->usrCpuRunTime);
-        // printf("CPU running time (system mode): %d\n", packet->sysCpuRunTime);
-        // printf("CPU idle time: %d\n", packet->idleTime);
-        // printf("CPU I/O wait time: %d\n", packet->waitTime);
-        // printf("Collcet Time: %lld\n", packet->collectTime);
+        printf("%d: Connected for accept %s.\n", i, msgs[signature[3]]);
+        param.clientSock = clientFd;
+        pthread_create(&tid[i], NULL, routine, &param);
+        // pthread_detach(tid[i]);
     }
-}
+    for (int i = 0; i < CONNECTION_COUNT; i++)
+        pthread_join(tid[i], NULL);
+}   
