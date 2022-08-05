@@ -9,7 +9,7 @@ typedef unsigned char uchar;
 
 typedef struct SInitialPacket
 {
-    uint signature;
+    uchar signature[4];
     uint logicalCoreCount;
     uint collectPeriod;
     ulong memTotal;
