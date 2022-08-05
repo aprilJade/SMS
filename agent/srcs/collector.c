@@ -112,7 +112,7 @@ void collectMemInfo(char* buf, SMemInfoPacket* packet)
 	buf[readSize] = 0;
 	
 	while (*buf++ != ' ');
-	packet->memTotal = atol(buf);
+	ulong memTotal = atol(buf);
 
 	while (*buf++ != '\n');
 	while (*buf++ != ' ');
@@ -124,19 +124,15 @@ void collectMemInfo(char* buf, SMemInfoPacket* packet)
 
 	while (*buf++ != '\n');
 	while (*buf++ != ' ');
-	size_t memBuffers = atol(buf);
+	ulong memBuffers = atol(buf);
 	
 	while (*buf++ != '\n');
 	while (*buf++ != ' ');
-	size_t memCached = atol(buf);
+	ulong memCached = atol(buf);
 
-	packet->memUsed = packet->memTotal - packet->memFree - memBuffers - memCached;
-	for (int i = 0; i < 10; i++)
+	packet->memUsed = memTotal - packet->memFree - memBuffers - memCached;
+	for (int i = 0; i < 11; i++)
 		while (*buf++ != '\n');
-	while (*buf++ != ' ');
-	packet->swapTotal = atol(buf);
-
-	while (*buf++ != '\n');
 	while (*buf++ != ' ');
 	packet->swapFree = atol(buf);
 	close(fd);
@@ -162,20 +158,20 @@ void collectNetInfo(char* buf, SNetInfoPacket* packet)
 	while (*buf++ != '\n');
 	while (*buf++ != '\n');
 	while (*buf++ != '\n');
-	memset(packet->netIfName, 0, 16);
-	for (int i = 0; *buf != ':'; i++)
-		packet->netIfName[i] = *buf++;
-	buf++;
-	packet->recvBytes = atol(buf);
+	while (*buf++ != ':');
+	packet->recvBytes = atol(buf) / 1024;
+
 	while (*buf++ == ' ');
 	while (*buf++ != ' ');
 	packet->recvPackets = atol(buf);
+
 	for (int i = 0; i < 7; i++)
 	{
 		while (*buf++ == ' ');
 		while (*buf++ != ' ');
 	}
-	packet->sendBytes = atol(buf);
+	packet->sendBytes = atol(buf) / 1024;
+
 	while (*buf++ == ' ');
 	while (*buf++ != ' ');
 	packet->sendPackets = atol(buf);
@@ -224,11 +220,10 @@ void collectProcInfo(char* path, char *buf, SProcInfoPacket* packet)
 		while (*pbuf++ != ' ');
 		cnt++;
 	}
-	// utime is divided by clock tick
-	packet->utime = atoi(pbuf) * 1000;
+	packet->utime = atol(pbuf) * 1000;
 
 	while (*pbuf++ != ' ');
-	packet->stime = atoi(pbuf) * 1000;
+	packet->stime = atol(pbuf) * 1000;
 	close(fd);
 
 	int fileNameLen = strlen(fileName);
@@ -255,7 +250,7 @@ void collectProcInfo(char* path, char *buf, SProcInfoPacket* packet)
 	for (int j = 0; j < 8; j++)
 		while (*pbuf++ != '\n');
 	pbuf += 4;
-	size_t uid = atol(pbuf);
+	size_t uid = atoi(pbuf);
 	pwd = getpwuid(uid);
 	strcpy(packet->userName, pwd->pw_name);
 	close(fd);
@@ -275,10 +270,85 @@ void collectProcInfo(char* path, char *buf, SProcInfoPacket* packet)
 		perror("agent");
 		return ;
 	}
-	if (readSize != 0)
+	if (readSize > 0)
 	{
 		buf[readSize] = 0;
 		cmdLine = strdup(buf);
 	}
+	else
+	{
+		packet->cmdlineLen = 0;
+	}
 	close(fd);
+}
+
+void generateInitialCpuPacket(SInitialPacket* packet)
+{
+	packet->logicalCoreCount = sysconf(_SC_NPROCESSORS_ONLN);
+	memcpy(&packet->signature, SIGNATURE_CPU, 4);
+}
+
+void generateInitialMemPacket(SInitialPacket* packet)
+{
+	memcpy(&packet->signature, SIGNATURE_MEM, 4);
+	char buf[BUFFER_SIZE + 1] = { 0, };
+	int fd = open("/proc/meminfo", O_RDONLY);
+	int readSize;
+	if (fd == -1)
+	{
+		// TODO: handling open error
+		perror("agent");
+		return ;
+	}
+	readSize = read(fd, buf, BUFFER_SIZE);
+	if (readSize == -1)
+	{
+		// TODO: handling read error
+		perror("agent");
+		return ;
+	}
+	buf[readSize] = 0;
+	char* pbuf = buf;
+	while (*pbuf++ != ' ');
+	packet->memTotal = atol(buf);
+
+	for (int i = 0; i < 14; i++)
+		while (*pbuf++ != '\n');
+	while (*pbuf++ != ' ');
+	packet->swapTotal = atol(buf);
+	close(fd);
+}
+
+void generateInitialNetPacket(SInitialPacket* packet)
+{
+	memcpy(&packet->signature, SIGNATURE_NET, 4);
+	char buf[BUFFER_SIZE + 1] = { 0, };
+	char *pbuf = buf;
+	int fd = open("/proc/net/dev", O_RDONLY);
+	if (fd == -1)
+	{
+		// TODO: handling open error
+		perror("agent");
+		return ;
+	}
+	int readSize = read(fd, buf, BUFFER_SIZE);
+	if (readSize == -1)
+	{
+		// TODO: handling read error
+		perror("agent");
+		return ;
+	}
+	buf[readSize] = 0;
+	while (*pbuf++ != '\n');
+	while (*pbuf++ != '\n');
+	while (*pbuf++ != '\n');
+	int i = 0;
+	memset(packet->netIfName, 0, 16);
+	for (i = 0; *pbuf != ':' && i < 15; i++)
+		packet->netIfName[i] = *pbuf++;
+}
+
+void generateInitialProcPacket(SInitialPacket* packet)
+{
+	memcpy(&packet->signature, SIGNATURE_PROC, 4);
 }

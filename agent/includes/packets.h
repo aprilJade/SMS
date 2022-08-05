@@ -2,6 +2,7 @@
 #define PACKETS_H
 
 typedef unsigned long long ulonglong;
+typedef unsigned long ulong;
 typedef unsigned int uint;
 typedef unsigned short ushort;
 typedef unsigned char uchar;
@@ -9,56 +10,53 @@ typedef unsigned char uchar;
 typedef struct SInitialPacket
 {
     uint signature;
+    uint logicalCoreCount;
+    uint collectPeriod;
+    ulong memTotal;
+    ulong swapTotal;
+    uchar netIfName[16];
 } SInitialPacket;
 
 typedef struct SCpuInfoPacket
 {
-    uint signature;
-    ulonglong collectTime;
-    float usage;
-    uint usrCpuRunTime;
-    uint sysCpuRunTime;
-    uint idleTime;
-    uint waitTime;
+    ulong collectTime;
+    ulong usrCpuRunTime;
+    ulong sysCpuRunTime;
+    ulong idleTime;
+    ulong waitTime;
 } SCpuInfoPacket;
 
 typedef struct SMemInfoPacket
 {
-    uint signature;
-    ulonglong collectTime;
-    uint memTotal;
-    uint memFree;
-    uint memAvail;
-    uint memUsed;
-    uint swapTotal;
-    uint swapFree;
-} SMemInfoPacket;
+    ulong collectTime;
+    ulong memFree;           // %lu
+    ulong memAvail;          // %lu since Linux 3.14
+    ulong memUsed;          // %lu 
+    ulong swapFree;         // %lu 
+} SMemInfoPacket;   
 
-#pragma pack(push, 1)
+// #pragma pack(push, 1)
 typedef struct SProcInfoPacket
 {
-    uint signature;
-    ulonglong collectTime;
-    uint pid;
-    uint ppid;
-    uint utime;
-    uint stime;
-    uchar userName[32];
-    uchar procName[16];
-    uchar state;
-    ushort cmdlineLen;
+    ulong collectTime;
+    uint pid;               // %d
+    uint ppid;              // %d
+    ulong utime;             // %lu  divided by sysconf(_SC_CLK_TCK) => seconds
+    ulong stime;             // %lu  divided by sysconf(_SC_CLK_TCK) => seconds
+    uchar userName[32];     // %s   max 32
+    uchar procName[16];     // %s   max 16
+    uchar state;            // %c
+    ushort cmdlineLen;   
 } SProcInfoPacket;
-#pragma pack(pop)
+// #pragma pack(pop)
 
 typedef struct SNetInfoPacket
 {
-    uint signature;
-    ulonglong collectTime;
-    uchar netIfName[16];
-    ulonglong recvBytes;
-    uint recvPackets;
-    ulonglong sendBytes;
-    uint sendPackets;
+    ulong collectTime;
+    ulong recvBytes;
+    ulong recvPackets;
+    ulong sendBytes;
+    ulong sendPackets;
 } SNetInfoPacket;
 
 #endif

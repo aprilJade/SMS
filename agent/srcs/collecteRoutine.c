@@ -22,7 +22,7 @@ void* cpuInfoRoutine(void* param)
 {
     size_t sendPacketCount = 0;
     // TODO: handle exit condition
-    ulonglong prevTime, postTime, elapseTime;
+    ulong prevTime, postTime, elapseTime;
 	long toMs = 1000 / sysconf(_SC_CLK_TCK);
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
@@ -35,16 +35,17 @@ void* cpuInfoRoutine(void* param)
         printf("Fail to connect to server\n");
         return 0;
     }
+
     SInitialPacket initPacket;
-    memcpy(&initPacket.signature, SIGNATURE_CPU, 4);
+    generateInitialCpuPacket(&initPacket);
     if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
     {
         // TODO: handle error
         perror("agent");
         return 0;
     }
+
     memset(&packet, 0, sizeof(SCpuInfoPacket));
-    memcpy(&packet.signature, SIGNATURE_CPU, 4);
     while (1)
     {
         gettimeofday(&timeVal, NULL);
@@ -54,11 +55,11 @@ void* cpuInfoRoutine(void* param)
 #if PRINT_CPU
         // TODO: Convert printf to log
         printf("<CPU information as OS resources>\n");
-        printf("CPU running time (user mode): %d ms\n", packet.usrCpuRunTime);
-        printf("CPU running time (system mode): %d ms\n", packet.sysCpuRunTime);
-        printf("CPU idle time: %d ms\n", packet.idleTime);
-        printf("CPU I/O wait time: %d ms\n", packet.waitTime);
-        printf("Collect starting time: %lld ms\n", packet.collectTime);
+        printf("CPU running time (user mode): %ld ms\n", packet.usrCpuRunTime);
+        printf("CPU running time (system mode): %ld ms\n", packet.sysCpuRunTime);
+        printf("CPU idle time: %ld ms\n", packet.idleTime);
+        printf("CPU I/O wait time: %ld ms\n", packet.waitTime);
+        printf("Collect starting time: %ld ms\n", packet.collectTime);
         printf("Send cpu info packet.\n");
 #endif
         if (write(sockFd, &packet, sizeof(SCpuInfoPacket)) == -1)
@@ -83,7 +84,7 @@ void* cpuInfoRoutine(void* param)
 void* memInfoRoutine(void* param)
 {
     size_t sendPacketCount = 0;
-    ulonglong prevTime, postTime, elapseTime;
+    ulong prevTime, postTime, elapseTime;
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
     SMemInfoPacket packet;
@@ -95,16 +96,17 @@ void* memInfoRoutine(void* param)
         printf("Fail to connect to server\n");
         return 0;
     }
+
     SInitialPacket initPacket;
-    memcpy(&initPacket.signature, SIGNATURE_MEM, 4);
+    generateInitialMemPacket(&initPacket);
     if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
     {
         // TODO: handle error
         perror("agent");
         return 0;
     }
+
     memset(&packet, 0, sizeof(SMemInfoPacket));
-    memcpy(&packet.signature, SIGNATURE_MEM, 4);
     while(1)
     {
         gettimeofday(&timeVal, NULL);
@@ -113,13 +115,11 @@ void* memInfoRoutine(void* param)
         collectMemInfo(buf, &packet);
 #if PRINT_MEM
         printf("<Memory information>\n");
-        printf("Total memory: %d kB\n", packet.memTotal);
-        printf("Free memory: %d kB\n", packet.memFree);
-        printf("Used memory: %d kB\n", packet.memUsed);
-        printf("Available memory: %d kB\n", packet.memAvail);
-        printf("Total swap: %d kB\n", packet.swapTotal);
-        printf("Free swap: %d kB\n", packet.swapFree);
-        printf("Collecting start time: %lld\n\n", packet.collectTime);
+        printf("Free memory: %ld kB\n", packet.memFree);
+        printf("Used memory: %ld kB\n", packet.memUsed);
+        printf("Available memory: %ld kB\n", packet.memAvail);
+        printf("Free swap: %ld kB\n", packet.swapFree);
+        printf("Collecting start time: %ld\n\n", packet.collectTime);
 #endif
         if (write(sockFd, &packet, sizeof(SMemInfoPacket)) == -1)
         {
@@ -143,10 +143,11 @@ void* memInfoRoutine(void* param)
     }
 }
 
+// TODO: handle multiple network interface
 void* netInfoRoutine(void* param)
 {
     size_t sendPacketCount = 0;
-    ulonglong prevTime, postTime, elapseTime;
+    ulong prevTime, postTime, elapseTime;
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
     SNetInfoPacket packet;
@@ -158,16 +159,17 @@ void* netInfoRoutine(void* param)
         printf("Fail to connect to server\n");
         return 0;
     }
+
     SInitialPacket initPacket;
-    memcpy(&initPacket.signature, SIGNATURE_NET, 4);
+    generateInitialNetPacket(&initPacket);
     if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
     {
         // TODO: handle error
         perror("agent");
         return 0;
     }
+
     memset(&packet, 0, sizeof(SNetInfoPacket));
-    memcpy(&packet.signature, SIGNATURE_NET, 4);
     while(1)
     {
         gettimeofday(&timeVal, NULL);
@@ -176,14 +178,14 @@ void* netInfoRoutine(void* param)
         collectNetInfo(buf, &packet);
 #if PRINT_NET
         printf("Collected net info packet\n\
-                Collect Time: %lld ms\n\
-                Network Interface: %s\n\
-                Receive Bytes: %lld B\n\
-                Receive Packet Count: %d\n\
-                Send Bytes: %lld B\n\
-                Send Packet Count: %d\n",
+                network interface name: %s\n\
+                Collect Time: %ld ms\n\
+                Receive Bytes: %ld kB\n\
+                Receive Packet Count: %ld\n\
+                Send Bytes: %ld kB\n\
+                Send Packet Count: %ld\n",
+                initPacket.netIfName,
                 packet.collectTime,
-                packet.netIfName,
                 packet.recvBytes,
                 packet.recvPackets,
                 packet.sendBytes,
@@ -226,19 +228,20 @@ void* procInfoRoutine(void* param)
         printf("Fail to connect to server\n");
         return 0;
     }
+
     SInitialPacket initPacket;
-    memcpy(&initPacket.signature, SIGNATURE_PROC, 4);
+    generateInitialProcPacket(&initPacket);
     if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
     {
         // TODO: handle error
         perror("agent");
         return 0;
     }
+
     DIR* dir;
     struct dirent* entry;
     char path[260];
     memset(&packet, 0, sizeof(SProcInfoPacket));
-    memcpy(&packet.signature, SIGNATURE_PROC, 4);
     while(1)
     {
         dir = opendir("/proc");
@@ -271,13 +274,13 @@ void* procInfoRoutine(void* param)
                 }
                 sendPacketCount++;
 #if PRINT_PROC
-                printf("Send process info packet: %d\n", packet.pid);
+                printf("Send process info packet: %u\n", packet.pid);
                 printf("Collect process info\n\
-                        Collect Time: %lld\n\
-                        PID: %d\n\
-                        PPID: %d\n\
-                        Running Time (user): %d\n\
-                        Running Time (system): %d\n\
+                        Collect Time: %ld\n\
+                        PID: %u\n\
+                        PPID: %u\n\
+                        Running Time (user): %ld\n\
+                        Running Time (system): %ld\n\
                         User name: %s\n\
                         Process Name: %s\n\
                         State: %c\n",
