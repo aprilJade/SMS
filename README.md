@@ -41,17 +41,13 @@ make
     - [ ] Disk 정보
     - [ ] 각 Logical Core별 정보 (running time, idle time, wait time, usage)
     - [ ] 지금은 NIC가 하나인 경우만 체크하나 복수의 네트워크 인터페이스의 정보를 수집하도록 변경
-  - [ ] 데이터 수집 시 특정 자료구조에 담아두고 Delta, Average 계산
-    - [ ] 데이터 Caching 구현
-    - [ ] CPU usage
-    - [ ] CPU usage per process
     - [ ] Network bytes per seconds
   - [ ] 설정 파일 제작 후 수집 주기, 송신 대상 서버 정보 등 설정기능 구현
     - [ ] 후보군: ini, json 혹은 custom.
-  - [ ] 변동없는 데이터는 최초에 한번만 서버에 송신하고, 그 이후에는 송신하지 않기
-    - [ ] CPU 정보 (Logical Core 개수)
-    - [ ] 메모리 정보 (메모리 총량 및 스왑 공간 총량)
-    - [ ] 네트워크 정보 (네트워크 인터페이스 종류와 개수)
+  - [x] ~변동없는 데이터는 최초에 한번만 서버에 송신하고, 그 이후에는 송신하지 않기~
+    - [x] ~CPU 정보 (Logical Core 개수)~
+    - [x] ~메모리 정보 (메모리 총량 및 스왑 공간 총량)~
+    - [x] ~네트워크 정보 (네트워크 인터페이스 종류와 개수)~
 - [ ] Server
   - [x] ~간단한 테스팅을 위한 TCP 서버 구현~
     - [x] ~싱글 스레드~
@@ -66,3 +62,12 @@ make
     - [ ] UDP 통신 스레드 생성
     - [ ] 각 연결마다 프로세스 생성
       - [ ] DB 저장 구현   
+    - [ ] 데이터 수집 시 특정 자료구조에 담아두고 Delta, Average 계산
+      - [ ] CPU usage
+        - [ ] CPU usage per process
+        - [ ] CPU usage per seconds
+      - [ ] Memory usage
+        - [ ] Memory usage per seconds
+      - [ ] Network throughput per seconds
+        - [ ] number of packet
+        - [ ] I/O bytes per seconds
