@@ -8,7 +8,7 @@
 
 #define DETAIL_PRINT_CPU 0
 #define DETAIL_PRINT_MEM 0
-#define DETAIL_PRINT_NET 0
+#define DETAIL_PRINT_NET 1
 #define DETAIL_PRINT_PROC 0
 
 void initRoutineFuncTable(void **funcTable)
@@ -130,15 +130,13 @@ int serverNetInfoRoutine(SServRoutineParam* param)
         // TODO: Store to DB
 #if DETAIL_PRINT_NET
         printf("Receive net info packet: %d bytes\n\
-                Collect Time: %lld ms\n\
-                Network Interface: %s\n\
-                Receive Bytes: %lld B\n\
-                Receive Packet Count: %d\n\
-                Send Bytes: %lld B\n\
-                Send Packet Count: %d\n",
+                Collect Time: %ld ms\n\
+                Receive Bytes: %ld kB\n\
+                Receive Packet Count: %ld\n\
+                Send Bytes: %ld kB\n\
+                Send Packet Count: %ld\n",
                 readSize,
                 packet->collectTime,
-                packet->netIfName,
                 packet->recvBytes,
                 packet->recvPackets,
                 packet->sendBytes,
