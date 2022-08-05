@@ -16,7 +16,6 @@ enum eRoutine
     NET_INFO = 'n'
 };
 
-void initRoutineFuncTable(void **funcTable);
 int serverCpuInfoRoutine(SServRoutineParam* param);
 int serverMemInfoRoutine(SServRoutineParam* param);
 int serverNetInfoRoutine(SServRoutineParam* param);

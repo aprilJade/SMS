@@ -42,13 +42,9 @@ int main(void)
     }
     printf("Wait to connect....\n");
     socklen_t len = sizeof(clientAddr);
-    char* signature;
-    void* routineFunctions[256] = { 0, };
-    initRoutineFuncTable(routineFunctions);
     int (*routine)(SServRoutineParam*);
     char buf[128] = { 0, };
     SInitialPacket* packet = (SInitialPacket*)buf;
-    SServRoutineParam param;
     pid_t pid[CONNECTION_COUNT];
     for (int i = 0; i < CONNECTION_COUNT; i++)
     {
@@ -71,16 +67,32 @@ int main(void)
             printf("Fail to receive...!\n");
             close(clientFd);
         }
-        signature = (char*)&packet->signature;
-        routine = routineFunctions[signature[3]];
-        if (routine == NULL)
+        switch (packet->signature[3])
         {
-            printf("Undefined Signature!!: ");
-            write(1, signature, 4);
-            putchar('\n');
-            close(clientFd);
-            continue;
+        case 'c':
+            // TODO: Store below data
+            // packet->logicalCoreCount;
+            routine = serverCpuInfoRoutine;
+            break;
+        case 'm':
+            // TODO: Store below data
+            // packet->memTotal;
+            // packet->swapTotal;
+            routine = serverMemInfoRoutine;
+            break;
+        case 'p':
+            routine = serverProcInfoRoutine;
+            break;
+        case 'n':
+            // TODO: Store below data
+            // packet->netIfName;
+            routine = serverNetInfoRoutine;
+            break;
+        default:
+            printf("Undefined signature!: %c", packet->signature[3]);
+            break;
         }
+        SServRoutineParam param;
         param.clientSock = clientFd;
         pid[i] = fork();
         if (pid[i] == -1)
