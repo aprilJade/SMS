@@ -11,10 +11,10 @@ int main(void)
 	SRoutineParam param;
 	param.collectPeriod = 3000;
 
-	pthread_create(&cpuTid, NULL, &cpuInfoRoutine, (void*)&param);
-	pthread_create(&memTid, NULL, &memInfoRoutine, (void*)&param);
-	pthread_create(&netTid, NULL, &netInfoRoutine, (void*)&param);
-	//pthread_create(&procTid, NULL, &procInfoRoutine, (void*)&param);
+	pthread_create(&cpuTid, NULL, &CpuInfoRoutine, (void*)&param);
+	pthread_create(&memTid, NULL, &MemInfoRoutine, (void*)&param);
+	pthread_create(&netTid, NULL, &NetInfoRoutine, (void*)&param);
+	//pthread_create(&procTid, NULL, &ProcInfoRoutine, (void*)&param);
 	pthread_join(cpuTid, NULL);
 	pthread_join(memTid, NULL);
 	pthread_join(netTid, NULL);

@@ -18,7 +18,7 @@
 #define HOST "127.0.0.1"
 #define PORT 4243
 
-void* cpuInfoRoutine(void* param)
+void* CpuInfoRoutine(void* param)
 {
     size_t sendPacketCount = 0;
     // TODO: handle exit condition
@@ -37,7 +37,7 @@ void* cpuInfoRoutine(void* param)
     }
 
     SInitialPacket initPacket;
-    generateInitialCpuPacket(&initPacket);
+    GenerateInitialCpuPacket(&initPacket);
     if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
     {
         // TODO: handle error
@@ -51,7 +51,7 @@ void* cpuInfoRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
         packet.collectTime = prevTime / 1000;
-        collectCpuInfo(toMs, buf, &packet);
+        CollectCpuInfo(toMs, buf, &packet);
 #if PRINT_CPU
         // TODO: Convert printf to log
         printf("<CPU information as OS resources>\n");
@@ -81,7 +81,7 @@ void* cpuInfoRoutine(void* param)
     }
 }
 
-void* memInfoRoutine(void* param)
+void* MemInfoRoutine(void* param)
 {
     size_t sendPacketCount = 0;
     ulong prevTime, postTime, elapseTime;
@@ -98,7 +98,7 @@ void* memInfoRoutine(void* param)
     }
 
     SInitialPacket initPacket;
-    generateInitialMemPacket(&initPacket);
+    GenerateInitialMemPacket(&initPacket);
     if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
     {
         // TODO: handle error
@@ -112,7 +112,7 @@ void* memInfoRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
         packet.collectTime = prevTime / 1000;
-        collectMemInfo(buf, &packet);
+        CollectMemInfo(buf, &packet);
 #if PRINT_MEM
         printf("<Memory information>\n");
         printf("Free memory: %ld kB\n", packet.memFree);
@@ -144,7 +144,7 @@ void* memInfoRoutine(void* param)
 }
 
 // TODO: handle multiple network interface
-void* netInfoRoutine(void* param)
+void* NetInfoRoutine(void* param)
 {
     size_t sendPacketCount = 0;
     ulong prevTime, postTime, elapseTime;
@@ -161,7 +161,7 @@ void* netInfoRoutine(void* param)
     }
 
     SInitialPacket initPacket;
-    generateInitialNetPacket(&initPacket);
+    GenerateInitialNetPacket(&initPacket);
     if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
     {
         // TODO: handle error
@@ -175,7 +175,7 @@ void* netInfoRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
         packet.collectTime = prevTime / 1000;
-        collectNetInfo(buf, &packet);
+        CollectNetInfo(buf, &packet);
 #if PRINT_NET
         printf("Collected net info packet\n\
                 network interface name: %s\n\
@@ -213,7 +213,7 @@ void* netInfoRoutine(void* param)
     }
 }
 
-void* procInfoRoutine(void* param)
+void* ProcInfoRoutine(void* param)
 {
     size_t sendPacketCount = 0;
     ulonglong prevTime, postTime, elapseTime;
@@ -230,7 +230,7 @@ void* procInfoRoutine(void* param)
     }
 
     SInitialPacket initPacket;
-    generateInitialProcPacket(&initPacket);
+    GenerateInitialProcPacket(&initPacket);
     if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
     {
         // TODO: handle error
@@ -263,7 +263,7 @@ void* procInfoRoutine(void* param)
                 prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
                 packet.collectTime = prevTime / 1000;
                 if (access(path, F_OK) == 0)
-                    collectProcInfo(path, buf, &packet);
+                    CollectProcInfo(path, buf, &packet);
                 else
                     continue;
                 if (write(sockFd, &packet, sizeof(SProcInfoPacket)) == -1)

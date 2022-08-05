@@ -8,15 +8,15 @@
 #include <stddef.h>
 #include "packets.h"
 
-void collectEachCpuInfo(long cpuCnt, long timeConversion, char* rdBuf);
-void collectCpuInfo(long timeConversion, char* rdBuf, SCpuInfoPacket* packet);
-void collectMemInfo(char* buf, SMemInfoPacket* packet);
-void collectNetInfo(char* buf, SNetInfoPacket* packet);
-void collectProcInfo(char* path, char *buf, SProcInfoPacket* packet);
+void CollectEachCpuInfo(long cpuCnt, long timeConversion, char* rdBuf);
+void CollectCpuInfo(long timeConversion, char* rdBuf, SCpuInfoPacket* packet);
+void CollectMemInfo(char* buf, SMemInfoPacket* packet);
+void CollectNetInfo(char* buf, SNetInfoPacket* packet);
+void CollectProcInfo(char* path, char *buf, SProcInfoPacket* packet);
 
-void generateInitialProcPacket(SInitialPacket* packet);
-void generateInitialNetPacket(SInitialPacket* packet);
-void generateInitialMemPacket(SInitialPacket* packet);
-void generateInitialCpuPacket(SInitialPacket* packet);
+void GenerateInitialProcPacket(SInitialPacket* packet);
+void GenerateInitialNetPacket(SInitialPacket* packet);
+void GenerateInitialMemPacket(SInitialPacket* packet);
+void GenerateInitialCpuPacket(SInitialPacket* packet);
 
 #endif

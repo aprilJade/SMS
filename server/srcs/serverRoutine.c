@@ -11,16 +11,7 @@
 #define DETAIL_PRINT_NET 1
 #define DETAIL_PRINT_PROC 0
 
-void initRoutineFuncTable(void **funcTable)
-{
-    // Add remain routines...
-    funcTable[CPU_INFO] = serverCpuInfoRoutine;
-    funcTable[MEM_INFO] = serverMemInfoRoutine;
-    funcTable[NET_INFO] = serverNetInfoRoutine;
-    funcTable[PROC_INFO] = serverProcInfoRoutine;
-}
-
-int serverCpuInfoRoutine(SServRoutineParam* param)
+int ServCpuInfoRoutine(SServRoutineParam* param)
 {
     assert(param != NULL);
     printf("Start serverCpuInfoRoutine\n");
@@ -60,7 +51,7 @@ int serverCpuInfoRoutine(SServRoutineParam* param)
     }
 }
 
-int serverMemInfoRoutine(SServRoutineParam* param)
+int ServMemInfoRoutine(SServRoutineParam* param)
 {
     assert(param != NULL);    
     printf("Start serverMemInfoRoutine\n");
@@ -104,7 +95,7 @@ int serverMemInfoRoutine(SServRoutineParam* param)
     }
 }
 
-int serverNetInfoRoutine(SServRoutineParam* param)
+int ServNetInfoRoutine(SServRoutineParam* param)
 {
     assert(param != NULL);    
     printf("Start serverNetInfoRoutine\n");
@@ -145,7 +136,7 @@ int serverNetInfoRoutine(SServRoutineParam* param)
     }
 }
 
-int serverProcInfoRoutine(SServRoutineParam* param)
+int ServProcInfoRoutine(SServRoutineParam* param)
 {
     assert(param != NULL);    
     printf("Start serverProcInfoRoutine\n");

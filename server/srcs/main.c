@@ -72,21 +72,21 @@ int main(void)
         case 'c':
             // TODO: Store below data
             // packet->logicalCoreCount;
-            routine = serverCpuInfoRoutine;
+            routine = ServCpuInfoRoutine;
             break;
         case 'm':
             // TODO: Store below data
             // packet->memTotal;
             // packet->swapTotal;
-            routine = serverMemInfoRoutine;
+            routine = ServMemInfoRoutine;
             break;
         case 'p':
-            routine = serverProcInfoRoutine;
+            routine = ServProcInfoRoutine;
             break;
         case 'n':
             // TODO: Store below data
             // packet->netIfName;
-            routine = serverNetInfoRoutine;
+            routine = ServProcInfoRoutine;
             break;
         default:
             printf("Undefined signature!: %c", packet->signature[3]);

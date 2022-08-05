@@ -16,9 +16,9 @@ enum eRoutine
     NET_INFO = 'n'
 };
 
-int serverCpuInfoRoutine(SServRoutineParam* param);
-int serverMemInfoRoutine(SServRoutineParam* param);
-int serverNetInfoRoutine(SServRoutineParam* param);
-int serverProcInfoRoutine(SServRoutineParam* param);
+int ServCpuInfoRoutine(SServRoutineParam* param);
+int ServMemInfoRoutine(SServRoutineParam* param);
+int ServNetInfoRoutine(SServRoutineParam* param);
+int ServProcInfoRoutine(SServRoutineParam* param);
 
 #endif

@@ -20,7 +20,7 @@
 // Logical CPU: get using sysconf()
 // Wall time: get using gettimeofday()
 
-void collectEachCpuInfo(long cpuCnt, long timeConversion, char* rdBuf)
+void CollectEachCpuInfo(long cpuCnt, long timeConversion, char* rdBuf)
 {
 	int	fd;
 	int readSize = 0;
@@ -59,7 +59,7 @@ void collectEachCpuInfo(long cpuCnt, long timeConversion, char* rdBuf)
 	close(fd);
 }
 
-void collectCpuInfo(long timeConversion, char* buf, SCpuInfoPacket* packet)
+void CollectCpuInfo(long timeConversion, char* buf, SCpuInfoPacket* packet)
 {
 	assert(packet != NULL);
     int	fd;
@@ -92,7 +92,7 @@ void collectCpuInfo(long timeConversion, char* buf, SCpuInfoPacket* packet)
 	close(fd);	
 }
 
-void collectMemInfo(char* buf, SMemInfoPacket* packet)
+void CollectMemInfo(char* buf, SMemInfoPacket* packet)
 {
 	int fd = open("/proc/meminfo", O_RDONLY);
 	int readSize;
@@ -138,7 +138,7 @@ void collectMemInfo(char* buf, SMemInfoPacket* packet)
 	close(fd);
 }
 
-void collectNetInfo(char* buf, SNetInfoPacket* packet)
+void CollectNetInfo(char* buf, SNetInfoPacket* packet)
 {
 	int fd = open("/proc/net/dev", O_RDONLY);
 	if (fd == -1)
@@ -177,7 +177,7 @@ void collectNetInfo(char* buf, SNetInfoPacket* packet)
 	packet->sendPackets = atol(buf);
 }
 
-void collectProcInfo(char* path, char *buf, SProcInfoPacket* packet)
+void CollectProcInfo(char* path, char *buf, SProcInfoPacket* packet)
 {
 	char fileName[32] = { 0, };
 	int fd = 0;
@@ -282,13 +282,13 @@ void collectProcInfo(char* path, char *buf, SProcInfoPacket* packet)
 	close(fd);
 }
 
-void generateInitialCpuPacket(SInitialPacket* packet)
+void GenerateInitialCpuPacket(SInitialPacket* packet)
 {
 	packet->logicalCoreCount = sysconf(_SC_NPROCESSORS_ONLN);
 	memcpy(&packet->signature, SIGNATURE_CPU, 4);
 }
 
-void generateInitialMemPacket(SInitialPacket* packet)
+void GenerateInitialMemPacket(SInitialPacket* packet)
 {
 	memcpy(&packet->signature, SIGNATURE_MEM, 4);
 	char buf[BUFFER_SIZE + 1] = { 0, };
@@ -319,7 +319,7 @@ void generateInitialMemPacket(SInitialPacket* packet)
 	close(fd);
 }
 
-void generateInitialNetPacket(SInitialPacket* packet)
+void GenerateInitialNetPacket(SInitialPacket* packet)
 {
 	memcpy(&packet->signature, SIGNATURE_NET, 4);
 	char buf[BUFFER_SIZE + 1] = { 0, };
@@ -348,7 +348,7 @@ void generateInitialNetPacket(SInitialPacket* packet)
 		packet->netIfName[i] = *pbuf++;
 }
 
-void generateInitialProcPacket(SInitialPacket* packet)
+void GenerateInitialProcPacket(SInitialPacket* packet)
 {
 	memcpy(&packet->signature, SIGNATURE_PROC, 4);
 }

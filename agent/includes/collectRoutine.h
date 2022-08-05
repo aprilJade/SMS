@@ -8,10 +8,10 @@ typedef struct SRoutineParam
     uint collectPeriod;
 } SRoutineParam;
 
-void initRoutineParam(SRoutineParam* target);
-void* cpuInfoRoutine(void* param);
-void* memInfoRoutine(void* param);
-void* netInfoRoutine(void* param);
-void* procInfoRoutine(void* param);
+void InitRoutineParam(SRoutineParam* target);
+void* CpuInfoRoutine(void* param);
+void* MemInfoRoutine(void* param);
+void* NetInfoRoutine(void* param);
+void* ProcInfoRoutine(void* param);
 
 #endif
