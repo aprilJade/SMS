@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #define HOST "127.0.0.1"
 #define PORT 4243
-#define CONNECTION_COUNT 3
+#define CONNECTION_COUNT 4
 
 int main(void)
 {
@@ -69,7 +69,7 @@ int main(void)
         }
         switch (packet->signature[3])
         {
-        case 'c':
+        case 'C':
             // TODO: Store below data
             // packet->logicalCoreCount;
             routine = ServCpuInfoRoutine;
@@ -86,7 +86,7 @@ int main(void)
         case 'n':
             // TODO: Store below data
             // packet->netIfName;
-            routine = ServProcInfoRoutine;
+            routine = ServNetInfoRoutine;
             break;
         default:
             printf("Undefined signature!: %c", packet->signature[3]);

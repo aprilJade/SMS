@@ -8,14 +8,6 @@ typedef struct SServRoutineParam
     int serverSock;
 } SServRoutineParam;
 
-enum eRoutine
-{
-    CPU_INFO = 'c',
-    MEM_INFO = 'm',
-    PROC_INFO = 'p',
-    NET_INFO = 'n'
-};
-
 int ServCpuInfoRoutine(SServRoutineParam* param);
 int ServMemInfoRoutine(SServRoutineParam* param);
 int ServNetInfoRoutine(SServRoutineParam* param);
