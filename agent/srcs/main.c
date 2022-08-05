@@ -1,10 +1,9 @@
 #include <unistd.h>
 #include <pthread.h>
-#include "collector.h"
-#include "collectRoutine.h"
 #include <stdio.h>
 #include <getopt.h>
 #include <stdlib.h>
+#include "collectRoutine.h"
 
 #define MIN_SLEEP_MS 1000
 

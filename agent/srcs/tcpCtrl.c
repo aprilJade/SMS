@@ -1,10 +1,10 @@
-#include "tcpCtrl.h"
 #include <sys/socket.h>
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <assert.h>
+#include "tcpCtrl.h"
 
 int ConnectToServer(char *host, short port)
 {

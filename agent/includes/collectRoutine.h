@@ -1,10 +1,11 @@
 #ifndef COLLECT_ROUTINE_H
 #define COLLECT_ROUTINE_H
+
 #include "packets.h"
 
 typedef struct SRoutineParam
 {
-    ulonglong agentStartTime;
+    //ulonglong agentStartTime;
     uint collectPeriod;
 } SRoutineParam;
 

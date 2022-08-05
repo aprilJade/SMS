@@ -1,7 +1,6 @@
 #ifndef PACKETS_H
 #define PACKETS_H
 
-typedef unsigned long long ulonglong;
 typedef unsigned long ulong;
 typedef unsigned int uint;
 typedef unsigned short ushort;
@@ -29,24 +28,25 @@ typedef struct SCpuInfoPacket
 typedef struct SMemInfoPacket
 {
     ulong collectTime;
-    ulong memFree;           // %lu
-    ulong memAvail;          // %lu since Linux 3.14
-    ulong memUsed;          // %lu 
-    ulong swapFree;         // %lu 
+    ulong memFree;
+    ulong memAvail;
+    ulong memUsed;
+    ulong swapFree;
+    uint collectPeriod;
 } SMemInfoPacket;   
 
 // #pragma pack(push, 1)
 typedef struct SProcInfoPacket
 {
     ulong collectTime;
-    uint pid;               // %d
-    uint ppid;              // %d
-    ulong utime;             // %lu  divided by sysconf(_SC_CLK_TCK) => seconds
-    ulong stime;             // %lu  divided by sysconf(_SC_CLK_TCK) => seconds
-    uchar userName[32];     // %s   max 32
-    uchar procName[16];     // %s   max 16
-    uchar state;            // %c
-    ushort cmdlineLen;   
+    uint pid;
+    uint ppid;
+    ulong utime;
+    ulong stime;
+    uchar userName[32];
+    uchar procName[16];
+    uchar state;
+    ushort cmdlineLen;
 } SProcInfoPacket;
 // #pragma pack(pop)
 

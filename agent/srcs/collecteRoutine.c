@@ -1,11 +1,11 @@
-#include "collectRoutine.h"
-#include "collector.h"
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/time.h>
 #include <string.h>
 #include <stdio.h>
 #include <dirent.h>
+#include "collectRoutine.h"
+#include "collector.h"
 #include "tcpCtrl.h"
 
 #define NO_SLEEP 0
@@ -37,7 +37,7 @@ void* CpuInfoRoutine(void* param)
     }
 
     SInitialPacket initPacket;
-    GenerateInitialCpuPacket(&initPacket);
+    GenerateInitialCpuPacket(&initPacket, pParam);
     if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
     {
         // TODO: handle error
@@ -98,7 +98,7 @@ void* MemInfoRoutine(void* param)
     }
 
     SInitialPacket initPacket;
-    GenerateInitialMemPacket(&initPacket);
+    GenerateInitialMemPacket(&initPacket, pParam);
     if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
     {
         // TODO: handle error
@@ -161,7 +161,7 @@ void* NetInfoRoutine(void* param)
     }
 
     SInitialPacket initPacket;
-    GenerateInitialNetPacket(&initPacket);
+    GenerateInitialNetPacket(&initPacket, pParam);
     if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
     {
         // TODO: handle error
@@ -216,7 +216,7 @@ void* NetInfoRoutine(void* param)
 void* ProcInfoRoutine(void* param)
 {
     size_t sendPacketCount = 0;
-    ulonglong prevTime, postTime, elapseTime;
+    ulong prevTime, postTime, elapseTime;
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
     SProcInfoPacket packet;
@@ -230,7 +230,7 @@ void* ProcInfoRoutine(void* param)
     }
 
     SInitialPacket initPacket;
-    GenerateInitialProcPacket(&initPacket);
+    GenerateInitialProcPacket(&initPacket, pParam);
     if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
     {
         // TODO: handle error

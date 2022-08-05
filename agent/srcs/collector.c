@@ -1,12 +1,13 @@
 #include <stdlib.h>
-#include "collector.h"
 #include <fcntl.h>
 #include <unistd.h>
 #include <pwd.h>
 #include <string.h>
 #include <stdio.h>
-#include "packets.h"
 #include <assert.h>
+#include "collector.h"
+#include "packets.h"
+#include "collectRoutine.h"
 
 // TODO: Calculate CPU usage about OS....
 // Formula: Cpu usage = (CPU running time) / (Logical CPU core count) / (Wall time)
@@ -282,13 +283,14 @@ void CollectProcInfo(char* path, char *buf, SProcInfoPacket* packet)
 	close(fd);
 }
 
-void GenerateInitialCpuPacket(SInitialPacket* packet)
+void GenerateInitialCpuPacket(SInitialPacket* packet, SRoutineParam* param)
 {
 	packet->logicalCoreCount = sysconf(_SC_NPROCESSORS_ONLN);
 	memcpy(&packet->signature, SIGNATURE_CPU, 4);
+	packet->collectPeriod = param->collectPeriod;
 }
 
-void GenerateInitialMemPacket(SInitialPacket* packet)
+void GenerateInitialMemPacket(SInitialPacket* packet, SRoutineParam* param)
 {
 	memcpy(&packet->signature, SIGNATURE_MEM, 4);
 	char buf[BUFFER_SIZE + 1] = { 0, };
@@ -317,9 +319,10 @@ void GenerateInitialMemPacket(SInitialPacket* packet)
 	while (*pbuf++ != ' ');
 	packet->swapTotal = atol(buf);
 	close(fd);
+	packet->collectPeriod = param->collectPeriod;
 }
 
-void GenerateInitialNetPacket(SInitialPacket* packet)
+void GenerateInitialNetPacket(SInitialPacket* packet, SRoutineParam* param)
 {
 	memcpy(&packet->signature, SIGNATURE_NET, 4);
 	char buf[BUFFER_SIZE + 1] = { 0, };
@@ -346,9 +349,11 @@ void GenerateInitialNetPacket(SInitialPacket* packet)
 	memset(packet->netIfName, 0, 16);
 	for (i = 0; *pbuf != ':' && i < 15; i++)
 		packet->netIfName[i] = *pbuf++;
+	packet->collectPeriod = param->collectPeriod;
 }
 
-void GenerateInitialProcPacket(SInitialPacket* packet)
+void GenerateInitialProcPacket(SInitialPacket* packet, SRoutineParam* param)
 {
 	memcpy(&packet->signature, SIGNATURE_PROC, 4);
+	packet->collectPeriod = param->collectPeriod;
 }
