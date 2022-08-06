@@ -9,11 +9,6 @@ typedef struct SServRoutineParam
     int logFd;
 } SServRoutineParam;
 
-//int ServCpuInfoRoutine(SServRoutineParam* param);
-//int ServMemInfoRoutine(SServRoutineParam* param);
-//int ServNetInfoRoutine(SServRoutineParam* param);
-//int ServProcInfoRoutine(SServRoutineParam* param);
-
 void* ServCpuInfoRoutine(void* param);
 void* ServMemInfoRoutine(void* param);
 void* ServNetInfoRoutine(void* param);

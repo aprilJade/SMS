@@ -12,7 +12,7 @@
 #include <fcntl.h>
 #define HOST "127.0.0.1"
 #define PORT 4244
-#define CONNECTION_COUNT 1
+#define CONNECTION_COUNT 4
 
 int OpenSocket(char* host, short port)
 {

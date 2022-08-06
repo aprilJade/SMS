@@ -4,7 +4,8 @@
 #include <getopt.h>
 #include <stdlib.h>
 #include <signal.h>
-#include "collectRoutine.h"
+#include <sys/time.h>
+#include "routines.h"
 #include "collector.h"
 
 void PrintHelp()

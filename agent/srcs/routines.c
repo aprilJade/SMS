@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <dirent.h>
-#include "collectRoutine.h"
+#include "routines.h"
 #include "collector.h"
 #include "tcpCtrl.h"
 
@@ -36,73 +36,7 @@ SRoutineParam* GenRoutineParam(int collectPeriod, int collectorID)
     ret->collectorID = collectorID;
     return ret;
 }
-/*
-void* CpuInfoRoutine(void* param)
-{
-    int i = 0;
-    ulong prevTime, postTime, elapseTime;
-	long toMs = 1000 / sysconf(_SC_CLK_TCK);
-    char buf[BUFFER_SIZE + 1] = { 0, };
-    struct timeval timeVal;
-    SCpuInfoPacket packet;
-    memset(&packet, 0, sizeof(SCpuInfoPacket));
-    SRoutineParam* pParam = (SRoutineParam*)param;
-    int ret;
 
-    // TODO: Change to Log
-    printf("Collect CPU information every %d ms.\n", pParam->collectPeriod);
-
-    int sockFd = ConnectToServer(HOST, PORT);
-    if (sockFd == -1)
-    {
-        // TODO: handle error
-        printf("Fail to connect to server\n");
-        return 0;
-    }
-
-    SInitialPacket initPacket;
-    GenerateInitialCpuPacket(&initPacket, pParam);
-    while ((ret = write(sockFd, &initPacket, sizeof(SInitialPacket))) == -1)
-    {
-        close(sockFd);
-        fprintf(stderr, "Server die\n");
-        i = 0;
-        do 
-        {
-            fprintf(stderr, "try to reconnect...(%d)\n", i++);
-            sleep(2);
-        } while ((sockFd = ConnectToServer(HOST, PORT)) == -1);
-        printf("Reconnected to server! Try to resume CPU information collecting.\n");
-    }
-
-    while (1)
-    {
-        gettimeofday(&timeVal, NULL);
-        prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
-        packet.collectTime = prevTime / 1000;
-        CollectCpuInfo(toMs, buf, &packet);
-        if (write(sockFd, &packet, sizeof(SCpuInfoPacket)) == -1)
-        {
-            close(sockFd);
-            fprintf(stderr, "Server die\n");
-            i = 0;
-            do 
-            {
-                fprintf(stderr, "try to reconnect...(%d)\n", i++);
-                sleep(2);
-            } while ((sockFd = ConnectToServer(HOST, PORT)) == -1);
-            printf("Reconnected to server! Try to resume CPU information collecting.\n");
-            write(sockFd, &initPacket, sizeof(SInitialPacket));
-            continue;
-        }
-        
-        gettimeofday(&timeVal, NULL);
-        postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
-        elapseTime = postTime - prevTime;
-        usleep(pParam->collectPeriod * 1000 - elapseTime);
-    }
-}
-*/
 void* CpuInfoRoutine(void* param)
 {
     ulong prevTime, postTime, elapseTime;
@@ -317,7 +251,7 @@ void* ProcInfoRoutine(void* param)
                 packet->collectTime = prevTime / 1000;
 
                 if (access(path, F_OK) == 0)
-                    CollectProcInfo(path, buf, &packet);
+                    CollectProcInfo(path, buf, packet);
                 else
                     continue;
                 
@@ -368,23 +302,29 @@ void* SendRoutine(void* param)
     void (*GenInitPacket)(SInitialPacket*, SRoutineParam*);
     Queue* queue = pParam->queue;
     int packetSize = 0;
+    char msgBuf[256];
+    char* senderName;
     switch (pParam->collectorID)
     {
         case CPU:
             GenInitPacket = GenerateInitialCpuPacket;
             packetSize = sizeof(SCpuInfoPacket);
+            senderName = "CPU Sender";
             break;
         case MEMORY:
             GenInitPacket = GenerateInitialMemPacket;
             packetSize = sizeof(SMemInfoPacket);
+            senderName = "Memory Sender";
             break;
         case NETWORK:
             GenInitPacket = GenerateInitialNetPacket;
             packetSize = sizeof(SNetInfoPacket);
+            senderName = "Network Sender";
             break;
         case PROCESS:
             GenInitPacket = GenerateInitialProcPacket;
             packetSize = sizeof(SProcInfoPacket);
+            senderName = "Process Sender";
             break;
     }
 
@@ -393,24 +333,29 @@ void* SendRoutine(void* param)
     int sockFd, reconnectTryCount = 0;
     while(1)
     {
-        pritnf("CPU sender: Try to connect to server.\n");
+        sprintf(msgBuf, "%s:\tTry to connect to server.\n", senderName);
+        puts(msgBuf);
         while ((sockFd = ConnectToServer(HOST, PORT)) == -1)
         {
-            fprintf(stderr, "CPU sender: Fail to connect to server. try to reconnect...(%d)\n", reconnectTryCount++);
+            sprintf(msgBuf, "%s:\tFail to connect to server. try to reconnect...(%d)\n", senderName, reconnectTryCount++);
+            fputs(msgBuf, stderr);
             sleep(RECONNECT_PERIOD);
             continue;
         }
 
-        printf("CPU sender: success to connect to server.\n");
+        printf("CPU sender:\tsuccess to connect to server.\n");
 
         GenInitPacket(&initPacket, pParam);
         if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
         {
             close(sockFd);
-            fprintf(stderr, "CPU sender: Server has no reponse. Stop collecting CPU information.\n");
+            sprintf(msgBuf, "%s:\tServer has no reponse. Stop collecting CPU information.\n", senderName);
+            fputs(msgBuf, stderr);
             continue;
         }
-        printf("CPU sender: Start send information every %d ms.\n", pParam->collectPeriod);
+
+        sprintf(msgBuf, "%s:\tStart send information every %d ms.\n", senderName, pParam->collectPeriod);
+        puts(msgBuf);
 
         while (1)
         {
@@ -430,7 +375,8 @@ void* SendRoutine(void* param)
             if (write(sockFd, packet, packetSize) == -1)
             {
                 close(sockFd);
-                fprintf(stderr, "CPU sender: Server has no reponse. Stop sending CPU information.\n");
+                sprintf(msgBuf, "%s:\tServer has no reponse. Stop sending CPU information.\n", senderName);
+                fputs(msgBuf, stderr);
                 break;
             }
             // TODO: Logging
