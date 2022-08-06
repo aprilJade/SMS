@@ -173,7 +173,7 @@ void* MemInfoRoutine(void* param)
     {
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
-        
+
         packet = (SMemInfoPacket*)malloc(sizeof(SMemInfoPacket));
         if (packet == NULL)
         {
@@ -213,40 +213,33 @@ void* MemInfoRoutine(void* param)
 // TODO: handle multiple network interface
 void* NetInfoRoutine(void* param)
 {
-    size_t sendPacketCount = 0;
     ulong prevTime, postTime, elapseTime;
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
-    SNetInfoPacket packet;
+    SNetInfoPacket* packet;
     SRoutineParam* pParam = (SRoutineParam*)param;
+    Queue* queue = pParam->queue;
 
     // TODO: Change to Log
-    printf("Collect network information every %d ms.\n", pParam->collectPeriod);
+    printf("Network Collector: Start to collect network information every %d ms.\n", pParam->collectPeriod);
 
-    int sockFd = ConnectToServer(HOST, PORT);
-    if (sockFd == -1)
-    {
-        // TODO: handle error
-        printf("Fail to connect to server\n");
-        return 0;
-    }
-
-    SInitialPacket initPacket;
-    GenerateInitialNetPacket(&initPacket, pParam);
-    if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
-    {
-        // TODO: handle error
-        perror("agent");
-        return 0;
-    }
-
-    memset(&packet, 0, sizeof(SNetInfoPacket));
     while(1)
     {
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
-        packet.collectTime = prevTime / 1000;
+
+        packet = (SNetInfoPacket*)malloc(sizeof(SNetInfoPacket));
+        if (packet == NULL)
+        {
+            // TODO: handling malloc fail
+            usleep(5000);
+            continue;
+        }
+        memset(packet, 0, sizeof(SMemInfoPacket));
+        packet->collectTime = prevTime / 1000;
+
         CollectNetInfo(buf, &packet);
+
 #if PRINT_NET
         printf("Collected net info packet\n\
                 network interface name: %s\n\
@@ -262,24 +255,18 @@ void* NetInfoRoutine(void* param)
                 packet.sendBytes,
                 packet.sendPackets);
 #endif
-        if (write(sockFd, &packet, sizeof(SNetInfoPacket)) == -1)
-        {
-            // TODO: handle error
-            perror("agent");
-            return 0;
-        }
-        sendPacketCount++;
-#if PRINT_NET
-        printf("Send network info packet.\n");
-#endif
+
+        pthread_mutex_lock(&queue->lock);
+        // TODO: Handling Queue is full...more graceful
+        while (IsFull(queue))
+            usleep(500);
+        Push(packet, queue);
+        pthread_mutex_unlock(&queue->lock);
+
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
-#if !NO_SLEEP
         usleep(pParam->collectPeriod * 1000 - elapseTime);
-#endif
-        // TODO: Check TCP connection
-        // If disconnected, reconnect!
     }
 }
 
