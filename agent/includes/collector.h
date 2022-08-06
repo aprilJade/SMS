@@ -11,6 +11,14 @@
 #include "packets.h"
 #include "collectRoutine.h"
 
+enum eCollectorID
+{
+    CPU = 'C',
+    MEMORY = 'm',
+    NETWORK = 'n',
+    PROCESS = 'p'
+};
+
 void CollectEachCpuInfo(long cpuCnt, long timeConversion, char* rdBuf);
 void CollectCpuInfo(long timeConversion, char* rdBuf, SCpuInfoPacket* packet);
 void CollectMemInfo(char* buf, SMemInfoPacket* packet);

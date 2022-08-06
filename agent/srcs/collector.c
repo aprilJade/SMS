@@ -287,6 +287,7 @@ void GenerateInitialCpuPacket(SInitialPacket* packet, SRoutineParam* param)
 	packet->logicalCoreCount = sysconf(_SC_NPROCESSORS_ONLN);
 	memcpy(&packet->signature, SIGNATURE_CPU, 4);
 	packet->collectPeriod = param->collectPeriod;
+	packet->collectorCreateTime = param->collectorCreateTime;
 }
 
 void GenerateInitialMemPacket(SInitialPacket* packet, SRoutineParam* param)
@@ -319,6 +320,7 @@ void GenerateInitialMemPacket(SInitialPacket* packet, SRoutineParam* param)
 	packet->swapTotal = atol(buf);
 	close(fd);
 	packet->collectPeriod = param->collectPeriod;
+	packet->collectorCreateTime = param->collectorCreateTime;
 }
 
 void GenerateInitialNetPacket(SInitialPacket* packet, SRoutineParam* param)
@@ -349,10 +351,12 @@ void GenerateInitialNetPacket(SInitialPacket* packet, SRoutineParam* param)
 	for (i = 0; *pbuf != ':' && i < 15; i++)
 		packet->netIfName[i] = *pbuf++;
 	packet->collectPeriod = param->collectPeriod;
+	packet->collectorCreateTime = param->collectorCreateTime;
 }
 
 void GenerateInitialProcPacket(SInitialPacket* packet, SRoutineParam* param)
 {
 	memcpy(&packet->signature, SIGNATURE_PROC, 4);
 	packet->collectPeriod = param->collectPeriod;
+	packet->collectorCreateTime = param->collectorCreateTime;
 }

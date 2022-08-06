@@ -8,8 +8,8 @@
 #include "collector.h"
 #include "tcpCtrl.h"
 
-#define RECONNECT_PERIOD 3  // seconds
-#define RECONNECT_MAX_TRY 5
+#define RECONNECT_PERIOD 3    // seconds
+#define RECONNECT_MAX_TRY 10
 #define NO_SLEEP 0
 #define PRINT_CPU 0
 #define PRINT_MEM 0
@@ -19,7 +19,7 @@
 #define HOST "127.0.0.1"
 #define PORT 4244
 
-SRoutineParam* GenRoutineParam(int collectPeriod)
+SRoutineParam* GenRoutineParam(int collectPeriod, int collectorID)
 {
     SRoutineParam* ret = (SRoutineParam*)malloc(sizeof(SRoutineParam));
     if (collectPeriod < MIN_SLEEP_MS)
@@ -31,6 +31,8 @@ SRoutineParam* GenRoutineParam(int collectPeriod)
     }
     else
         ret->collectPeriod = collectPeriod;
+    ret->queue = NewQueue();
+    ret->collectorID = collectorID;
     return ret;
 }
 /*
@@ -78,16 +80,6 @@ void* CpuInfoRoutine(void* param)
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
         packet.collectTime = prevTime / 1000;
         CollectCpuInfo(toMs, buf, &packet);
-#if PRINT_CPU
-        // TODO: Convert printf to log
-        printf("<CPU information as OS resources>\n");
-        printf("CPU running time (user mode): %ld ms\n", packet.usrCpuRunTime);
-        printf("CPU running time (system mode): %ld ms\n", packet.sysCpuRunTime);
-        printf("CPU idle time: %ld ms\n", packet.idleTime);
-        printf("CPU I/O wait time: %ld ms\n", packet.waitTime);
-        printf("Collect starting time: %ld ms\n", packet.collectTime);
-        printf("Send cpu info packet.\n");
-#endif       
         if (write(sockFd, &packet, sizeof(SCpuInfoPacket)) == -1)
         {
             close(sockFd);
@@ -407,5 +399,83 @@ void* ProcInfoRoutine(void* param)
 #endif
         // TODO: Check TCP connection
         // If disconnected, reconnect!
+    }
+}
+
+void* SendRoutine(void* param)
+{
+    SRoutineParam* pParam = (SRoutineParam*)param;
+    void (*GenInitPacket)(SInitialPacket*, SRoutineParam*);
+    Queue* queue = pParam->queue;
+    int packetSize = 0;
+    switch (pParam->collectorID)
+    {
+        case CPU:
+            GenInitPacket = GenerateInitialCpuPacket;
+            packetSize = sizeof(SCpuInfoPacket);
+            break;
+        case MEMORY:
+            GenInitPacket = GenerateInitialMemPacket;
+            packetSize = sizeof(SMemInfoPacket);
+            break;
+        case NETWORK:
+            GenInitPacket = GenerateInitialNetPacket;
+            packetSize = sizeof(SNetInfoPacket);
+            break;
+        case PROCESS:
+            GenInitPacket = GenerateInitialProcPacket;
+            packetSize = sizeof(SProcInfoPacket);
+            break;
+    }
+
+    SInitialPacket initPacket;
+    void* packet = NULL;
+    int sockFd, reconnectTryCount = 0;
+    while(1)
+    {
+        pritnf("CPU sender: Try to connect to server.\n");
+        while ((sockFd = ConnectToServer(HOST, PORT)) == -1)
+        {
+            fprintf(stderr, "CPU sender: Fail to connect to server. try to reconnect...(%d)\n", reconnectTryCount++);
+            sleep(RECONNECT_PERIOD);
+            continue;
+        }
+
+        printf("CPU sender: success to connect to server.\n");
+
+        GenInitPacket(&initPacket, pParam);
+        if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
+        {
+            close(sockFd);
+            fprintf(stderr, "CPU sender: Server has no reponse. Stop collecting CPU information.\n");
+            continue;
+        }
+        printf("CPU sender: Start send information every %d ms.\n", pParam->collectPeriod);
+
+        while (1)
+        {
+            if (packet == NULL)
+            {
+                pthread_mutex_lock(&queue->lock);
+                packet = Pop(queue);
+                if (packet == NULL)
+                {
+                    pthread_mutex_unlock(&queue->lock);
+                    usleep(pParam->collectPeriod * 800);
+                    continue;
+                }
+                pthread_mutex_unlock(&queue->lock);
+            }
+
+            if (write(sockFd, packet, packetSize) == -1)
+            {
+                close(sockFd);
+                fprintf(stderr, "CPU sender: Server has no reponse. Stop sending CPU information.\n");
+                break;
+            }
+            // TODO: Logging
+            free(packet);
+            packet = NULL;
+        }
     }
 }

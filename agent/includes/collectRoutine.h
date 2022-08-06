@@ -4,23 +4,22 @@
 #define ROUTINE_COUNT 1
 
 #include "packets.h"
+#include <Queue.h>
 
 typedef struct SRoutineParam
 {
-    //ulonglong agentStartTime;
+    ulong collectorCreateTime;
+    uint collectorID;
     uint collectPeriod;
+    ConcurrentQueue* queue;
 } SRoutineParam;
 
-SRoutineParam* GenRoutineParam(int collectPeriod);
+SRoutineParam* GenRoutineParam(int collectPeriod, int collectorID);
 void* CpuInfoRoutine(void* param);
 void* MemInfoRoutine(void* param);
 void* NetInfoRoutine(void* param);
 void* ProcInfoRoutine(void* param);
 
-void* CpuInfoSendRoutine(void* param);
-void* MemInfoSendRoutine(void* param);
-void* NetInfoSendRoutine(void* param);
-void* ProcInfoSendRoutine(void* param);
-
+void* SendRoutine(void* param);
 
 #endif

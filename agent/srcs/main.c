@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include "collectRoutine.h"
-
+#include "collector.h"
 
 void PrintHelp()
 {
@@ -41,7 +41,6 @@ int main(int argc, char** argv)
 	pthread_t senderTids[ROUTINE_COUNT] = { 0, };
 	SRoutineParam* param[ROUTINE_COUNT] = { 0, };
 	void* (*collector[ROUTINE_COUNT + 1])(void*) = { 0, };
-	void* (*sender[ROUTINE_COUNT + 1])(void*) = { 0, };
 	
 	while ((c = getopt_long(argc, argv, "C:m:n:p:h", longOptions, 0)) > 0)
 	{
@@ -59,23 +58,19 @@ int main(int argc, char** argv)
 		{
 		case 'C':
 			collector[i] = CpuInfoRoutine;
-			sender[i] = CpuInfoSendRoutine;
-			param[i] = GenRoutineParam(atoi(optarg));
+			param[i] = GenRoutineParam(atoi(optarg), CPU);
 			break;
 		case 'm':
 			collector[i] = MemInfoRoutine;
-			sender[i] = MemInfoSendRoutine;
-			param[i] = GenRoutineParam(atoi(optarg));
+			param[i] = GenRoutineParam(atoi(optarg), MEMORY);
 			break;
 		case 'n':
 			collector[i] = NetInfoRoutine;
-			sender[i] = NetInfoSendRoutine;
-			param[i] = GenRoutineParam(atoi(optarg));
+			param[i] = GenRoutineParam(atoi(optarg), NETWORK);
 			break;
 		case 'p':
 			collector[i] = ProcInfoRoutine;
-			sender[i] = ProcInfoSendRoutine;
-			param[i] = GenRoutineParam(atoi(optarg));
+			param[i] = GenRoutineParam(atoi(optarg), PROCESS);
 			break;
 		case 'h':
 			PrintHelp();
@@ -87,11 +82,14 @@ int main(int argc, char** argv)
 	}
 	
 	signal(SIGPIPE, SIG_IGN);
-	
+    struct timeval timeVal;
+	ulong collectorCreateTime;
 	for (i = 0; collector[i]; i++)
 	{
+		gettimeofday(&timeVal, NULL);
+		param[i]->collectorCreateTime = timeVal.tv_sec * 1000 + timeVal.tv_usec / 1000;
 		pthread_create(&collectorTids[i], NULL, collector[i], param[i]);
-		pthread_create(&senderTids[i], NULL, sender[i], param[i]);
+		pthread_create(&senderTids[i], NULL, SendRoutine, param[i]);
 	}
 
 	for (i = 0; collector[i]; i++)

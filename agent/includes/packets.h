@@ -14,6 +14,7 @@ typedef struct SInitialPacket
     ulong memTotal;
     ulong swapTotal;
     uchar netIfName[16];
+    ulong collectorCreateTime; 
 } SInitialPacket;
 
 typedef struct SCpuInfoPacket
