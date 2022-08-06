@@ -15,34 +15,34 @@
 #define PRINT_PROC 0
 
 #define HOST "127.0.0.1"
-#define PORT 4243
+#define PORT 4244
 
 SRoutineParam* GenRoutineParam(int collectPeriod)
 {
     SRoutineParam* ret = (SRoutineParam*)malloc(sizeof(SRoutineParam));
-    if (ret->collectPeriod < MIN_SLEEP_MS)
+    if (collectPeriod < MIN_SLEEP_MS)
     {
         printf("Minimum collect period is 500 ms\n\
                 But you input %d ms. This is not allowed.\n\
-                Set collect period to 500 ms\n", ret->collectPeriod);
+                Set collect period to 500 ms\n", collectPeriod);
         ret->collectPeriod = MIN_SLEEP_MS;
     }
     else
-    {
         ret->collectPeriod = collectPeriod;
-    }
     return ret;
 }
 
 void* CpuInfoRoutine(void* param)
 {
-    size_t sendPacketCount = 0;
+    int i = 0;
     ulong prevTime, postTime, elapseTime;
 	long toMs = 1000 / sysconf(_SC_CLK_TCK);
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
     SCpuInfoPacket packet;
+    memset(&packet, 0, sizeof(SCpuInfoPacket));
     SRoutineParam* pParam = (SRoutineParam*)param;
+    int ret;
 
     // TODO: Change to Log
     printf("Collect CPU information every %d ms.\n", pParam->collectPeriod);
@@ -57,14 +57,19 @@ void* CpuInfoRoutine(void* param)
 
     SInitialPacket initPacket;
     GenerateInitialCpuPacket(&initPacket, pParam);
-    if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
+    while ((ret = write(sockFd, &initPacket, sizeof(SInitialPacket))) == -1)
     {
-        // TODO: handle error
-        perror("agent");
-        return 0;
+        close(sockFd);
+        fprintf(stderr, "Server die\n");
+        i = 0;
+        do 
+        {
+            fprintf(stderr, "try to reconnect...(%d)\n", i++);
+            sleep(2);
+        } while ((sockFd = ConnectToServer(HOST, PORT)) == -1);
+        printf("Reconnected to server! Try to resume CPU information collecting.\n");
     }
 
-    memset(&packet, 0, sizeof(SCpuInfoPacket));
     while (1)
     {
         gettimeofday(&timeVal, NULL);
@@ -80,22 +85,26 @@ void* CpuInfoRoutine(void* param)
         printf("CPU I/O wait time: %ld ms\n", packet.waitTime);
         printf("Collect starting time: %ld ms\n", packet.collectTime);
         printf("Send cpu info packet.\n");
-#endif
+#endif       
         if (write(sockFd, &packet, sizeof(SCpuInfoPacket)) == -1)
         {
-            // TODO: handle error
-            perror("agent");
-            return 0;
+            close(sockFd);
+            fprintf(stderr, "Server die\n");
+            i = 0;
+            do 
+            {
+                fprintf(stderr, "try to reconnect...(%d)\n", i++);
+                sleep(2);
+            } while ((sockFd = ConnectToServer(HOST, PORT)) == -1);
+            printf("Reconnected to server! Try to resume CPU information collecting.\n");
+            write(sockFd, &initPacket, sizeof(SInitialPacket));
+            continue;
         }
-        sendPacketCount++;
+        
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
-#if !NO_SLEEP
         usleep(pParam->collectPeriod * 1000 - elapseTime);
-#endif
-        // TODO: Check TCP connection
-        // If disconnected, reconnect!
     }
 }
 

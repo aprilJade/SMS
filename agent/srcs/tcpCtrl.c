@@ -21,15 +21,6 @@ int ConnectToServer(char *host, short port)
     sockaddr.sin_addr.s_addr = inet_addr(host);
     sockaddr.sin_port = htons(port);
     if (connect(fd, (struct sockaddr *)&sockaddr, sizeof(sockaddr)) == -1)
-    {
-        // TODO: handle error
-        perror("agent");
         return -1;
-    }
-    else
-    {
-        // TODO: convert printf to log
-        printf("Success connecting to server\n");
-    }
     return fd;
 }

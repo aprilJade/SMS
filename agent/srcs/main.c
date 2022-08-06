@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <getopt.h>
 #include <stdlib.h>
+#include <signal.h>
 #include "collectRoutine.h"
 
 
@@ -36,7 +37,6 @@ int main(int argc, char** argv)
 
 	char c;
 	int i = 0;
-	int tmp;
 	pthread_t tids[ROUTINE_COUNT] = { 0, };
 	SRoutineParam* param[ROUTINE_COUNT] = { 0, };
 	void* (*routine[ROUTINE_COUNT + 1])(void*) = { 0, };
@@ -48,7 +48,7 @@ int main(int argc, char** argv)
 			PrintUsage();
 			exit(1);
 		}
-		if ((tmp = atoi(optarg)) == 0)
+		if (optarg == NULL)
 		{
 			PrintHelp();
 			exit(1);
@@ -57,19 +57,19 @@ int main(int argc, char** argv)
 		{
 		case 'C':
 			routine[i] = CpuInfoRoutine;
-			param[i] = GenRoutineParam(tmp);
+			param[i] = GenRoutineParam(atoi(optarg));
 			break;
 		case 'm':
 			routine[i] = MemInfoRoutine;
-			param[i] = GenRoutineParam(tmp);
+			param[i] = GenRoutineParam(atoi(optarg));
 			break;
 		case 'n':
 			routine[i] = NetInfoRoutine;
-			param[i] = GenRoutineParam(tmp);
+			param[i] = GenRoutineParam(atoi(optarg));
 			break;
 		case 'p':
 			routine[i] = ProcInfoRoutine;
-			param[i] = GenRoutineParam(tmp);
+			param[i] = GenRoutineParam(atoi(optarg));
 			break;
 		case 'h':
 			PrintHelp();
@@ -79,17 +79,14 @@ int main(int argc, char** argv)
 		}
 		i++;
 	}
-	printf("over parse.\n");
+	
+	signal(SIGPIPE, SIG_IGN);
+	
 	for (i = 0; routine[i] != 0; i++)
 		pthread_create(&tids[i], NULL, routine[i], param[i]);
 
 	for (i = 0; routine[i]; i++)
 		pthread_join(tids[i], NULL);
 		
-	//printf("Create thread collect CPU information every %d ms.\n", param[i]->collectPeriod);
-	//printf("Create thread collect memory information every %d ms.\n", param[i]->collectPeriod);
-	//printf("Create thread collect network information every %d ms.\n", param[i]->collectPeriod);
-	//printf("Create thread collect all process information every %d ms.\n", param[i]->collectPeriod);
-
-	return 0; 
+	exit(0);
 }

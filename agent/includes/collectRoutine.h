@@ -1,7 +1,7 @@
 #ifndef COLLECT_ROUTINE_H
 #define COLLECT_ROUTINE_H
 #define MIN_SLEEP_MS 500
-#define ROUTINE_COUNT 4
+#define ROUTINE_COUNT 1
 
 #include "packets.h"
 
