@@ -17,4 +17,10 @@ void* MemInfoRoutine(void* param);
 void* NetInfoRoutine(void* param);
 void* ProcInfoRoutine(void* param);
 
+void* CpuInfoSendRoutine(void* param);
+void* MemInfoSendRoutine(void* param);
+void* NetInfoSendRoutine(void* param);
+void* ProcInfoSendRoutine(void* param);
+
+
 #endif

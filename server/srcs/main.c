@@ -11,8 +11,8 @@
 #include <pthread.h>
 #include <fcntl.h>
 #define HOST "127.0.0.1"
-#define PORT 4243
-#define CONNECTION_COUNT 4
+#define PORT 4244
+#define CONNECTION_COUNT 1
 
 int OpenSocket(char* host, short port)
 {
