@@ -184,7 +184,7 @@ void* MemInfoRoutine(void* param)
         memset(packet, 0, sizeof(SMemInfoPacket));
         packet->collectTime = prevTime / 1000;
 
-        CollectMemInfo(buf, &packet);
+        CollectMemInfo(buf, packet);
 
 #if PRINT_MEM
         printf("<Memory information>\n");
@@ -235,10 +235,10 @@ void* NetInfoRoutine(void* param)
             usleep(5000);
             continue;
         }
-        memset(packet, 0, sizeof(SMemInfoPacket));
+        memset(packet, 0, sizeof(SNetInfoPacket));
         packet->collectTime = prevTime / 1000;
 
-        CollectNetInfo(buf, &packet);
+        CollectNetInfo(buf, packet);
 
 #if PRINT_NET
         printf("Collected net info packet\n\
@@ -272,37 +272,20 @@ void* NetInfoRoutine(void* param)
 
 void* ProcInfoRoutine(void* param)
 {
-    size_t sendPacketCount = 0;
     ulong prevTime, postTime, elapseTime;
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
-    SProcInfoPacket packet;
+    SProcInfoPacket* packet;
     SRoutineParam* pParam = (SRoutineParam*)param;
+    Queue* queue = pParam->queue;
 
     // TODO: Change to Log
-    printf("Collect process information every %d ms.\n", pParam->collectPeriod);
-
-    int sockFd = ConnectToServer(HOST, PORT);
-    if (sockFd == -1)
-    {
-        // TODO: handle error
-        printf("Fail to connect to server\n");
-        return 0;
-    }
-
-    SInitialPacket initPacket;
-    GenerateInitialProcPacket(&initPacket, pParam);
-    if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
-    {
-        // TODO: handle error
-        perror("agent");
-        return 0;
-    }
+    printf("Process Collector: Start to collect process information every %d ms.\n", pParam->collectPeriod);
 
     DIR* dir;
     struct dirent* entry;
     char path[260];
-    memset(&packet, 0, sizeof(SProcInfoPacket));
+
     while(1)
     {
         dir = opendir("/proc");
@@ -321,19 +304,23 @@ void* ProcInfoRoutine(void* param)
                     perror("agent");
                     return 0;
                 }    
+                packet = (SProcInfoPacket*)malloc(sizeof(SProcInfoPacket));
+                if (packet == NULL)
+                {
+                    // TODO: handling malloc fail
+                    usleep(5000);
+                    continue;
+                }
+                memset(packet, 0, sizeof(SProcInfoPacket));
                 prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
-                packet.collectTime = prevTime / 1000;
+
+                packet->collectTime = prevTime / 1000;
+
                 if (access(path, F_OK) == 0)
                     CollectProcInfo(path, buf, &packet);
                 else
                     continue;
-                if (write(sockFd, &packet, sizeof(SProcInfoPacket)) == -1)
-                {
-                    // TODO: handle error
-                    perror("agent");
-                    return 0;
-                }
-                sendPacketCount++;
+                
 #if PRINT_PROC
                 printf("Send process info packet: %u\n", packet.pid);
                 printf("Collect process info\n\
@@ -354,16 +341,24 @@ void* ProcInfoRoutine(void* param)
                         packet.procName,
                         packet.state);
 #endif
+
+                pthread_mutex_lock(&queue->lock);
+                // TODO: Handling Queue is full...more graceful
+                while (IsFull(queue))
+                {
+                    pthread_mutex_unlock(&queue->lock);
+                    usleep(5000);
+                    pthread_mutex_lock(&queue->lock);
+                }
+                Push(packet, queue);
+                pthread_mutex_unlock(&queue->lock);
+
                 gettimeofday(&timeVal, NULL);
                 postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
                 elapseTime = postTime - prevTime;
             }
         }
-#if !NO_SLEEP
         usleep(pParam->collectPeriod * 1000 - elapseTime);
-#endif
-        // TODO: Check TCP connection
-        // If disconnected, reconnect!
     }
 }
 
