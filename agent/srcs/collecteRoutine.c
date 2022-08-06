@@ -8,8 +8,9 @@
 #include "collector.h"
 #include "tcpCtrl.h"
 
-#define RECONNECT_PERIOD 3    // seconds
-#define RECONNECT_MAX_TRY 10
+#define RECONNECT_PERIOD 6    // seconds
+#define RECONNECT_MAX_TRY 100
+
 #define NO_SLEEP 0
 #define PRINT_CPU 0
 #define PRINT_MEM 0
@@ -108,63 +109,41 @@ void* CpuInfoRoutine(void* param)
 	long toMs = 1000 / sysconf(_SC_CLK_TCK);
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
-    SCpuInfoPacket packet;
+    SCpuInfoPacket* packet;
     memset(&packet, 0, sizeof(SCpuInfoPacket));
     SRoutineParam* pParam = (SRoutineParam*)param;
+    Queue* queue = pParam->queue;
 
-    int sockFd;
-    SInitialPacket initPacket;
-    GenerateInitialCpuPacket(&initPacket, pParam);
 
-    int reconnectTryCount = 0;
-    while (reconnectTryCount < RECONNECT_MAX_TRY)
+    while (1)
     {
-        if ((sockFd = ConnectToServer(HOST, PORT)) == -1)
-        {
-            fprintf(stderr, "Fail to connect to server. try to reconnect...(%d)\n", reconnectTryCount++);
-            sleep(RECONNECT_PERIOD);
-            continue;
-        }
-        printf("Success: Connect to server.\n");
-        reconnectTryCount = 0;
-        if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
-        {
-            close(sockFd);
-            fprintf(stderr, "Server has no reponse\n");
-            continue;
-        }
-        printf("Start collecting CPU information every %d ms.\n", pParam->collectPeriod);
-        while (1)
-        {
-            gettimeofday(&timeVal, NULL);
-            prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
-            packet.collectTime = prevTime / 1000;
-            CollectCpuInfo(toMs, buf, &packet);
+        gettimeofday(&timeVal, NULL);
+        prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
+        packet = (SCpuInfoPacket*)malloc(sizeof(SCpuInfoPacket));
+        packet->collectTime = prevTime / 1000;
+        CollectCpuInfo(toMs, buf, packet);
 #if PRINT_CPU
-            // TODO: Convert printf to log
-            printf("<CPU information as OS resources>\n");
-            printf("CPU running time (user mode): %ld ms\n", packet.usrCpuRunTime);
-            printf("CPU running time (system mode): %ld ms\n", packet.sysCpuRunTime);
-            printf("CPU idle time: %ld ms\n", packet.idleTime);
-            printf("CPU I/O wait time: %ld ms\n", packet.waitTime);
-            printf("Collect starting time: %ld ms\n", packet.collectTime);
-            printf("Send cpu info packet.\n");
+        // TODO: Convert printf to log
+        printf("<CPU information as OS resources>\n");
+        printf("CPU running time (user mode): %ld ms\n", packet.usrCpuRunTime);
+        printf("CPU running time (system mode): %ld ms\n", packet.sysCpuRunTime);
+        printf("CPU idle time: %ld ms\n", packet.idleTime);
+        printf("CPU I/O wait time: %ld ms\n", packet.waitTime);
+        printf("Collect starting time: %ld ms\n", packet.collectTime);
+        printf("Send cpu info packet.\n");
 #endif       
-            if (write(sockFd, &packet, sizeof(SCpuInfoPacket)) == -1)
-            {
-                close(sockFd);
-                fprintf(stderr, "Server has no reponse. Stop collecting CPU information.\n");
-                break;
-            }
-            
-            gettimeofday(&timeVal, NULL);
-            postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
-            elapseTime = postTime - prevTime;
-            usleep(pParam->collectPeriod * 1000 - elapseTime);
-        }
+        pthread_mutex_lock(&queue->lock);
+        // TODO: Handling Queue is full...more graceful
+        while (IsFull(queue))
+            usleep(500);
+        Push(packet, queue);
+        pthread_mutex_unlock(&queue->lock);
+        
+        gettimeofday(&timeVal, NULL);
+        postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
+        elapseTime = postTime - prevTime;
+        usleep(pParam->collectPeriod * 1000 - elapseTime);
     }
-    fprintf(stderr, "Unable to connect to server. Check server machine or network statement.\n");
-    fprintf(stderr, "Stop CPU thread.\n");
 }
 
 void* MemInfoRoutine(void* param)
