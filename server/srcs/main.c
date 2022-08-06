@@ -8,25 +8,20 @@
 #include <assert.h>
 #include "serverRoutine.h"
 #include <stdlib.h>
+#include <pthread.h>
+#include <fcntl.h>
 #define HOST "127.0.0.1"
 #define PORT 4243
 #define CONNECTION_COUNT 4
 
-int main(void)
+int OpenSocket(char* host, short port)
 {
-    printf("Simple SMS server...\n");
-    printf("This server just print received data.\n");
-    printf("Parse received data and print it.\n");
-    printf("When agent implematation is over, this server implemented...!\n");
-    int servFd, clientFd;
-
     struct sockaddr_in servAddr;
-    struct sockaddr_in clientAddr;
-    servFd = socket(PF_INET, SOCK_STREAM, 0);
+    int servFd = socket(PF_INET, SOCK_STREAM, 0);
     if (servFd == -1)
     {
         perror("server");
-        return (1);
+        return -1;
     }
     memset(&servAddr, 0, sizeof(servAddr));
     servAddr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -38,16 +33,36 @@ int main(void)
         printf("Fail to bind\n");
         perror("server");
         close(servFd);
+        return -1;
+    }
+    return servFd;
+}
+
+int main(void)
+{
+    printf("Simple SMS server...\n");
+    printf("This server just print received data.\n");
+    printf("Parse received data and print it.\n");
+    printf("When agent implematation is over, this server implemented...!\n");
+    
+    int servFd, clientFd;
+    struct sockaddr_in clientAddr;
+    if ((servFd = OpenSocket(HOST, PORT)) == -1)
+    {
+        perror("server");
         return 1;
     }
-    printf("Wait to connect....\n");
-    socklen_t len = sizeof(clientAddr);
-    int (*routine)(SServRoutineParam*);
+
     char buf[128] = { 0, };
     SInitialPacket* packet = (SInitialPacket*)buf;
-    pid_t pid[CONNECTION_COUNT];
+    socklen_t len = sizeof(clientAddr);
+    void* (*routine)(void*);
+    pthread_t tid[CONNECTION_COUNT];
+    SServRoutineParam* param;
+    
     for (int i = 0; i < CONNECTION_COUNT; i++)
     {
+        printf("Wait to connect....\n");
         if (listen(servFd, CONNECTION_COUNT) == -1)
         {
             perror("server");
@@ -92,19 +107,26 @@ int main(void)
             printf("Undefined signature!: %c", packet->signature[3]);
             break;
         }
-        SServRoutineParam param;
-        param.clientSock = clientFd;
-        pid[i] = fork();
-        if (pid[i] == -1)
+        param = (SServRoutineParam*)malloc(sizeof(SServRoutineParam));
+        param->clientSock = clientFd;
+        char buf[16];
+        sprintf(buf, "Log-%d", i);
+        param->logFd = open(buf, O_CREAT | O_RDWR, 0777);
+        if (param->logFd == -1)
         {
             perror("server");
-            return 1;
-        }
-        if (pid[i] == 0)
-            exit(routine(&param));
-        else
             close(clientFd);
+            close(servFd);
+            return 0;
+        }
+        if (pthread_create(&tid[i], NULL, routine, param) == -1)
+        {
+            perror("server");
+            close(clientFd);
+            close(param->logFd);
+            continue;
+        }
     }
     for (int i = 0; i < CONNECTION_COUNT; i++)
-        wait(&pid[i]);
+        pthread_join(tid[i], NULL);
 }   

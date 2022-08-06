@@ -9,6 +9,7 @@
 
 #include <stddef.h>
 #include "packets.h"
+#include "collectRoutine.h"
 
 void CollectEachCpuInfo(long cpuCnt, long timeConversion, char* rdBuf);
 void CollectCpuInfo(long timeConversion, char* rdBuf, SCpuInfoPacket* packet);

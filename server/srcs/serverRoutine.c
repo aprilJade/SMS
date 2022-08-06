@@ -8,10 +8,10 @@
 
 #define DETAIL_PRINT_CPU 0
 #define DETAIL_PRINT_MEM 0
-#define DETAIL_PRINT_NET 1
+#define DETAIL_PRINT_NET 0
 #define DETAIL_PRINT_PROC 0
 
-int ServCpuInfoRoutine(SServRoutineParam* param)
+void* ServCpuInfoRoutine(void* param)
 {
     assert(param != NULL);
     printf("Start serverCpuInfoRoutine\n");
@@ -25,15 +25,18 @@ int ServCpuInfoRoutine(SServRoutineParam* param)
         {
             printf("Fail to receive...!\n");
             close(pParam->clientSock);
-            return 1;
+            close(pParam->logFd);
+            return 0;
         }
         if (readSize == 0)
         {
             printf("Disconnected from agent side.\n");
             close(pParam->clientSock);
+            close(pParam->logFd);
             return 0;
         }
         // TODO: Store to DB
+        write(pParam->logFd, "C", 1);
 #if DETAIL_PRINT_CPU
         printf("Receive cpu info packet: %d\n\
                 Collect Time: %lld ms\n\
@@ -51,7 +54,7 @@ int ServCpuInfoRoutine(SServRoutineParam* param)
     }
 }
 
-int ServMemInfoRoutine(SServRoutineParam* param)
+void* ServMemInfoRoutine(void* param)
 {
     assert(param != NULL);    
     printf("Start serverMemInfoRoutine\n");
@@ -65,15 +68,18 @@ int ServMemInfoRoutine(SServRoutineParam* param)
         {
             printf("Fail to receive...!\n");
             close(pParam->clientSock);
-            return 1;
+            close(pParam->logFd);
+            return 0;
         }
         if (readSize == 0)
         {
             printf("Disconnected from agent side.\n");
             close(pParam->clientSock);
+            close(pParam->logFd);
             return 0;
         }
         // TODO: Store to DB
+        write(pParam->logFd, "m", 1);
 #if DETAIL_PRINT_MEM
         printf("Receive mem info packet: %d bytes\n\
                 Collect Time: %lld ms\n\
@@ -95,7 +101,7 @@ int ServMemInfoRoutine(SServRoutineParam* param)
     }
 }
 
-int ServNetInfoRoutine(SServRoutineParam* param)
+void* ServNetInfoRoutine(void* param)
 {
     assert(param != NULL);    
     printf("Start serverNetInfoRoutine\n");
@@ -110,15 +116,18 @@ int ServNetInfoRoutine(SServRoutineParam* param)
         {
             printf("Fail to receive...!\n");
             close(pParam->clientSock);
-            return 1;
+            close(pParam->logFd);
+            return 0;
         }
         if (readSize == 0)
         {
             printf("Disconnected from agent side.\n");
             close(pParam->clientSock);
+            close(pParam->logFd);
             return 0;
         }
         // TODO: Store to DB
+        write(pParam->logFd, "n", 1);
 #if DETAIL_PRINT_NET
         printf("Receive net info packet: %d bytes\n\
                 Collect Time: %ld ms\n\
@@ -136,7 +145,7 @@ int ServNetInfoRoutine(SServRoutineParam* param)
     }
 }
 
-int ServProcInfoRoutine(SServRoutineParam* param)
+void* ServProcInfoRoutine(void* param)
 {
     assert(param != NULL);    
     printf("Start serverProcInfoRoutine\n");
@@ -151,15 +160,20 @@ int ServProcInfoRoutine(SServRoutineParam* param)
         {
             printf("Fail to receive...!\n");
             close(pParam->clientSock);
-            return 1;
+            close(pParam->logFd);
+            free(pParam);
+            return 0;
         }
         if (readSize == 0)
         {
             printf("Disconnected from agent side.\n");
             close(pParam->clientSock);
+            close(pParam->logFd);
+            free(pParam);
             return 0;
         }
         // TODO: Store to DB
+        write(pParam->logFd, "p", 1);
 #if DETAIL_PRINT_PROC
         printf("Receive net info packet: %d bytes\n\
                 Collect Time: %lld ms\n\

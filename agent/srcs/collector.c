@@ -7,7 +7,6 @@
 #include <assert.h>
 #include "collector.h"
 #include "packets.h"
-#include "collectRoutine.h"
 
 // TODO: Calculate CPU usage about OS....
 // Formula: Cpu usage = (CPU running time) / (Logical CPU core count) / (Wall time)
