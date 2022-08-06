@@ -343,7 +343,9 @@ void* SendRoutine(void* param)
             continue;
         }
 
-        printf("CPU sender:\tsuccess to connect to server.\n");
+        
+        sprintf(msgBuf, "%s:\tsuccess to connect to server.\n", senderName);
+        puts(msgBuf);
 
         GenInitPacket(&initPacket, pParam);
         if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)

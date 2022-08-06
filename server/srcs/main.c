@@ -3,16 +3,17 @@
 #include <sys/wait.h>
 #include <arpa/inet.h>
 #include <string.h>
-#include "../../agent/includes/packets.h"
 #include <unistd.h>
 #include <assert.h>
-#include "serverRoutine.h"
 #include <stdlib.h>
 #include <pthread.h>
 #include <fcntl.h>
+#include "serverRoutine.h"
+#include "../../agent/includes/packets.h"
+
+#define CONNECTION_COUNT 4
 #define HOST "127.0.0.1"
 #define PORT 4244
-#define CONNECTION_COUNT 4
 
 int OpenSocket(char* host, short port)
 {
@@ -57,12 +58,13 @@ int main(void)
     SInitialPacket* packet = (SInitialPacket*)buf;
     socklen_t len = sizeof(clientAddr);
     void* (*routine)(void*);
-    pthread_t tid[CONNECTION_COUNT];
+    pthread_t tid;
     SServRoutineParam* param;
+    char logPath[32];
     
-    for (int i = 0; i < CONNECTION_COUNT; i++)
+    printf("Start listening: %s:%d\n", HOST, PORT);
+    while (1)
     {
-        printf("Wait to connect....\n");
         if (listen(servFd, CONNECTION_COUNT) == -1)
         {
             perror("server");
@@ -88,30 +90,34 @@ int main(void)
             // TODO: Store below data
             // packet->logicalCoreCount;
             routine = ServCpuInfoRoutine;
+            sprintf(logPath, "Log-%s", "CPU");
             break;
         case 'm':
             // TODO: Store below data
             // packet->memTotal;
             // packet->swapTotal;
             routine = ServMemInfoRoutine;
+            sprintf(logPath, "Log-%s", "Memory");
             break;
         case 'p':
             routine = ServProcInfoRoutine;
+            sprintf(logPath, "Log-%s", "Process");
             break;
         case 'n':
             // TODO: Store below data
             // packet->netIfName;
             routine = ServNetInfoRoutine;
+            sprintf(logPath, "Log-%s", "Network");
             break;
         default:
             printf("Undefined signature!: %c", packet->signature[3]);
             break;
         }
+
         param = (SServRoutineParam*)malloc(sizeof(SServRoutineParam));
         param->clientSock = clientFd;
-        char buf[16];
-        sprintf(buf, "Log-%d", i);
-        param->logFd = open(buf, O_CREAT | O_RDWR, 0777);
+
+        param->logFd = open(logPath, O_CREAT | O_RDWR | O_APPEND, 0777);
         if (param->logFd == -1)
         {
             perror("server");
@@ -119,14 +125,14 @@ int main(void)
             close(servFd);
             return 0;
         }
-        if (pthread_create(&tid[i], NULL, routine, param) == -1)
+        
+        if (pthread_create(&tid, NULL, routine, param) == -1)
         {
             perror("server");
             close(clientFd);
             close(param->logFd);
             continue;
         }
+        pthread_detach(tid);
     }
-    for (int i = 0; i < CONNECTION_COUNT; i++)
-        pthread_join(tid[i], NULL);
 }   

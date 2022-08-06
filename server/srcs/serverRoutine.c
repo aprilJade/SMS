@@ -33,6 +33,7 @@ void* ServCpuInfoRoutine(void* param)
             printf("Disconnected from agent side.\n");
             close(pParam->clientSock);
             close(pParam->logFd);
+            printf("Wait to reconnect....\n");
             return 0;
         }
         // TODO: Store to DB
@@ -76,6 +77,7 @@ void* ServMemInfoRoutine(void* param)
             printf("Disconnected from agent side.\n");
             close(pParam->clientSock);
             close(pParam->logFd);
+            printf("Wait to reconnect....\n");
             return 0;
         }
         // TODO: Store to DB
@@ -117,6 +119,7 @@ void* ServNetInfoRoutine(void* param)
             printf("Fail to receive...!\n");
             close(pParam->clientSock);
             close(pParam->logFd);
+            printf("Wait to reconnect....\n");
             return 0;
         }
         if (readSize == 0)
@@ -170,6 +173,7 @@ void* ServProcInfoRoutine(void* param)
             close(pParam->clientSock);
             close(pParam->logFd);
             free(pParam);
+            printf("Wait to reconnect....\n");
             return 0;
         }
         // TODO: Store to DB
