@@ -5,16 +5,19 @@
 #include <stdlib.h>
 #include "collectRoutine.h"
 
-#define MIN_SLEEP_MS 1000
 
 void PrintHelp()
 {
-	printf("Not implemented Yet\n");
+	printf("PrintHelp(): Not implemented Yet\n");
+}
+
+void PrintUsage()
+{
+	fprintf(stderr, "Try \"./agent -h\" or \"./agent --help\" for more information.\n");
 }
 
 int main(int argc, char** argv)
 {
-	pthread_t cpuTid = 0, memTid = 0, netTid = 0, procTid = 0;
 	static struct option longOptions[] =
 	{
 		{"CPU", required_argument, 0, 'C'},
@@ -24,56 +27,69 @@ int main(int argc, char** argv)
 		{"help", no_argument, 0, 'h'},
 		{0, 0, 0, 0} 
 	};
-	char c;
-	SRoutineParam param;
-	param.collectPeriod = 0;
-	
-	while ((c = getopt_long(argc, argv, "C:m:n:p:", longOptions, 0)) > 0)
+
+	if (argc == 1)
 	{
-		if (c == 'h')
-		{
-			PrintHelp();
-			return 0;
-		}
+		PrintUsage();
+		return 1;
+	}
 
-		if ((param.collectPeriod = atoi(optarg)) < MIN_SLEEP_MS)
+	char c;
+	int i = 0;
+	int tmp;
+	pthread_t tids[ROUTINE_COUNT] = { 0, };
+	SRoutineParam* param[ROUTINE_COUNT] = { 0, };
+	void* (*routine[ROUTINE_COUNT + 1])(void*) = { 0, };
+	
+	while ((c = getopt_long(argc, argv, "C:m:n:p:h", longOptions, 0)) > 0)
+	{
+		if (c == '?')
 		{
-			// TODO: handling error
-			fputs("Option value is must be more than 1000\n", stderr);
-			return 1;
+			PrintUsage();
+			exit(1);
 		}
-
-		switch (c)
+		if ((tmp = atoi(optarg)) == 0)
 		{
-		case 'C':
-			printf("Create thread collect CPU information every %d ms.\n", param.collectPeriod);
-			pthread_create(&cpuTid, NULL, &CpuInfoRoutine, (void*)&param);
-			continue;
-		case 'm':
-			printf("Create thread collect memory information every %d ms.\n", param.collectPeriod);
-			pthread_create(&memTid, NULL, &MemInfoRoutine, (void*)&param);
-			continue;
-		case 'n':
-			printf("Create thread collect network information every %d ms.\n", param.collectPeriod);
-			pthread_create(&netTid, NULL, &NetInfoRoutine, (void*)&param);
-			continue;
-		case 'p':
-			printf("Create thread collect all process information every %d ms.\n", param.collectPeriod);
-			pthread_create(&procTid, NULL, &ProcInfoRoutine, (void*)&param);
-			continue;
-		default:
-			printf("Error: undefined optargs: %c\n", c);
 			PrintHelp();
 			exit(1);
 		}
+		switch (c)
+		{
+		case 'C':
+			routine[i] = CpuInfoRoutine;
+			param[i] = GenRoutineParam(tmp);
+			break;
+		case 'm':
+			routine[i] = MemInfoRoutine;
+			param[i] = GenRoutineParam(tmp);
+			break;
+		case 'n':
+			routine[i] = NetInfoRoutine;
+			param[i] = GenRoutineParam(tmp);
+			break;
+		case 'p':
+			routine[i] = ProcInfoRoutine;
+			param[i] = GenRoutineParam(tmp);
+			break;
+		case 'h':
+			PrintHelp();
+			exit(0);
+		default:
+			abort();
+		}
+		i++;
 	}
-	if (cpuTid != 0)
-		pthread_join(cpuTid, NULL);
-	if (memTid != 0)
-		pthread_join(memTid, NULL);
-	if (netTid != 0)
-		pthread_join(netTid, NULL);
-	if (procTid != 0)
-		pthread_join(procTid, NULL);
+	printf("over parse.\n");
+	for (i = 0; routine[i] != 0; i++)
+		pthread_create(&tids[i], NULL, routine[i], param[i]);
+
+	for (i = 0; routine[i]; i++)
+		pthread_join(tids[i], NULL);
+		
+	//printf("Create thread collect CPU information every %d ms.\n", param[i]->collectPeriod);
+	//printf("Create thread collect memory information every %d ms.\n", param[i]->collectPeriod);
+	//printf("Create thread collect network information every %d ms.\n", param[i]->collectPeriod);
+	//printf("Create thread collect all process information every %d ms.\n", param[i]->collectPeriod);
+
 	return 0; 
 }

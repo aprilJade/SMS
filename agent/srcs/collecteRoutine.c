@@ -14,20 +14,39 @@
 #define PRINT_NET 0
 #define PRINT_PROC 0
 
-
 #define HOST "127.0.0.1"
 #define PORT 4243
+
+SRoutineParam* GenRoutineParam(int collectPeriod)
+{
+    SRoutineParam* ret = (SRoutineParam*)malloc(sizeof(SRoutineParam));
+    if (ret->collectPeriod < MIN_SLEEP_MS)
+    {
+        printf("Minimum collect period is 500 ms\n\
+                But you input %d ms. This is not allowed.\n\
+                Set collect period to 500 ms\n", ret->collectPeriod);
+        ret->collectPeriod = MIN_SLEEP_MS;
+    }
+    else
+    {
+        ret->collectPeriod = collectPeriod;
+    }
+    return ret;
+}
 
 void* CpuInfoRoutine(void* param)
 {
     size_t sendPacketCount = 0;
-    // TODO: handle exit condition
     ulong prevTime, postTime, elapseTime;
 	long toMs = 1000 / sysconf(_SC_CLK_TCK);
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
     SCpuInfoPacket packet;
     SRoutineParam* pParam = (SRoutineParam*)param;
+
+    // TODO: Change to Log
+    printf("Collect CPU information every %d ms.\n", pParam->collectPeriod);
+
     int sockFd = ConnectToServer(HOST, PORT);
     if (sockFd == -1)
     {
@@ -69,7 +88,6 @@ void* CpuInfoRoutine(void* param)
             return 0;
         }
         sendPacketCount++;
-        // TODO: Caching.... packet data
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
@@ -89,6 +107,10 @@ void* MemInfoRoutine(void* param)
     struct timeval timeVal;
     SMemInfoPacket packet;
     SRoutineParam* pParam = (SRoutineParam*)param;
+
+    // TODO: Change to Log
+    printf("Collect memory information every %d ms.\n", pParam->collectPeriod);
+
     int sockFd = ConnectToServer(HOST, PORT);
     if (sockFd == -1)
     {
@@ -131,7 +153,6 @@ void* MemInfoRoutine(void* param)
 #if PRINT_MEM
         printf("Send memory info packet.\n");
 #endif
-        // TODO: Caching.... packet data
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
@@ -152,6 +173,10 @@ void* NetInfoRoutine(void* param)
     struct timeval timeVal;
     SNetInfoPacket packet;
     SRoutineParam* pParam = (SRoutineParam*)param;
+
+    // TODO: Change to Log
+    printf("Collect network information every %d ms.\n", pParam->collectPeriod);
+
     int sockFd = ConnectToServer(HOST, PORT);
     if (sockFd == -1)
     {
@@ -201,7 +226,6 @@ void* NetInfoRoutine(void* param)
 #if PRINT_NET
         printf("Send network info packet.\n");
 #endif
-        // TODO: Caching.... packet data
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
@@ -221,6 +245,10 @@ void* ProcInfoRoutine(void* param)
     struct timeval timeVal;
     SProcInfoPacket packet;
     SRoutineParam* pParam = (SRoutineParam*)param;
+
+    // TODO: Change to Log
+    printf("Collect process information every %d ms.\n", pParam->collectPeriod);
+
     int sockFd = ConnectToServer(HOST, PORT);
     if (sockFd == -1)
     {
@@ -293,7 +321,6 @@ void* ProcInfoRoutine(void* param)
                         packet.procName,
                         packet.state);
 #endif
-                // TODO: Caching.... packet data
                 gettimeofday(&timeVal, NULL);
                 postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
                 elapseTime = postTime - prevTime;

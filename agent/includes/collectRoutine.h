@@ -1,5 +1,7 @@
 #ifndef COLLECT_ROUTINE_H
 #define COLLECT_ROUTINE_H
+#define MIN_SLEEP_MS 500
+#define ROUTINE_COUNT 4
 
 #include "packets.h"
 
@@ -9,7 +11,7 @@ typedef struct SRoutineParam
     uint collectPeriod;
 } SRoutineParam;
 
-void InitRoutineParam(SRoutineParam* target);
+SRoutineParam* GenRoutineParam(int collectPeriod);
 void* CpuInfoRoutine(void* param);
 void* MemInfoRoutine(void* param);
 void* NetInfoRoutine(void* param);
