@@ -110,18 +110,28 @@ void* CpuInfoRoutine(void* param)
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
     SCpuInfoPacket* packet;
-    memset(&packet, 0, sizeof(SCpuInfoPacket));
     SRoutineParam* pParam = (SRoutineParam*)param;
     Queue* queue = pParam->queue;
 
+    printf("CPU Collector: Start to collect CPU information every %d ms.\n", pParam->collectPeriod);
 
     while (1)
     {
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
+
         packet = (SCpuInfoPacket*)malloc(sizeof(SCpuInfoPacket));
+        if (packet == NULL)
+        {
+            // TODO: handling malloc fail
+            usleep(5000);
+            continue;
+        }
+        memset(packet, 0, sizeof(SCpuInfoPacket));
         packet->collectTime = prevTime / 1000;
+
         CollectCpuInfo(toMs, buf, packet);
+
 #if PRINT_CPU
         // TODO: Convert printf to log
         printf("<CPU information as OS resources>\n");
@@ -132,6 +142,7 @@ void* CpuInfoRoutine(void* param)
         printf("Collect starting time: %ld ms\n", packet.collectTime);
         printf("Send cpu info packet.\n");
 #endif       
+
         pthread_mutex_lock(&queue->lock);
         // TODO: Handling Queue is full...more graceful
         while (IsFull(queue))
@@ -148,40 +159,33 @@ void* CpuInfoRoutine(void* param)
 
 void* MemInfoRoutine(void* param)
 {
-    size_t sendPacketCount = 0;
     ulong prevTime, postTime, elapseTime;
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
-    SMemInfoPacket packet;
+    SMemInfoPacket* packet;
     SRoutineParam* pParam = (SRoutineParam*)param;
+    Queue* queue = pParam->queue;
 
     // TODO: Change to Log
-    printf("Collect memory information every %d ms.\n", pParam->collectPeriod);
+    printf("Memory Collector: Start to collect memory information every %d ms.\n", pParam->collectPeriod);
 
-    int sockFd = ConnectToServer(HOST, PORT);
-    if (sockFd == -1)
-    {
-        // TODO: handle error
-        printf("Fail to connect to server\n");
-        return 0;
-    }
-
-    SInitialPacket initPacket;
-    GenerateInitialMemPacket(&initPacket, pParam);
-    if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
-    {
-        // TODO: handle error
-        perror("agent");
-        return 0;
-    }
-
-    memset(&packet, 0, sizeof(SMemInfoPacket));
     while(1)
     {
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
-        packet.collectTime = prevTime / 1000;
+        
+        packet = (SMemInfoPacket*)malloc(sizeof(SMemInfoPacket));
+        if (packet == NULL)
+        {
+            // TODO: handling malloc fail
+            usleep(5000);
+            continue;
+        }
+        memset(packet, 0, sizeof(SMemInfoPacket));
+        packet->collectTime = prevTime / 1000;
+
         CollectMemInfo(buf, &packet);
+
 #if PRINT_MEM
         printf("<Memory information>\n");
         printf("Free memory: %ld kB\n", packet.memFree);
@@ -190,24 +194,19 @@ void* MemInfoRoutine(void* param)
         printf("Free swap: %ld kB\n", packet.swapFree);
         printf("Collecting start time: %ld\n\n", packet.collectTime);
 #endif
-        if (write(sockFd, &packet, sizeof(SMemInfoPacket)) == -1)
-        {
-            // TODO: handle error
-            perror("agent");
-            return 0;
-        }
-        sendPacketCount++;
-#if PRINT_MEM
-        printf("Send memory info packet.\n");
-#endif
+
+        pthread_mutex_lock(&queue->lock);
+        // TODO: Handling Queue is full...more graceful
+        while (IsFull(queue))
+            usleep(500);
+        Push(packet, queue);
+        pthread_mutex_unlock(&queue->lock);
+
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
-#if !NO_SLEEP
+
         usleep(pParam->collectPeriod * 1000 - elapseTime);
-#endif
-        // TODO: Check TCP connection
-        // If disconnected, reconnect!
     }
 }
 
