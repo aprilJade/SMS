@@ -1,11 +1,25 @@
 #ifndef LOGGER_H
 #define LOGGER_H
+#define KIND_OF_LOG 8
 #include <pthread.h>
+#include "Queue.h"
+
+typedef struct LoggerBuffer
+{
+    Queue* queue;
+} LoggerBuffer;
 
 typedef struct Logger
 {
     pthread_t pid;
 } Logger;
+
+typedef struct LoggerOptValue
+{
+    int queueSize;
+    int curQueueElemCnt;
+    int connFailCnt;
+} LoggerOptValue;
 
 enum eSig
 {
@@ -38,10 +52,10 @@ enum eOption
 {
     NO_OPT,
     QUEUE_OPT,
-    CONN_FAIL_OPT,
-    CUR_THRD_CNT_OPT
+    CONN_FAIL_OPT
 };
 
-int Log(unsigned char signature, int msg, int protocol, int optionalFlag, int optionValue = 0);
+void InitLogger(Logger* handle);
+int Log(Logger* handle, unsigned char signature, int msg, int protocol, int optionalFlag, void* optionValue);
 
 #endif
