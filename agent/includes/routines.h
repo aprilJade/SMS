@@ -2,9 +2,11 @@
 #define ROUTINES_H
 #define MIN_SLEEP_MS 500
 #define ROUTINE_COUNT 4
+#define HOST "127.0.0.1"
+#define PORT 4244
 
 #include "packets.h"
-#include <Queue.h>
+#include "logger.h"
 
 typedef struct SRoutineParam
 {
@@ -12,6 +14,7 @@ typedef struct SRoutineParam
     uint collectorID;
     uint collectPeriod;
     Queue* queue;
+    Logger* logger;
 } SRoutineParam;
 
 SRoutineParam* GenRoutineParam(int collectPeriod, int collectorID);

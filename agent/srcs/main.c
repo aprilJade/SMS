@@ -42,7 +42,13 @@ int main(int argc, char** argv)
 	pthread_t senderTids[ROUTINE_COUNT] = { 0, };
 	SRoutineParam* param[ROUTINE_COUNT] = { 0, };
 	void* (*collector[ROUTINE_COUNT + 1])(void*) = { 0, };
-	
+	Logger* logger = NewLogger(HOST, PORT);
+    Log(logger, LOG_CPU, THRD_CRT, TCP, NO_OPT, NULL);
+	if (logger == NULL)
+	{
+		fprintf(stderr, "logger is null...\n");
+		exit(1);
+	}
 	while ((c = getopt_long(argc, argv, "C:m:n:p:h", longOptions, 0)) > 0)
 	{
 		if (c == '?')
@@ -60,18 +66,22 @@ int main(int argc, char** argv)
 		case 'C':
 			collector[i] = CpuInfoRoutine;
 			param[i] = GenRoutineParam(atoi(optarg), CPU);
+			param[i]->logger = logger;
 			break;
 		case 'm':
 			collector[i] = MemInfoRoutine;
 			param[i] = GenRoutineParam(atoi(optarg), MEMORY);
+			param[i]->logger = logger;
 			break;
 		case 'n':
 			collector[i] = NetInfoRoutine;
 			param[i] = GenRoutineParam(atoi(optarg), NETWORK);
+			param[i]->logger = logger;
 			break;
 		case 'p':
 			collector[i] = ProcInfoRoutine;
 			param[i] = GenRoutineParam(atoi(optarg), PROCESS);
+			param[i]->logger = logger;
 			break;
 		case 'h':
 			PrintHelp();

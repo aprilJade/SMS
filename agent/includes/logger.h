@@ -1,6 +1,7 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 #define KIND_OF_LOG 8
+#define LOG_BUFFER_SIZE 128
 #include <pthread.h>
 #include "Queue.h"
 
@@ -9,9 +10,23 @@ typedef struct LoggerBuffer
     Queue* queue;
 } LoggerBuffer;
 
+typedef struct LoggerRoutineParam
+{
+    pthread_mutex_t* queueLock;
+    pthread_mutex_t* fdLock;
+    Queue* queue;
+    int logFd;
+} LoggerRoutineParam;
+
 typedef struct Logger
 {
-    pthread_t pid;
+    pthread_t tid;
+    pthread_mutex_t queueLock;
+    pthread_mutex_t fdLock;
+    Queue* queue;
+    const char* logfilePath;
+    char* host;
+    short port;
 } Logger;
 
 typedef struct LoggerOptValue
@@ -23,10 +38,10 @@ typedef struct LoggerOptValue
 
 enum eSig
 {
-    CPU = 'C',
-    MEMORY = 'm',
-    NETWORK = 'n',
-    PROCESS = 'p'
+    LOG_CPU = 'C',
+    LOG_MEMORY = 'm',
+    LOG_NETWORK = 'n',
+    LOG_PROCESS = 'p'
 };
 
 enum eMessage
@@ -55,7 +70,8 @@ enum eOption
     CONN_FAIL_OPT
 };
 
-void InitLogger(Logger* handle);
-int Log(Logger* handle, unsigned char signature, int msg, int protocol, int optionalFlag, void* optionValue);
+Logger* NewLogger(char* host, short port);
+int Log(Logger* handle, char signature, int msg, int protocol, int optionalFlag, void* optionValue);
+void DeleteLogger(Logger* logger);
 
 #endif

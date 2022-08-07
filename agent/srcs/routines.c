@@ -17,8 +17,6 @@
 #define PRINT_NET 0
 #define PRINT_PROC 0
 
-#define HOST "127.0.0.1"
-#define PORT 4244
 
 SRoutineParam* GenRoutineParam(int collectPeriod, int collectorID)
 {
@@ -46,8 +44,9 @@ void* CpuInfoRoutine(void* param)
     SCpuInfoPacket* packet;
     SRoutineParam* pParam = (SRoutineParam*)param;
     Queue* queue = pParam->queue;
-
-    printf("CPU Collector: Start to collect CPU information every %d ms.\n", pParam->collectPeriod);
+    Logger* logger = pParam->logger;
+    //printf("CPU Collector: Start to collect CPU information every %d ms.\n", pParam->collectPeriod);
+    //Log(logger, LOG_CPU, THRD_CRT, TCP, NO_OPT, NULL);
 
     while (1)
     {
