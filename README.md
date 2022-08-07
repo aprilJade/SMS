@@ -35,9 +35,25 @@ make
   - [ ] 공통으로 쓰이는 함수 라이브러리로 제작
   - [ ] Logger
     - [ ] 서버와 클라이언트의 동작을 로깅하기 위한 로깅 라이브러리 제작
-    - [ ] 로깅은 저장소 설계 (파일에 text or DB)
-      - [ ] log폴더 없을 시 생성하여 일자별로 로깅
-    - [ ] 로그 포맷 설계
+    - [x] ~로깅은 저장소 설계 (파일에 text or DB)~
+      - [x] ~log폴더 없을 시 생성하여 일자별로 로깅~
+    - [x] ~로그 포맷 설계~
+    - [ ] printf에서 Log()로 전환
+      - [x] ~Sender~
+      - [ ] CPU Routine
+      - [ ] Memory Routine
+      - [ ] Network Routine
+      - [ ] Process Routine
+    - [ ] System Log 추가
+      - [ ] malloc error, file open error, file read error,...
+      - [ ] agent 실행 시 로깅
+        - [ ] 실행 시간, 실행 유저 정보, PID, PPID 등
+      - [ ] agent 종료 시 로깅
+        - [ ] Daemon이면 종료시킬 때 시그널을 보내서 할텐데, 종료 때 시그널이 무엇인지 조사하여 처리
+          - [ ] Abort
+          - [ ] Segfault
+          - [ ] Bus Error
+          - [ ] 종료 시간(종료 관련 시그널 받은 시간), 실행 유저 정보, PID, PPID, 간략한 메모리 정보, 간략한 CPU 정보 등
 - [ ] Agent
   - [x] ~데이터 수집하여 패킷으로 만들고 송신하기 (각 정보별로 스레드 동작)~
     - [x] ~CPU 정보~
