@@ -43,12 +43,6 @@ int main(int argc, char** argv)
 	SRoutineParam* param[ROUTINE_COUNT] = { 0, };
 	void* (*collector[ROUTINE_COUNT + 1])(void*) = { 0, };
 	Logger* logger = NewLogger(HOST, PORT);
-    Log(logger, LOG_CPU, THRD_CRT, TCP, NO_OPT, NULL);
-	if (logger == NULL)
-	{
-		fprintf(stderr, "logger is null...\n");
-		exit(1);
-	}
 	while ((c = getopt_long(argc, argv, "C:m:n:p:h", longOptions, 0)) > 0)
 	{
 		if (c == '?')

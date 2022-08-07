@@ -60,13 +60,14 @@ enum eProtocol
 {
     TCP,
     UDP,
-    DB
+    DB,
+    SYS
 };
 
 enum eOption
 {
     NO_OPT,
-    QUEUE_OPT,
+    DISCONN_OPT,
     CONN_FAIL_OPT
 };
 

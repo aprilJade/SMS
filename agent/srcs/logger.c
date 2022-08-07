@@ -21,10 +21,11 @@ static char* logMsgs[KIND_OF_LOG] = {
     "thread-created"    // THRD_CRT
 };
 
-static char* logProtocolStr[3] = {
+static char* logProtocolStr[4] = {
     "TCP",
     "UDP",
-    "DB"
+    "DB",
+    "SYS"
 };
 
 // TODO: User could set log directory.
@@ -139,7 +140,7 @@ int Log(Logger* handle, char signature, int msg, int protocol, int optionalFlag,
             handle->host,
             handle->port);
         break;
-    case QUEUE_OPT:
+    case DISCONN_OPT:
 #if LOGGER_DEBUG
         printf("Log QUEUE_OPT\n");
 #endif
@@ -159,7 +160,7 @@ int Log(Logger* handle, char signature, int msg, int protocol, int optionalFlag,
 #if LOGGER_DEBUG
         printf("Log CONN_FAIL_OPT\n");
 #endif
-        sprintf(msgBuf, "[%02d:%02d:%02d+0900] %c %s %s %s:%d %d\n",
+        sprintf(msgBuf, "[%02d:%02d:%02d+0900] %c %s %s %s:%d %d %d/%d\n",
             timeStruct->tm_hour,
             timeStruct->tm_min,
             timeStruct->tm_sec,
@@ -168,7 +169,9 @@ int Log(Logger* handle, char signature, int msg, int protocol, int optionalFlag,
             logProtocolStr[protocol],
             handle->host,
             handle->port,
-            optVal->connFailCnt);
+            optVal->connFailCnt,
+            optVal->curQueueElemCnt,
+            optVal->queueSize);
         break;
     default:
         // TODO: handle error...

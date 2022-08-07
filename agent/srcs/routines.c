@@ -46,7 +46,7 @@ void* CpuInfoRoutine(void* param)
     Queue* queue = pParam->queue;
     Logger* logger = pParam->logger;
     //printf("CPU Collector: Start to collect CPU information every %d ms.\n", pParam->collectPeriod);
-    //Log(logger, LOG_CPU, THRD_CRT, TCP, NO_OPT, NULL);
+    Log(logger, LOG_CPU, THRD_CRT, SYS, NO_OPT, NULL);
 
     while (1)
     {
@@ -328,35 +328,36 @@ void* SendRoutine(void* param)
     }
 
     SInitialPacket initPacket;
+    LoggerOptValue logOptVal;
+    logOptVal.connFailCnt = 0;
+    logOptVal.queueSize = QUEUE_SIZE;
     void* packet = NULL;
     int sockFd, reconnectTryCount = 0;
+    Logger* logger = pParam->logger;
     while(1)
     {
-        sprintf(msgBuf, "%s:\tTry to connect to server.\n", senderName);
-        puts(msgBuf);
-        while ((sockFd = ConnectToServer(HOST, PORT)) == -1)
+        while (1)
         {
-            sprintf(msgBuf, "%s:\tFail to connect to server. try to reconnect...(%d)\n", senderName, reconnectTryCount++);
-            fputs(msgBuf, stderr);
+            Log(logger, pParam->collectorID, TRY_CONN, TCP, NO_OPT, NULL);
+            if ((sockFd = ConnectToServer(HOST, PORT)) != -1)
+                break;
+            logOptVal.connFailCnt++;
+            pthread_mutex_lock(&queue->lock);
+            logOptVal.curQueueElemCnt = queue->count;
+            pthread_mutex_unlock(&queue->lock);
+            Log(logger, pParam->collectorID, FAIL_CONN, TCP, CONN_FAIL_OPT, &logOptVal);
             sleep(RECONNECT_PERIOD);
-            continue;
         }
 
-        
-        sprintf(msgBuf, "%s:\tsuccess to connect to server.\n", senderName);
-        puts(msgBuf);
+        Log(logger, pParam->collectorID, CONN, TCP, NO_OPT, NULL);
 
         GenInitPacket(&initPacket, pParam);
         if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
         {
             close(sockFd);
-            sprintf(msgBuf, "%s:\tServer has no reponse. Stop collecting CPU information.\n", senderName);
-            fputs(msgBuf, stderr);
+            Log(logger, pParam->collectorID, DISCONN, TCP, NO_OPT, NULL);
             continue;
         }
-
-        sprintf(msgBuf, "%s:\tStart send information every %d ms.\n", senderName, pParam->collectPeriod);
-        puts(msgBuf);
 
         while (1)
         {
@@ -376,11 +377,13 @@ void* SendRoutine(void* param)
             if (write(sockFd, packet, packetSize) == -1)
             {
                 close(sockFd);
-                sprintf(msgBuf, "%s:\tServer has no reponse. Stop sending CPU information.\n", senderName);
-                fputs(msgBuf, stderr);
+                pthread_mutex_lock(&queue->lock);
+                logOptVal.curQueueElemCnt = queue->count;
+                pthread_mutex_unlock(&queue->lock);
+                Log(logger, pParam->collectorID, DISCONN, TCP, DISCONN_OPT, &logOptVal);
                 break;
             }
-            // TODO: Logging
+            Log(logger, pParam->collectorID, SND, TCP, NO_OPT, NULL);
             free(packet);
             packet = NULL;
         }
