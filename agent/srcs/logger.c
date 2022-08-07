@@ -10,7 +10,7 @@
 
 #define LOGGER_DEBUG 0
 
-static char* logMsgs[KIND_OF_LOG] = {
+static const char* logMsgs[KIND_OF_LOG] = {
     "try-connection",   // TRY_CONN
     "fail-connection",  // FAIL_CONN
     "connected",        // CONN
@@ -21,7 +21,7 @@ static char* logMsgs[KIND_OF_LOG] = {
     "thread-created"    // THRD_CRT
 };
 
-static char* logProtocolStr[4] = {
+static const char* logProtocolStr[4] = {
     "TCP",
     "UDP",
     "DB",
