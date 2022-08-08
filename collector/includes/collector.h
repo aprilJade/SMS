@@ -9,7 +9,6 @@
 
 #include <stddef.h>
 #include "packets.h"
-#include "routines.h"
 
 enum eCollectorID
 {

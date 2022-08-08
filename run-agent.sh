@@ -1,4 +1,5 @@
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/apriljade/Documents/repository/SMS/SMSutils
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/apriljade/Documents/repository/SMS/collector
 # -p [period] -c [period] -m [period] -n [period]
 # The [period] is the collection period and is in milliseconds.
 # If you want collect CPU info every 500ms, memory info every 500ms, network info every 500ms and

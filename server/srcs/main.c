@@ -9,7 +9,6 @@
 #include <pthread.h>
 #include <fcntl.h>
 #include "serverRoutine.h"
-#include "../../agent/includes/packets.h"
 
 #define CONNECTION_COUNT 4
 #define HOST "127.0.0.1"
