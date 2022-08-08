@@ -1,7 +1,8 @@
 NAME		=	agent
 CFLAG		=	-g -fsanitize=address
-INCLUDES	=	-I./includes/
-LIB			=	-lpthread
+INCLUDES	=	-I./includes/ -I../SMSutils/includes
+LIB			=	-lpthread -lSMSutils
+LIB_DIR		=	-L../SMSutils
 SRC_DIR		=	./srcs
 OBJ_DIR		=	./objs
 SRCS		=	$(notdir $(wildcard $(SRC_DIR)/*.c))
@@ -17,10 +18,10 @@ $(shell mkdir $(OBJ_DIR))
 endif
 
 $(OBJ_DIR)/%.o	: $(SRC_DIR)/%.c
-	$(CC) $(CFLAG) $(LIB) -c $< -o $@ $(INCLUDES) 
+	$(CC) $(CFLAG) $(LIB_DIR) $(LIB) -c $< -o $@ $(INCLUDES) 
 
 $(NAME): $(OBJECTS)
-	cc $(CFLAG) $(LIB) $(INCLUDES) -o $(NAME) $(OBJECTS)
+	cc $(CFLAG) $(LIB_DIR) $(LIB)  $(INCLUDES) -o $(NAME) $(OBJECTS)
 
 all: $(NAME)
 
