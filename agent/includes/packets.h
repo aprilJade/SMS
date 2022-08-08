@@ -68,46 +68,4 @@ typedef struct SBodyp
 } SBodyp;
 #pragma pack(pop)
 
-/*
-typedef struct SCpuInfoPacket
-{
-    ulong collectTime;
-    ulong usrCpuRunTime;
-    ulong sysCpuRunTime;
-    ulong idleTime;
-    ulong waitTime;
-} SCpuInfoPacket;
-
-typedef struct SMemInfoPacket
-{
-    ulong collectTime;
-    ulong memFree;
-    ulong memAvail;
-    ulong memUsed;
-    ulong swapFree;
-    uint collectPeriod;
-} SMemInfoPacket;   
-
-typedef struct SProcInfoPacket
-{
-    ulong collectTime;
-    uint pid;
-    uint ppid;
-    ulong utime;
-    ulong stime;
-    uchar userName[32];
-    uchar procName[16];
-    uchar state;
-    ushort cmdlineLen;
-} SProcInfoPacket;
-
-typedef struct SNetInfoPacket
-{
-    ulong collectTime;
-    ulong recvBytes;
-    ulong recvPackets;
-    ulong sendBytes;
-    ulong sendPackets;
-} SNetInfoPacket;
-*/
 #endif
