@@ -175,15 +175,14 @@ int Log(Logger* handle, char signature, int msg, int protocol, int optionalFlag,
             optVal->queueSize);
         break;
     case COLLECT_ELAPSE_OPT:
-        sprintf(msgBuf, "[%02d:%02d:%02d+0900] %c %s %s %ldus %d\n",
+        sprintf(msgBuf, "[%02d:%02d:%02d+0900] %c %s %s %ld\n",
             timeStruct->tm_hour,
             timeStruct->tm_min,
             timeStruct->tm_sec,
             signature,
             logMsgs[msg],
             logProtocolStr[protocol],
-            optVal->elapseTime,
-            optVal->collectedCount);
+            optVal->elapseTime);
         break;
     default:
         // TODO: handle error...

@@ -38,12 +38,12 @@ make
     - [x] ~로깅은 저장소 설계 (파일에 text or DB)~
       - [x] ~log폴더 없을 시 생성하여 일자별로 로깅~
     - [x] ~로그 포맷 설계~
-    - [ ] printf에서 Log()로 전환
+    - [x] ~printf에서 Log()로 전환~
       - [x] ~Sender~
-      - [ ] CPU Routine
-      - [ ] Memory Routine
-      - [ ] Network Routine
-      - [ ] Process Routine
+      - [x] ~CPU Routine~
+      - [x] ~Memory Routine~
+      - [x] ~Network Routine~
+      - [x] ~Process Routine~
     - [ ] System Log 추가
       - [ ] malloc error, file open error, file read error,...
       - [ ] agent 실행 시 로깅

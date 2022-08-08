@@ -6,10 +6,10 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#define DETAIL_PRINT_CPU 1
-#define DETAIL_PRINT_MEM 1
-#define DETAIL_PRINT_NET 1
-#define DETAIL_PRINT_PROC 1
+#define DETAIL_PRINT_CPU 0
+#define DETAIL_PRINT_MEM 0
+#define DETAIL_PRINT_NET 0
+#define DETAIL_PRINT_PROC 0
 
 void* ServCpuInfoRoutine(void* param)
 {
