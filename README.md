@@ -33,10 +33,10 @@ sh run-agent.sh
 또한 추후 추가되거나 삭제될 리스트가 있을 수 있습니다.
 - [ ] 공통
   - [ ] 코드 정리 (수시로 반복할 것)
-  - [ ] 패킷 데이터 자료형 다시 생각해보기 (man 5 proc 참조(각 자료에 대한 자료형 명시되어있음))
-  - [ ] 동적 라이브러리로 분할하기
-    - [ ] SMSutils - Logger, Queue, ...
-    - [ ] collector - CPU, Memory, Network, Process, ...
+  - [x] ~패킷 데이터 자료형 다시 생각해보기 (man 5 proc 참조(각 자료에 대한 자료형 명시되어있음))~
+  - [x] ~동적 라이브러리로 분할하기~
+    - [x] ~SMSutils - Logger, Queue, ...~
+    - [x] ~collector - CPU, Memory, Network, Process, ...~
   - [ ] Logger
     - [ ] 서버와 클라이언트의 동작을 로깅하기 위한 로깅 라이브러리 제작
     - [x] ~로깅은 저장소 설계 (파일에 text or DB)~
