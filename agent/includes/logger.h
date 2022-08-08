@@ -1,6 +1,6 @@
 #ifndef LOGGER_H
 #define LOGGER_H
-#define KIND_OF_LOG 8
+#define KIND_OF_LOG 9
 #define LOG_BUFFER_SIZE 128
 #include <pthread.h>
 #include "Queue.h"
@@ -34,6 +34,7 @@ typedef struct LoggerOptValue
     int queueSize;
     int curQueueElemCnt;
     int connFailCnt;
+    unsigned long elapseTime;
 } LoggerOptValue;
 
 enum eSig
@@ -53,7 +54,8 @@ enum eMessage
     RCV,
     SND,
     QRY,
-    THRD_CRT
+    THRD_CRT,
+    COLL_COMPLETE
 };
 
 enum eProtocol
@@ -68,7 +70,8 @@ enum eOption
 {
     NO_OPT,
     DISCONN_OPT,
-    CONN_FAIL_OPT
+    CONN_FAIL_OPT,
+    COLLECT_ELAPSE_OPT
 };
 
 Logger* NewLogger(char* host, short port);

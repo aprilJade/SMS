@@ -48,6 +48,7 @@ void* CpuInfoRoutine(void* param)
     //printf("CPU Collector: Start to collect CPU information every %d ms.\n", pParam->collectPeriod);
     Log(logger, LOG_CPU, THRD_CRT, SYS, NO_OPT, NULL);
 
+    LoggerOptValue logOptVal;
     while (1)
     {
         gettimeofday(&timeVal, NULL);
@@ -66,7 +67,6 @@ void* CpuInfoRoutine(void* param)
         CollectCpuInfo(toMs, buf, packet);
 
 #if PRINT_CPU
-        // TODO: Convert printf to log
         printf("<CPU information as OS resources>\n");
         printf("CPU running time (user mode): %ld ms\n", packet.usrCpuRunTime);
         printf("CPU running time (system mode): %ld ms\n", packet.sysCpuRunTime);
@@ -82,10 +82,11 @@ void* CpuInfoRoutine(void* param)
             usleep(500);
         Push(packet, queue);
         pthread_mutex_unlock(&queue->lock);
-        
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
+        logOptVal.elapseTime = elapseTime;
+        Log(logger, LOG_CPU, COLL_COMPLETE, SYS, COLLECT_ELAPSE_OPT, &logOptVal);
         usleep(pParam->collectPeriod * 1000 - elapseTime);
     }
 }

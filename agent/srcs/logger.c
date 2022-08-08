@@ -18,7 +18,8 @@ static const char* logMsgs[KIND_OF_LOG] = {
     "received",         // RCV
     "send",             // SND
     "query",            // QRY
-    "thread-created"    // THRD_CRT
+    "thread-created",   // THRD_CRT
+    "collected"         // COLL_COMPLETE
 };
 
 static const char* logProtocolStr[4] = {
@@ -115,7 +116,7 @@ void DeleteLogger(Logger* logger)
 int Log(Logger* handle, char signature, int msg, int protocol, int optionalFlag, void* optionValue)
 {
     assert(handle != NULL);
-    assert(optionalFlag <= CONN_FAIL_OPT && optionalFlag >= NO_OPT);
+    assert(optionalFlag <= COLLECT_ELAPSE_OPT && optionalFlag >= NO_OPT);
     time_t localTime;
     struct tm* timeStruct;
     LoggerOptValue* optVal = (LoggerOptValue*)optionValue;
@@ -172,6 +173,16 @@ int Log(Logger* handle, char signature, int msg, int protocol, int optionalFlag,
             optVal->connFailCnt,
             optVal->curQueueElemCnt,
             optVal->queueSize);
+        break;
+    case COLLECT_ELAPSE_OPT:
+        sprintf(msgBuf, "[%02d:%02d:%02d+0900] %c %s %s %ldus\n",
+            timeStruct->tm_hour,
+            timeStruct->tm_min,
+            timeStruct->tm_sec,
+            signature,
+            logMsgs[msg],
+            logProtocolStr[protocol],
+            optVal->elapseTime);
         break;
     default:
         // TODO: handle error...
