@@ -2,6 +2,7 @@
 */.vscode/
 */agent
 *.o
+*.so
 objs/
 */server
 */Log*
