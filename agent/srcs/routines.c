@@ -45,7 +45,7 @@ void* CpuInfoRoutine(void* param)
     SRoutineParam* pParam = (SRoutineParam*)param;
     Queue* queue = pParam->queue;
     Logger* logger = pParam->logger;
-    //printf("CPU Collector: Start to collect CPU information every %d ms.\n", pParam->collectPeriod);
+    
     Log(logger, LOG_CPU, THRD_CRT, SYS, NO_OPT, NULL);
 
     LoggerOptValue logOptVal;
@@ -99,9 +99,10 @@ void* MemInfoRoutine(void* param)
     SMemInfoPacket* packet;
     SRoutineParam* pParam = (SRoutineParam*)param;
     Queue* queue = pParam->queue;
+    Logger* logger = pParam->logger;
+    LoggerOptValue logOptVal;
 
-    // TODO: Change to Log
-    printf("Memory Collector: Start to collect memory information every %d ms.\n", pParam->collectPeriod);
+    Log(logger, LOG_MEMORY, THRD_CRT, SYS, NO_OPT, NULL);
 
     while(1)
     {
@@ -135,11 +136,12 @@ void* MemInfoRoutine(void* param)
             usleep(500);
         Push(packet, queue);
         pthread_mutex_unlock(&queue->lock);
-
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 
+        logOptVal.elapseTime = elapseTime;
+        Log(logger, LOG_MEMORY, COLL_COMPLETE, SYS, COLLECT_ELAPSE_OPT, &logOptVal);
         usleep(pParam->collectPeriod * 1000 - elapseTime);
     }
 }
@@ -153,9 +155,10 @@ void* NetInfoRoutine(void* param)
     SNetInfoPacket* packet;
     SRoutineParam* pParam = (SRoutineParam*)param;
     Queue* queue = pParam->queue;
+    Logger* logger = pParam->logger;
+    LoggerOptValue logOptVal;
 
-    // TODO: Change to Log
-    printf("Network Collector: Start to collect network information every %d ms.\n", pParam->collectPeriod);
+    Log(logger, LOG_NETWORK, THRD_CRT, SYS, NO_OPT, NULL);
 
     while(1)
     {
@@ -200,21 +203,25 @@ void* NetInfoRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
+
+        logOptVal.elapseTime = elapseTime;
+        Log(logger, LOG_NETWORK, COLL_COMPLETE, SYS, COLLECT_ELAPSE_OPT, &logOptVal);
         usleep(pParam->collectPeriod * 1000 - elapseTime);
     }
 }
 
 void* ProcInfoRoutine(void* param)
 {
-    ulong prevTime, postTime, elapseTime;
+    ulong prevTime, postTime, elapseTime, totalElapsed;
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
     SProcInfoPacket* packet;
     SRoutineParam* pParam = (SRoutineParam*)param;
     Queue* queue = pParam->queue;
+    Logger* logger = pParam->logger;
+    LoggerOptValue logOptVal;
 
-    // TODO: Change to Log
-    printf("Process Collector: Start to collect process information every %d ms.\n", pParam->collectPeriod);
+    Log(logger, LOG_PROCESS, THRD_CRT, SYS, NO_OPT, NULL);
 
     DIR* dir;
     struct dirent* entry;
@@ -223,6 +230,7 @@ void* ProcInfoRoutine(void* param)
     while(1)
     {
         dir = opendir("/proc");
+        totalElapsed = 0;
         if (dir == NULL)
             return 0;
         while ((entry = readdir(dir)) != NULL)
@@ -290,9 +298,12 @@ void* ProcInfoRoutine(void* param)
                 gettimeofday(&timeVal, NULL);
                 postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
                 elapseTime = postTime - prevTime;
+                totalElapsed += elapseTime;
             }
         }
-        usleep(pParam->collectPeriod * 1000 - elapseTime);
+        logOptVal.elapseTime = totalElapsed;
+        Log(logger, LOG_PROCESS, COLL_COMPLETE, SYS, COLLECT_ELAPSE_OPT, &logOptVal);
+        usleep(pParam->collectPeriod * 1000 - totalElapsed);
     }
 }
 
