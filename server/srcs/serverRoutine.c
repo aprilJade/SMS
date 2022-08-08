@@ -6,10 +6,10 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#define DETAIL_PRINT_CPU 0
-#define DETAIL_PRINT_MEM 0
-#define DETAIL_PRINT_NET 0
-#define DETAIL_PRINT_PROC 0
+#define DETAIL_PRINT_CPU 1
+#define DETAIL_PRINT_MEM 1
+#define DETAIL_PRINT_NET 1
+#define DETAIL_PRINT_PROC 1
 
 void* ServCpuInfoRoutine(void* param)
 {
@@ -17,17 +17,20 @@ void* ServCpuInfoRoutine(void* param)
     printf("Start serverCpuInfoRoutine\n");
     SServRoutineParam* pParam = (SServRoutineParam*)param;
     int readSize;
-    char buf[128] = { 0, };
-    SCpuInfoPacket* packet = (SCpuInfoPacket*)buf;
+    char buf[512] = { 0, };
+    //SCpuInfoPacket* packet = (SCpuInfoPacket*)buf;
+    SHeader* hHeader;
+    SBodyc* hBody;
     while (1)
     {
-        if ((readSize = read(pParam->clientSock, buf, sizeof(SCpuInfoPacket))) == -1)
+        if ((readSize = read(pParam->clientSock, buf, 512)) == -1)
         {
             printf("Fail to receive...!\n");
             close(pParam->clientSock);
             close(pParam->logFd);
             return 0;
         }
+        
         if (readSize == 0)
         {
             printf("Disconnected from agent side.\n");
@@ -36,21 +39,18 @@ void* ServCpuInfoRoutine(void* param)
             printf("Wait to reconnect....\n");
             return 0;
         }
+
+        hHeader = (SHeader*)buf;
+        hBody = (SBodyc*)(buf + sizeof(SHeader));
         // TODO: Store to DB
-        write(pParam->logFd, "C", 1);
+        //write(pParam->logFd, "C", 1);
 #if DETAIL_PRINT_CPU
-        printf("Receive cpu info packet: %d\n\
-                Collect Time: %lld ms\n\
-                Running Time (user): %d ms\n\
-                Running Time (system): %d ms\n\
-                Idle Time: %d ms\n\
-                Wait Time: %d ms\n\n",
-                readSize, 
-                packet->collectTime, 
-                packet->usrCpuRunTime,
-                packet->sysCpuRunTime,
-                packet->idleTime,
-                packet->waitTime);
+        for (int i = 0; i < hHeader->bodyCount; i++)
+        {
+            printf("%d: %ld %ld %ld %ld\n",
+                i, hBody->usrCpuRunTime, hBody->sysCpuRunTime, hBody->idleTime, hBody->waitTime);
+            hBody++;
+        }
 #endif
     }
 }
@@ -61,11 +61,14 @@ void* ServMemInfoRoutine(void* param)
     printf("Start serverMemInfoRoutine\n");
     SServRoutineParam* pParam = (SServRoutineParam*)param;
     int readSize;
-    char buf[128] = { 0, };
-    SMemInfoPacket* packet = (SMemInfoPacket*)buf;
+    char buf[512] = { 0, };
+    
+    SHeader* hHeader;
+    SBodym* hBody;
+
     while (1)
     {
-        if ((readSize = read(pParam->clientSock, buf, sizeof(SMemInfoPacket))) == -1)
+        if ((readSize = read(pParam->clientSock, buf, 512)) == -1)
         {
             printf("Fail to receive...!\n");
             close(pParam->clientSock);
@@ -80,25 +83,16 @@ void* ServMemInfoRoutine(void* param)
             printf("Wait to reconnect....\n");
             return 0;
         }
+
+        hHeader = (SHeader*)buf;
+        hBody = (SBodym*)(buf + sizeof(SHeader));
+
         // TODO: Store to DB
-        write(pParam->logFd, "m", 1);
+        //write(pParam->logFd, "m", 1);
 #if DETAIL_PRINT_MEM
-        printf("Receive mem info packet: %d bytes\n\
-                Collect Time: %lld ms\n\
-                Total Memory: %d kB\n\
-                Free Memory: %d kB\n\
-                Used Memory: %d kB\n\
-                Available Memory: %d kB\n\
-                Total Swap Space: %d kB\n\
-                Free Swap Space: %d kB\n",
-                readSize,
-                packet->collectTime,
-                packet->memTotal,
-                packet->memFree,
-                packet->memUsed,
-                packet->memAvail,
-                packet->swapTotal,
-                packet->swapFree);
+        printf("%c: %ukB %ukB %ukB %ukB\n",
+            hHeader->signature[3],
+            hBody->memFree, hBody->memUsed, hBody->memAvail, hBody->swapFree);
 #endif
     }
 }
@@ -110,11 +104,13 @@ void* ServNetInfoRoutine(void* param)
     SServRoutineParam* pParam = (SServRoutineParam*)param;
     int readSize = 0;
     int totalSize = 0;
-    char buf[128] = { 0, };
-    SNetInfoPacket* packet = (SNetInfoPacket*)buf;
+    char buf[512] = { 0, };
+    SHeader* hHeader;
+    SBodyn* hBody;
+
     while (1)
     {
-        if ((readSize = read(pParam->clientSock, buf, sizeof(SNetInfoPacket))) == -1)
+        if ((readSize = read(pParam->clientSock, buf, 512)) == -1)
         {
             printf("Fail to receive...!\n");
             close(pParam->clientSock);
@@ -130,20 +126,18 @@ void* ServNetInfoRoutine(void* param)
             return 0;
         }
         // TODO: Store to DB
-        write(pParam->logFd, "n", 1);
+        //write(pParam->logFd, "n", 1);
+
+        hHeader = (SHeader*)buf;
+        hBody = (SBodyn*)(buf + sizeof(SHeader));
+
 #if DETAIL_PRINT_NET
-        printf("Receive net info packet: %d bytes\n\
-                Collect Time: %ld ms\n\
-                Receive Bytes: %ld kB\n\
-                Receive Packet Count: %ld\n\
-                Send Bytes: %ld kB\n\
-                Send Packet Count: %ld\n",
-                readSize,
-                packet->collectTime,
-                packet->recvBytes,
-                packet->recvPackets,
-                packet->sendBytes,
-                packet->sendPackets);
+        for(int i = 0; i < hHeader->bodyCount; i++)
+        {
+            printf("%c: recv %ld %ld / send %ld %ld\n",
+                hHeader->signature[3],
+                hBody->recvBytes, hBody->recvPackets, hBody->sendBytes, hBody->sendPackets);
+        }
 #endif
     }
 }
@@ -155,11 +149,11 @@ void* ServProcInfoRoutine(void* param)
     SServRoutineParam* pParam = (SServRoutineParam*)param;
     int readSize = 0;
     int totalSize = 0;
-    char buf[128] = { 0, };
-    SProcInfoPacket* packet = (SProcInfoPacket*)buf;
+    char buf[1024 * 1024] = { 0, };
+
     while (1)
     {
-        if ((readSize = read(pParam->clientSock, buf, sizeof(SProcInfoPacket))) == -1)
+        if ((readSize = read(pParam->clientSock, buf, 1024 * 1024)) == -1)
         {
             printf("Fail to receive...!\n");
             close(pParam->clientSock);
@@ -177,22 +171,9 @@ void* ServProcInfoRoutine(void* param)
             return 0;
         }
         // TODO: Store to DB
-        write(pParam->logFd, "p", 1);
+        //write(pParam->logFd, "p", 1);
 #if DETAIL_PRINT_PROC
-        printf("Receive net info packet: %d bytes\n\
-                Collect Time: %lld ms\n\
-                Network Interface: %s\n\
-                Receive Bytes: %lld B\n\
-                Receive Packet Count: %d\n\
-                Send Bytes: %lld B\n\
-                Send Packet Count: %d\n",
-                readSize,
-                packet->collectTime,
-                packet->netIfName,
-                packet->recvBytes,
-                packet->recvPackets,
-                packet->sendBytes,
-                packet->sendPackets);
+        
 #endif
     }
 }

@@ -35,11 +35,12 @@ typedef struct LoggerOptValue
     int curQueueElemCnt;
     int connFailCnt;
     unsigned long elapseTime;
+    int collectedCount;
 } LoggerOptValue;
 
 enum eSig
 {
-    LOG_CPU = 'C',
+    LOG_CPU = 'c',
     LOG_MEMORY = 'm',
     LOG_NETWORK = 'n',
     LOG_PROCESS = 'p'

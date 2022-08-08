@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
+#include <dirent.h>
 #include "collector.h"
 #include "packets.h"
 
@@ -20,7 +21,7 @@
 // Logical CPU: get using sysconf()
 // Wall time: get using gettimeofday()
 
-void CollectEachCpuInfo(long cpuCnt, long timeConversion, char* rdBuf)
+uchar* CollectEachCpuInfo(ushort cpuCnt, long timeConversion, char* rdBuf)
 {
 	int	fd;
 	int readSize = 0;
@@ -30,69 +31,50 @@ void CollectEachCpuInfo(long cpuCnt, long timeConversion, char* rdBuf)
 	{
 		// TODO: Handling open error
 		perror("agent");
-		return ;
+		return NULL;
 	}
 	readSize = read(fd, rdBuf, BUFFER_SIZE);
 	if (readSize == -1)
 	{
 		// TODO: Handling read error
 		perror("agent");
-		return ;
+		return NULL;
 	}
 	rdBuf[readSize] = 0;
+	uchar* result = (uchar*)malloc(cpuCnt * sizeof(SBodyc) + sizeof(SHeader));
+	if (result == NULL)
+	{
+		// TODO: Handling malloc error
+		return NULL;
+	}
+	// gen header..
+
+	SHeader* hh = (SHeader*)result;
+	memcpy(result, SIGNATURE_CPU, 4);
+	hh->bodyCount = cpuCnt;
+	hh->bodySize = sizeof(SBodyc);
+
+	SBodyc* handle = (SBodyc*)(result + sizeof(SHeader));
     while (*rdBuf++ != '\n');
 	for (int i = 0; i < cpuCnt; i++)
 	{
 		while (*rdBuf++ != ' ');
-		size_t userModeRunningTime = atol(rdBuf) * timeConversion;
+		handle->usrCpuRunTime = atol(rdBuf) * timeConversion;
 		while (*rdBuf++ != ' ');
-		size_t sysModeRunningTime = atol(rdBuf) * timeConversion;
+		handle->sysCpuRunTime = atol(rdBuf) * timeConversion;
 		while (*rdBuf++ != ' ');
 		while (*rdBuf++ != ' ');
-		size_t idleTime = atol(rdBuf) * timeConversion;
+		handle->idleTime = atol(rdBuf) * timeConversion;
 		while (*rdBuf++ != ' ');
-		size_t waitTime = atol(rdBuf) * timeConversion;
+		handle->waitTime = atol(rdBuf) * timeConversion;
 		while (*rdBuf++ != '\n');
-        printf("cpu%d\tumrt: %10ld\tsmrt: %10ld\tidle: %10ld\twait: %10ld\n",
-         i, userModeRunningTime, sysModeRunningTime, idleTime, waitTime);
+		handle++;
 	}
 	close(fd);
+	return result;
 }
 
-void CollectCpuInfo(long timeConversion, char* buf, SCpuInfoPacket* packet)
-{
-	assert(packet != NULL);
-    int	fd;
-	int readSize = 0;
-	fd = open("/proc/stat", O_RDONLY);
-	if (fd == -1)
-	{
-		// TODO: Handling open error
-		perror("agent");
-		return ;
-	}
-	readSize = read(fd, buf, BUFFER_SIZE);
-	if (readSize == -1)
-	{
-		// TODO: Handling read error
-		perror("agent");
-		return ;
-	}
-	buf[readSize] = 0;
-    while (*buf++ != ' ');
-    packet->usrCpuRunTime = atol(buf) * timeConversion;
-    while (*buf++ != ' ');
-    packet->sysCpuRunTime = atol(buf) * timeConversion;
-    while (*buf++ != ' ');
-    while (*buf++ != ' ');
-    packet->idleTime = atol(buf) * timeConversion;
-    while (*buf++ != ' ');
-    packet->waitTime = atol(buf) * timeConversion;
-    while (*buf++ != '\n');
-	close(fd);	
-}
-
-void CollectMemInfo(char* buf, SMemInfoPacket* packet)
+uchar* CollectMemInfo(char* buf)
 {
 	int fd = open("/proc/meminfo", O_RDONLY);
 	int readSize;
@@ -100,27 +82,40 @@ void CollectMemInfo(char* buf, SMemInfoPacket* packet)
 	{
 		// TODO: handling open error
 		perror("agent");
-		return ;
+		return NULL;
 	}
 	readSize = read(fd, buf, BUFFER_SIZE);
 	if (readSize == -1)
 	{
 		// TODO: handling read error
 		perror("agent");
-		return ;
+		return NULL;
 	}
 	buf[readSize] = 0;
 	
+	uchar* result = (uchar*)malloc(sizeof(SHeader) + sizeof(SBodym));
+	if (result == NULL)
+	{
+		// TODO: handling malloc error
+		return NULL;
+	}
+
+	SHeader* hh = (SHeader*)result;
+	memcpy(result, SIGNATURE_MEM, 4);
+	hh->bodyCount = 1;
+	hh->bodySize = sizeof(SBodym);
+	SBodym* handle = (SBodym*)(result + sizeof(SHeader));
+
 	while (*buf++ != ' ');
 	ulong memTotal = atol(buf);
 
 	while (*buf++ != '\n');
 	while (*buf++ != ' ');
-	packet->memFree = atol(buf);
+	handle->memFree = atol(buf);
 	
 	while (*buf++ != '\n');
 	while (*buf++ != ' ');
-	packet->memAvail = atol(buf);
+	handle->memAvail = atol(buf);
 
 	while (*buf++ != '\n');
 	while (*buf++ != ' ');
@@ -130,169 +125,245 @@ void CollectMemInfo(char* buf, SMemInfoPacket* packet)
 	while (*buf++ != ' ');
 	ulong memCached = atol(buf);
 
-	packet->memUsed = memTotal - packet->memFree - memBuffers - memCached;
+	handle->memUsed = memTotal - handle->memFree - memBuffers - memCached;
 	for (int i = 0; i < 11; i++)
 		while (*buf++ != '\n');
 	while (*buf++ != ' ');
-	packet->swapFree = atol(buf);
+	handle->swapFree = atol(buf);
 	close(fd);
+	return result;
 }
 
-void CollectNetInfo(char* buf, SNetInfoPacket* packet)
+uchar* CollectNetInfo(char* buf, int nicCount)
 {
 	int fd = open("/proc/net/dev", O_RDONLY);
 	if (fd == -1)
 	{
 		// TODO: handling open error
 		perror("agent");
-		return ;
+		return NULL;
 	}
 	int readSize = read(fd, buf, BUFFER_SIZE);
 	if (readSize == -1)
 	{
 		// TODO: handling read error
 		perror("agent");
-		return ;
+		return NULL;
 	}
 	buf[readSize] = 0;
-	while (*buf++ != '\n');
-	while (*buf++ != '\n');
-	while (*buf++ != '\n');
-	while (*buf++ != ':');
-	packet->recvBytes = atol(buf) / 1024;
 
-	while (*buf++ == ' ');
-	while (*buf++ != ' ');
-	packet->recvPackets = atol(buf);
-
-	for (int i = 0; i < 7; i++)
+	uchar* result = (uchar*)malloc(sizeof(SHeader) + sizeof(SBodyn) * nicCount);
+	if (result == NULL)
 	{
+		// TODO: handle malloc error
+		return NULL;
+	}
+	SHeader* hh = (SHeader*)result;
+	memcpy(result, SIGNATURE_NET, 4);
+	hh->bodyCount = nicCount;
+	hh->bodySize = sizeof(SBodyn);
+	SBodyn* handle = (SBodyn*)result;
+
+	while (*buf++ != '\n');
+	while (*buf++ != '\n');
+	// while (*buf++ != '\n'); // if this code line is run, then couldn't collect loopback data
+	for (int i = 0; i < nicCount; i++)
+	{
+		while (*buf++ != ':');
+		handle->recvBytes = atol(buf) / 1024;
+
 		while (*buf++ == ' ');
 		while (*buf++ != ' ');
-	}
-	packet->sendBytes = atol(buf) / 1024;
+		handle->recvPackets = atol(buf);
 
-	while (*buf++ == ' ');
-	while (*buf++ != ' ');
-	packet->sendPackets = atol(buf);
+		for (int i = 0; i < 7; i++)
+		{
+			while (*buf++ == ' ');
+			while (*buf++ != ' ');
+		}
+		handle->sendBytes = atol(buf) / 1024;
+
+		while (*buf++ == ' ');
+		while (*buf++ != ' ');
+		handle->sendPackets = atol(buf);
+		handle++;
+	}
+	return result;
 }
 
-void CollectProcInfo(char* path, char *buf, SProcInfoPacket* packet)
+uchar* CollectProcInfo(char *buf, uchar* dataBuf)
 {
-	char fileName[32] = { 0, };
+	char filePath[260] = { 0, };
 	int fd = 0;
 	int readSize = 0;
-	int cnt;
 	char *pbuf;
-	char* cmdLine;
 	struct passwd *pwd;
+
+	DIR* dir;
+    struct dirent* entry;
+    char path[260];
+
+	uchar* tmp = dataBuf;
+	memcpy(tmp, SIGNATURE_PROC, 4);
+	SBodyp* handle;
+	tmp += 8;
+	int procCnt = 0;
+
+	dir = opendir("/proc");
+	if (dir == NULL)
+	{
+		// TODO: handle error
+		return NULL;
+	}
+	while ((entry = readdir(dir)) != NULL)
+	{
+		if (entry->d_type == DT_DIR)
+		{
+			if (atoi(entry->d_name) < 1)
+				continue;
+			snprintf(path, 262, "/proc/%s", entry->d_name);
+			if (access(path, F_OK) != 0)
+				continue;
+			
+			// start parsing
+			procCnt++;
+			handle = (SBodyp*)tmp;
+
+			sprintf(filePath, "%s/stat", path);
+			fd = open(filePath, O_RDONLY);
+			if (fd == -1)
+			{
+				// TODO: handling open error
+				perror("agent");
+				return NULL;
+			}
+			pbuf = buf;
+			readSize = read(fd, buf, 512);
+			if (readSize == -1)
+			{
+				// TODO: handling read error
+				perror("agent");
+				return NULL;
+			}
+			pbuf[readSize] = 0;
+
+			handle->pid = atoi(pbuf);
+			while (*pbuf++ != '(');
+			for (int j = 0; *pbuf != ')' && j < 16; j++)
+				handle->procName[j] = *pbuf++;
+			while (*pbuf++ != ')');
+			pbuf++;
+			handle->state = *pbuf++;
+			handle->ppid = atoi(pbuf);
+
+			for (int cnt = 0; cnt < 11; cnt++)
+				while (*pbuf++ != ' ');
+
+			handle->utime = atol(pbuf) * 1000;
+
+			while (*pbuf++ != ' ');
+			handle->stime = atol(pbuf) * 1000;
+			close(fd);
+
+			int fileNameLen = strlen(filePath);
+			filePath[fileNameLen++] = 'u';
+			filePath[fileNameLen++] = 's';
+			filePath[fileNameLen] = '\0';
+			fd = open(filePath, O_RDONLY);
+			if (fd == -1)
+			{
+				// TODO: handling open error
+				perror("agent");
+				return NULL;
+			}
+			readSize = read(fd, buf, 512);
+			if (readSize == -1)
+			{
+				// TODO: handling read error
+				perror("agent");
+				return NULL;
+			}
+			buf[readSize] = 0;
+
+			pbuf = buf;
+			for (int j = 0; j < 8; j++)
+				while (*pbuf++ != '\n');
+			pbuf += 4;
+			size_t uid = atoi(pbuf);
+			pwd = getpwuid(uid);
+			strcpy(handle->userName, pwd->pw_name);
+			close(fd);
+
+			sprintf(filePath, "%s/cmdline", path);
+			fd = open(filePath, O_RDONLY);
+			if (fd == -1)
+			{
+				// TODO: handling open error
+				perror("agent");
+				return NULL;
+			}
+			readSize = read(fd, buf, BUFFER_SIZE);
+			if (readSize == -1)
+			{
+				// TODO: handling read error
+				perror("agent");
+				return NULL;
+			}
+
+			handle->cmdlineLen = strlen(buf);
+			tmp += sizeof(SBodyp);
+
+			if (readSize > 0)
+			{
+				buf[readSize] = 0;
+				handle->cmdlineLen = strlen(buf);
+				strncpy(tmp, buf, handle->cmdlineLen);
+				tmp += handle->cmdlineLen;
+			}
+			close(fd);
+		}
+	}
 	
-	sprintf(fileName, "%s/stat", path);
-	fd = open(fileName, O_RDONLY);
-	if (fd == -1)
+	// complete collection
+	uchar* result = (uchar*)malloc(tmp - dataBuf);
+	if (result == NULL)
 	{
-		// TODO: handling open error
-		perror("agent");
-		return ;
+		// TODO: handle malloc error
+		return NULL;
 	}
-	pbuf = buf;
-	readSize = read(fd, buf, 512);
-	if (readSize == -1)
-	{
-		// TODO: handling read error
-		perror("agent");
-		return ;
-	}
-	pbuf[readSize] = 0;
-
-	packet->pid = atoi(pbuf);
-	while (*pbuf++ != '(');
-	for (int j = 0; *pbuf != ')' && j < 16; j++)
-		packet->procName[j] = *pbuf++;
-	while (*pbuf++ != ')');
-	pbuf++;
-	packet->state = *pbuf++;
-	packet->ppid = atoi(pbuf);
-
-	cnt = 0;
-	while (cnt < 11)
-	{
-		while (*pbuf++ != ' ');
-		cnt++;
-	}
-	packet->utime = atol(pbuf) * 1000;
-
-	while (*pbuf++ != ' ');
-	packet->stime = atol(pbuf) * 1000;
-	close(fd);
-
-	int fileNameLen = strlen(fileName);
-	fileName[fileNameLen++] = 'u';
-	fileName[fileNameLen++] = 's';
-	fileName[fileNameLen] = '\0';
-	fd = open(fileName, O_RDONLY);
-	if (fd == -1)
-	{
-		// TODO: handling open error
-		perror("agent");
-		return ;
-	}
-	readSize = read(fd, buf, 512);
-	if (readSize == -1)
-	{
-		// TODO: handling read error
-		perror("agent");
-		return ;
-	}
-	buf[readSize] = 0;
-
-	pbuf = buf;
-	for (int j = 0; j < 8; j++)
-		while (*pbuf++ != '\n');
-	pbuf += 4;
-	size_t uid = atoi(pbuf);
-	pwd = getpwuid(uid);
-	strcpy(packet->userName, pwd->pw_name);
-	close(fd);
-
-	sprintf(fileName, "%s/cmdline", path);
-	fd = open(fileName, O_RDONLY);
-	if (fd == -1)
-	{
-		// TODO: handling open error
-		perror("agent");
-		return ;
-	}
-	readSize = read(fd, buf, BUFFER_SIZE);
-	if (readSize == -1)
-	{
-		// TODO: handling read error
-		perror("agent");
-		return ;
-	}
-	if (readSize > 0)
-	{
-		buf[readSize] = 0;
-		cmdLine = strdup(buf);
-	}
-	else
-	{
-		packet->cmdlineLen = 0;
-	}
-	close(fd);
+	memcpy(result, tmp, tmp - dataBuf);
+	SHeader* hh = (SHeader*)result;
+	hh->bodyCount = 0;
+	hh->bodySize = tmp - dataBuf;
+	return result;
 }
 
-void GenerateInitialCpuPacket(SInitialPacket* packet, SRoutineParam* param)
+uchar* GenerateInitialCpuPacket(SRoutineParam* param)
 {
-	packet->logicalCoreCount = sysconf(_SC_NPROCESSORS_ONLN);
-	memcpy(&packet->signature, SIGNATURE_CPU, 4);
-	packet->collectPeriod = param->collectPeriod;
-	packet->collectorCreateTime = param->collectorCreateTime;
+	uchar* result = (uchar*)malloc(sizeof(SInitialPacket));
+	if (result == NULL)
+	{
+		// TODO: handle malloc error
+		return NULL;
+	}
+	SInitialPacket* handle = (SInitialPacket*)result;
+	handle->logicalCoreCount = sysconf(_SC_NPROCESSORS_ONLN);
+	memcpy(handle->signature, SIGNATURE_CPU, 4);
+	handle->collectPeriod = param->collectPeriod;
+	handle->isReconnected = 0;
+	return result;
 }
 
-void GenerateInitialMemPacket(SInitialPacket* packet, SRoutineParam* param)
+uchar* GenerateInitialMemPacket(SRoutineParam* param)
 {
-	memcpy(&packet->signature, SIGNATURE_MEM, 4);
+	uchar* result = (uchar*)malloc(sizeof(SInitialPacket));
+	if (result == NULL)
+	{
+		// TODO: handle malloc error
+		return NULL;
+	}
+	SInitialPacket* handle = (SInitialPacket*)result;
+	memcpy(handle->signature, SIGNATURE_MEM, 4);
 	char buf[BUFFER_SIZE + 1] = { 0, };
 	int fd = open("/proc/meminfo", O_RDONLY);
 	int readSize;
@@ -300,32 +371,45 @@ void GenerateInitialMemPacket(SInitialPacket* packet, SRoutineParam* param)
 	{
 		// TODO: handling open error
 		perror("agent");
-		return ;
+		return NULL;
 	}
 	readSize = read(fd, buf, BUFFER_SIZE);
 	if (readSize == -1)
 	{
 		// TODO: handling read error
 		perror("agent");
-		return ;
+		return NULL;
 	}
 	buf[readSize] = 0;
 	char* pbuf = buf;
 	while (*pbuf++ != ' ');
-	packet->memTotal = atol(buf);
+	handle->memTotal = atol(buf);
 
 	for (int i = 0; i < 14; i++)
 		while (*pbuf++ != '\n');
 	while (*pbuf++ != ' ');
-	packet->swapTotal = atol(buf);
+	handle->swapTotal = atol(buf);
 	close(fd);
-	packet->collectPeriod = param->collectPeriod;
-	packet->collectorCreateTime = param->collectorCreateTime;
+	handle->collectPeriod = param->collectPeriod;
+	handle->isReconnected = 0;
+	return result;
 }
 
-void GenerateInitialNetPacket(SInitialPacket* packet, SRoutineParam* param)
+uchar* GenerateInitialNetPacket(SRoutineParam* param)
 {
-	memcpy(&packet->signature, SIGNATURE_NET, 4);
+	int nicCount = GetNicCount();
+	uchar* result = (uchar*)malloc(sizeof(SInitialPacket) * sizeof(SInitialPacketBody) * nicCount);
+	if (result == NULL)
+	{
+		// TODO: handle malloc error
+		return NULL;
+	}
+	SInitialPacket* handle = (SInitialPacket*)result;
+	memcpy(handle->signature, SIGNATURE_NET, 4);
+	handle->collectPeriod = param->collectPeriod;
+	handle->isReconnected = 0;
+
+	int i;
 	char buf[BUFFER_SIZE + 1] = { 0, };
 	char *pbuf = buf;
 	int fd = open("/proc/net/dev", O_RDONLY);
@@ -333,30 +417,43 @@ void GenerateInitialNetPacket(SInitialPacket* packet, SRoutineParam* param)
 	{
 		// TODO: handling open error
 		perror("agent");
-		return ;
+		return NULL;
 	}
 	int readSize = read(fd, buf, BUFFER_SIZE);
 	if (readSize == -1)
 	{
 		// TODO: handling read error
 		perror("agent");
-		return ;
+		return NULL;
 	}
 	buf[readSize] = 0;
+	SInitialPacketBody* hBody = (SInitialPacketBody*)(result + sizeof(SInitialPacket));
 	while (*pbuf++ != '\n');
 	while (*pbuf++ != '\n');
-	while (*pbuf++ != '\n');
-	int i = 0;
-	memset(packet->netIfName, 0, 16);
-	for (i = 0; *pbuf != ':' && i < 15; i++)
-		packet->netIfName[i] = *pbuf++;
-	packet->collectPeriod = param->collectPeriod;
-	packet->collectorCreateTime = param->collectorCreateTime;
+	for (int j = 0; j < nicCount; j++)
+	{
+		while (*pbuf++ != ' ');
+		memset(hBody->name, 0, 15);
+		for (i = 0; *pbuf != ':' && i < 15; i++)
+			hBody->name[i] = *pbuf++;
+		hBody->nameLength = i;
+		while (*pbuf++ != '\n');
+		hBody++;
+	}
+	return result;
 }
 
-void GenerateInitialProcPacket(SInitialPacket* packet, SRoutineParam* param)
+uchar* GenerateInitialProcPacket(SRoutineParam* param)
 {
-	memcpy(&packet->signature, SIGNATURE_PROC, 4);
-	packet->collectPeriod = param->collectPeriod;
-	packet->collectorCreateTime = param->collectorCreateTime;
+	uchar* result = (uchar*)malloc(sizeof(SInitialPacket));
+	if (result == NULL)
+	{
+		// TODO: handle malloc error
+		return NULL;
+	}
+	SInitialPacket* handle = (SInitialPacket*)result;
+	memcpy(handle->signature, SIGNATURE_PROC, 4);
+	handle->collectPeriod = param->collectPeriod;
+	handle->isReconnected = 0;
+	return result;
 }

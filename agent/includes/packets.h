@@ -9,14 +9,66 @@ typedef unsigned char uchar;
 typedef struct SInitialPacket
 {
     uchar signature[4];
-    uint logicalCoreCount;
     uint collectPeriod;
+    uint logicalCoreCount;
     ulong memTotal;
     ulong swapTotal;
-    uchar netIfName[16];
-    ulong collectorCreateTime; 
+    ushort netIFCount;
+    ushort isReconnected;
 } SInitialPacket;
 
+typedef struct SInitialPacketBody
+{
+    uchar nameLength;
+    uchar name[15];
+} SInitialPacketBody;
+
+typedef struct SHeader
+{
+    uchar signature[4];
+    ushort bodyCount;
+    ushort bodySize;
+} SHeader;
+
+typedef struct SBodyc
+{
+    ulong usrCpuRunTime;
+    ulong sysCpuRunTime;
+    ulong idleTime;
+    ulong waitTime;
+} SBodyc;
+
+typedef struct SBodym
+{
+    uint memFree;
+    uint memAvail;
+    uint memUsed;
+    uint swapFree;
+} SBodym;
+
+typedef struct SBodyn
+{
+    ulong recvBytes;
+    ulong recvPackets;
+    ulong sendBytes;
+    ulong sendPackets;
+} SBodyn;
+
+#pragma pack(push, 1)
+typedef struct SBodyp
+{
+    uint pid;
+    uint ppid;
+    ulong utime;
+    ulong stime;
+    uchar procName[16];
+    uchar userName[32];
+    uchar state;
+    ushort cmdlineLen;
+} SBodyp;
+#pragma pack(pop)
+
+/*
 typedef struct SCpuInfoPacket
 {
     ulong collectTime;
@@ -36,7 +88,6 @@ typedef struct SMemInfoPacket
     uint collectPeriod;
 } SMemInfoPacket;   
 
-// #pragma pack(push, 1)
 typedef struct SProcInfoPacket
 {
     ulong collectTime;
@@ -49,7 +100,6 @@ typedef struct SProcInfoPacket
     uchar state;
     ushort cmdlineLen;
 } SProcInfoPacket;
-// #pragma pack(pop)
 
 typedef struct SNetInfoPacket
 {
@@ -59,5 +109,5 @@ typedef struct SNetInfoPacket
     ulong sendBytes;
     ulong sendPackets;
 } SNetInfoPacket;
-
+*/
 #endif

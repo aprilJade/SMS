@@ -2,7 +2,7 @@
 #define COLLECTOR_H
 
 #define BUFFER_SIZE 512
-#define SIGNATURE_CPU "SMSC"
+#define SIGNATURE_CPU "SMSc"
 #define SIGNATURE_MEM "SMSm"
 #define SIGNATURE_NET "SMSn"
 #define SIGNATURE_PROC "SMSp"
@@ -13,21 +13,20 @@
 
 enum eCollectorID
 {
-    CPU = 'C',
+    CPU = 'c',
     MEMORY = 'm',
     NETWORK = 'n',
     PROCESS = 'p'
 };
 
-void CollectEachCpuInfo(long cpuCnt, long timeConversion, char* rdBuf);
-void CollectCpuInfo(long timeConversion, char* rdBuf, SCpuInfoPacket* packet);
-void CollectMemInfo(char* buf, SMemInfoPacket* packet);
-void CollectNetInfo(char* buf, SNetInfoPacket* packet);
-void CollectProcInfo(char* path, char *buf, SProcInfoPacket* packet);
+uchar* CollectEachCpuInfo(ushort cpuCnt, long timeConversion, char* rdBuf);
+uchar* CollectMemInfo(char* buf);
+uchar* CollectNetInfo(char* buf, int nicCount);
+uchar* CollectProcInfo(char *buf, uchar* dataBuf);
 
-void GenerateInitialProcPacket(SInitialPacket* packet, SRoutineParam* param);
-void GenerateInitialNetPacket(SInitialPacket* packet, SRoutineParam* param);
-void GenerateInitialMemPacket(SInitialPacket* packet, SRoutineParam* param);
-void GenerateInitialCpuPacket(SInitialPacket* packet, SRoutineParam* param);
+uchar* GenerateInitialProcPacket(SRoutineParam* param);
+uchar* GenerateInitialNetPacket(SRoutineParam* param);
+uchar* GenerateInitialMemPacket(SRoutineParam* param);
+uchar* GenerateInitialCpuPacket(SRoutineParam* param);
 
 #endif

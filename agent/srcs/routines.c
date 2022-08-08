@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <dirent.h>
+#include <fcntl.h>
 #include "routines.h"
 #include "collector.h"
 #include "tcpCtrl.h"
@@ -22,12 +23,7 @@ SRoutineParam* GenRoutineParam(int collectPeriod, int collectorID)
 {
     SRoutineParam* ret = (SRoutineParam*)malloc(sizeof(SRoutineParam));
     if (collectPeriod < MIN_SLEEP_MS)
-    {
-        printf("Minimum collect period is 500 ms\n\
-                But you input %d ms. This is not allowed.\n\
-                Set collect period to 500 ms\n", collectPeriod);
         ret->collectPeriod = MIN_SLEEP_MS;
-    }
     else
         ret->collectPeriod = collectPeriod;
     ret->queue = NewQueue();
@@ -39,33 +35,24 @@ void* CpuInfoRoutine(void* param)
 {
     ulong prevTime, postTime, elapseTime;
 	long toMs = 1000 / sysconf(_SC_CLK_TCK);
+    ushort cpuCnt = sysconf(_SC_NPROCESSORS_ONLN);
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
-    SCpuInfoPacket* packet;
     SRoutineParam* pParam = (SRoutineParam*)param;
     Queue* queue = pParam->queue;
     Logger* logger = pParam->logger;
-    
-    Log(logger, LOG_CPU, THRD_CRT, SYS, NO_OPT, NULL);
 
+    Log(logger, LOG_CPU, THRD_CRT, SYS, NO_OPT, NULL);
+    uchar* data;
     LoggerOptValue logOptVal;
+
     while (1)
     {
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
-        packet = (SCpuInfoPacket*)malloc(sizeof(SCpuInfoPacket));
-        if (packet == NULL)
-        {
-            // TODO: handling malloc fail
-            usleep(5000);
-            continue;
-        }
-        memset(packet, 0, sizeof(SCpuInfoPacket));
-        packet->collectTime = prevTime / 1000;
-
-        CollectCpuInfo(toMs, buf, packet);
-
+        //CollectCpuInfo(toMs, buf, packet);
+        data = CollectEachCpuInfo(cpuCnt, toMs, buf);
 #if PRINT_CPU
         printf("<CPU information as OS resources>\n");
         printf("CPU running time (user mode): %ld ms\n", packet.usrCpuRunTime);
@@ -80,8 +67,9 @@ void* CpuInfoRoutine(void* param)
         // TODO: Handling Queue is full...more graceful
         while (IsFull(queue))
             usleep(500);
-        Push(packet, queue);
+        Push(data, queue);
         pthread_mutex_unlock(&queue->lock);
+
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
@@ -96,11 +84,11 @@ void* MemInfoRoutine(void* param)
     ulong prevTime, postTime, elapseTime;
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
-    SMemInfoPacket* packet;
     SRoutineParam* pParam = (SRoutineParam*)param;
     Queue* queue = pParam->queue;
     Logger* logger = pParam->logger;
     LoggerOptValue logOptVal;
+    uchar* data;
 
     Log(logger, LOG_MEMORY, THRD_CRT, SYS, NO_OPT, NULL);
 
@@ -109,17 +97,7 @@ void* MemInfoRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
-        packet = (SMemInfoPacket*)malloc(sizeof(SMemInfoPacket));
-        if (packet == NULL)
-        {
-            // TODO: handling malloc fail
-            usleep(5000);
-            continue;
-        }
-        memset(packet, 0, sizeof(SMemInfoPacket));
-        packet->collectTime = prevTime / 1000;
-
-        CollectMemInfo(buf, packet);
+        data = CollectMemInfo(buf);
 
 #if PRINT_MEM
         printf("<Memory information>\n");
@@ -134,8 +112,9 @@ void* MemInfoRoutine(void* param)
         // TODO: Handling Queue is full...more graceful
         while (IsFull(queue))
             usleep(500);
-        Push(packet, queue);
+        Push(data, queue);
         pthread_mutex_unlock(&queue->lock);
+
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
@@ -146,36 +125,57 @@ void* MemInfoRoutine(void* param)
     }
 }
 
-// TODO: handle multiple network interface
+int GetNicCount()
+{
+    char buf[BUFFER_SIZE] = { 0, };
+    int fd = open("/proc/net/dev", O_RDONLY);
+	if (fd == -1)
+	{
+		// TODO: handling open error
+		perror("agent");
+		return -1;
+	}
+    char* pBuf = buf;
+	int readSize = read(fd, buf, BUFFER_SIZE);
+	if (readSize == -1)
+	{
+		// TODO: handling read error
+		perror("agent");
+		return -1;
+	}
+	buf[readSize] = 0;
+    int cnt = 0;
+	while (*pBuf++ != '\n');
+	while (*pBuf++ != '\n');
+    while (*pBuf)
+    {
+        cnt++;
+	    while (*pBuf++ != '\n');
+    }
+    return cnt;
+}
+
 void* NetInfoRoutine(void* param)
 {
     ulong prevTime, postTime, elapseTime;
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
-    SNetInfoPacket* packet;
     SRoutineParam* pParam = (SRoutineParam*)param;
     Queue* queue = pParam->queue;
     Logger* logger = pParam->logger;
     LoggerOptValue logOptVal;
 
+    int nicCount = GetNicCount();
+
     Log(logger, LOG_NETWORK, THRD_CRT, SYS, NO_OPT, NULL);
+    uchar* data;
 
     while(1)
     {
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
-        packet = (SNetInfoPacket*)malloc(sizeof(SNetInfoPacket));
-        if (packet == NULL)
-        {
-            // TODO: handling malloc fail
-            usleep(5000);
-            continue;
-        }
-        memset(packet, 0, sizeof(SNetInfoPacket));
-        packet->collectTime = prevTime / 1000;
-
-        CollectNetInfo(buf, packet);
+        data = CollectNetInfo(buf, nicCount);
 
 #if PRINT_NET
         printf("Collected net info packet\n\
@@ -197,7 +197,7 @@ void* NetInfoRoutine(void* param)
         // TODO: Handling Queue is full...more graceful
         while (IsFull(queue))
             usleep(500);
-        Push(packet, queue);
+        Push(data, queue);
         pthread_mutex_unlock(&queue->lock);
 
         gettimeofday(&timeVal, NULL);
@@ -215,137 +215,78 @@ void* ProcInfoRoutine(void* param)
     ulong prevTime, postTime, elapseTime, totalElapsed;
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
-    SProcInfoPacket* packet;
     SRoutineParam* pParam = (SRoutineParam*)param;
     Queue* queue = pParam->queue;
     Logger* logger = pParam->logger;
     LoggerOptValue logOptVal;
+    int collectedCount;
 
     Log(logger, LOG_PROCESS, THRD_CRT, SYS, NO_OPT, NULL);
 
-    DIR* dir;
-    struct dirent* entry;
-    char path[260];
-
+    uchar dataBuf[1024 * 1024] = { 0, };
+    uchar* data;
     while(1)
     {
-        dir = opendir("/proc");
-        totalElapsed = 0;
-        if (dir == NULL)
-            return 0;
-        while ((entry = readdir(dir)) != NULL)
-        {
-            if (entry->d_type == DT_DIR)
-            {
-                if (atoi(entry->d_name) < 1)
-                    continue;
-                snprintf(path, 262, "/proc/%s", entry->d_name);
-                if (gettimeofday(&timeVal, NULL) == -1)
-                {
-                    // TODO: handling error
-                    perror("agent");
-                    return 0;
-                }    
-                packet = (SProcInfoPacket*)malloc(sizeof(SProcInfoPacket));
-                if (packet == NULL)
-                {
-                    // TODO: handling malloc fail
-                    usleep(5000);
-                    continue;
-                }
-                memset(packet, 0, sizeof(SProcInfoPacket));
-                prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
+        gettimeofday(&timeVal, NULL);
+        prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
-                packet->collectTime = prevTime / 1000;
+        memset(dataBuf, 0, 1024 * 1024);
+        data = CollectProcInfo(buf, dataBuf);
 
-                if (access(path, F_OK) == 0)
-                    CollectProcInfo(path, buf, packet);
-                else
-                    continue;
-                
-#if PRINT_PROC
-                printf("Send process info packet: %u\n", packet.pid);
-                printf("Collect process info\n\
-                        Collect Time: %ld\n\
-                        PID: %u\n\
-                        PPID: %u\n\
-                        Running Time (user): %ld\n\
-                        Running Time (system): %ld\n\
-                        User name: %s\n\
-                        Process Name: %s\n\
-                        State: %c\n",
-                        packet.collectTime,
-                        packet.pid,
-                        packet.ppid,
-                        packet.utime,
-                        packet.stime,
-                        packet.userName,
-                        packet.procName,
-                        packet.state);
-#endif
+        pthread_mutex_lock(&queue->lock);
+        // TODO: Handling Queue is full...more graceful
+        while (IsFull(queue))
+            usleep(500);
+        Push(data, queue);
+        pthread_mutex_unlock(&queue->lock);
 
-                pthread_mutex_lock(&queue->lock);
-                // TODO: Handling Queue is full...more graceful
-                while (IsFull(queue))
-                {
-                    pthread_mutex_unlock(&queue->lock);
-                    usleep(5000);
-                    pthread_mutex_lock(&queue->lock);
-                }
-                Push(packet, queue);
-                pthread_mutex_unlock(&queue->lock);
+        gettimeofday(&timeVal, NULL);
+        postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
+        elapseTime = postTime - prevTime;
 
-                gettimeofday(&timeVal, NULL);
-                postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
-                elapseTime = postTime - prevTime;
-                totalElapsed += elapseTime;
-            }
-        }
-        logOptVal.elapseTime = totalElapsed;
+        logOptVal.elapseTime = elapseTime;
         Log(logger, LOG_PROCESS, COLL_COMPLETE, SYS, COLLECT_ELAPSE_OPT, &logOptVal);
-        usleep(pParam->collectPeriod * 1000 - totalElapsed);
+        usleep(pParam->collectPeriod * 1000 - elapseTime);
     }
 }
 
 void* SendRoutine(void* param)
 {
     SRoutineParam* pParam = (SRoutineParam*)param;
-    void (*GenInitPacket)(SInitialPacket*, SRoutineParam*);
     Queue* queue = pParam->queue;
     int packetSize = 0;
     char msgBuf[256];
-    char* senderName;
+    SInitialPacket* initialPacket;
+    int initialPacketSize;
     switch (pParam->collectorID)
     {
         case CPU:
-            GenInitPacket = GenerateInitialCpuPacket;
-            packetSize = sizeof(SCpuInfoPacket);
-            senderName = "CPU Sender";
+            initialPacket = (SInitialPacket*)GenerateInitialCpuPacket(pParam);
+            packetSize = sizeof(SHeader) + sysconf(_SC_NPROCESSORS_ONLN) * sizeof(SBodyc);
+            initialPacketSize = sizeof(SInitialPacket);
             break;
         case MEMORY:
-            GenInitPacket = GenerateInitialMemPacket;
-            packetSize = sizeof(SMemInfoPacket);
-            senderName = "Memory Sender";
+            initialPacket = (SInitialPacket*)GenerateInitialMemPacket(pParam);
+            packetSize = sizeof(SHeader) + sizeof(SBodym);
+            initialPacketSize = sizeof(SInitialPacket);
             break;
         case NETWORK:
-            GenInitPacket = GenerateInitialNetPacket;
-            packetSize = sizeof(SNetInfoPacket);
-            senderName = "Network Sender";
+            initialPacket = (SInitialPacket*)GenerateInitialNetPacket(pParam);
+            packetSize = sizeof(SHeader) + sizeof(SBodyn) * GetNicCount();
             break;
         case PROCESS:
-            GenInitPacket = GenerateInitialProcPacket;
-            packetSize = sizeof(SProcInfoPacket);
-            senderName = "Process Sender";
+            initialPacket = (SInitialPacket*)GenerateInitialProcPacket(pParam);
+            initialPacketSize = sizeof(SInitialPacket);
             break;
     }
 
-    SInitialPacket initPacket;
     LoggerOptValue logOptVal;
     logOptVal.connFailCnt = 0;
     logOptVal.queueSize = QUEUE_SIZE;
-    void* packet = NULL;
+    void* data = NULL;
     int sockFd, reconnectTryCount = 0;
     Logger* logger = pParam->logger;
+
     while(1)
     {
         while (1)
@@ -363,30 +304,36 @@ void* SendRoutine(void* param)
 
         Log(logger, pParam->collectorID, CONN, TCP, NO_OPT, NULL);
 
-        GenInitPacket(&initPacket, pParam);
-        if (write(sockFd, &initPacket, sizeof(SInitialPacket)) == -1)
+        if (write(sockFd, initialPacket, initialPacketSize) == -1)
         {
             close(sockFd);
             Log(logger, pParam->collectorID, DISCONN, TCP, NO_OPT, NULL);
             continue;
         }
+        initialPacket->isReconnected = 1;
 
         while (1)
         {
-            if (packet == NULL)
+            if (data == NULL)
             {
                 pthread_mutex_lock(&queue->lock);
-                packet = Pop(queue);
-                if (packet == NULL)
+                while (IsEmpty(queue))
                 {
                     pthread_mutex_unlock(&queue->lock);
                     usleep(pParam->collectPeriod * 800);
-                    continue;
+                    pthread_mutex_lock(&queue->lock);
                 }
+                data = Pop(queue);
                 pthread_mutex_unlock(&queue->lock);
             }
+            
+            if (pParam->collectorID == PROCESS)
+            {
+                SHeader* handle = (SHeader*)data;
+                packetSize = handle->bodySize;
+            }
 
-            if (write(sockFd, packet, packetSize) == -1)
+            if (write(sockFd, data, packetSize) == -1)
             {
                 close(sockFd);
                 pthread_mutex_lock(&queue->lock);
@@ -395,9 +342,9 @@ void* SendRoutine(void* param)
                 Log(logger, pParam->collectorID, DISCONN, TCP, DISCONN_OPT, &logOptVal);
                 break;
             }
-            Log(logger, pParam->collectorID, SND, TCP, NO_OPT, NULL);
-            free(packet);
-            packet = NULL;
+            
+            free(data);
+            data = NULL;
         }
     }
 }

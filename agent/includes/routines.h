@@ -17,6 +17,7 @@ typedef struct SRoutineParam
     Logger* logger;
 } SRoutineParam;
 
+int GetNicCount();
 SRoutineParam* GenRoutineParam(int collectPeriod, int collectorID);
 void* CpuInfoRoutine(void* param);
 void* MemInfoRoutine(void* param);

@@ -54,7 +54,7 @@ int main(void)
         return 1;
     }
 
-    char buf[128] = { 0, };
+    char buf[512] = { 0, };
     SInitialPacket* packet = (SInitialPacket*)buf;
     socklen_t len = sizeof(clientAddr);
     void* (*routine)(void*);
@@ -79,20 +79,36 @@ int main(void)
             close(servFd);
             return 1;
         }
-        if (read(clientFd, buf, 128) == -1)
+        if (read(clientFd, buf, 512) == -1)
         {
             printf("Fail to receive...!\n");
             close(clientFd);
         }
+#if 0
+        char str[5] = { 0, };
+        strncpy(str, packet->signature, 4);
+        printf("%s\n%d\n%d\n%d\n%ld\n%ld\n%d\n",
+            str,
+            packet->collectPeriod,
+            packet->isReconnected,
+            packet->logicalCoreCount,
+            packet->memTotal,
+            packet->swapTotal,
+            packet->netIFCount);
+#endif
         switch (packet->signature[3])
         {
-        case 'C':
+        case 'c':
+            if (packet->isReconnected)
+                break;
             // TODO: Store below data
             // packet->logicalCoreCount;
             routine = ServCpuInfoRoutine;
             sprintf(logPath, "Log-%s", "CPU");
             break;
         case 'm':
+            if (packet->isReconnected)
+                break;
             // TODO: Store below data
             // packet->memTotal;
             // packet->swapTotal;
@@ -100,10 +116,14 @@ int main(void)
             sprintf(logPath, "Log-%s", "Memory");
             break;
         case 'p':
+            if (packet->isReconnected)
+                break;
             routine = ServProcInfoRoutine;
             sprintf(logPath, "Log-%s", "Process");
             break;
         case 'n':
+            if (packet->isReconnected)
+                break;
             // TODO: Store below data
             // packet->netIfName;
             routine = ServNetInfoRoutine;
