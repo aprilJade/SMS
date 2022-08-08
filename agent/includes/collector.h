@@ -24,9 +24,5 @@ uchar* CollectMemInfo(char* buf);
 uchar* CollectNetInfo(char* buf, int nicCount);
 uchar* CollectProcInfo(char *buf, uchar* dataBuf);
 
-uchar* GenerateInitialProcPacket(SRoutineParam* param);
-uchar* GenerateInitialNetPacket(SRoutineParam* param);
-uchar* GenerateInitialMemPacket(SRoutineParam* param);
-uchar* GenerateInitialCpuPacket(SRoutineParam* param);
 
 #endif

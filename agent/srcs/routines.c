@@ -350,3 +350,127 @@ void* SendRoutine(void* param)
         }
     }
 }
+
+
+uchar* GenerateInitialCpuPacket(SRoutineParam* param)
+{
+	uchar* result = (uchar*)malloc(sizeof(SInitialPacket));
+	if (result == NULL)
+	{
+		// TODO: handle malloc error
+		return NULL;
+	}
+	SInitialPacket* handle = (SInitialPacket*)result;
+	handle->logicalCoreCount = sysconf(_SC_NPROCESSORS_ONLN);
+	memcpy(handle->signature, SIGNATURE_CPU, 4);
+	handle->collectPeriod = param->collectPeriod;
+	handle->isReconnected = 0;
+	return result;
+}
+
+uchar* GenerateInitialMemPacket(SRoutineParam* param)
+{
+	uchar* result = (uchar*)malloc(sizeof(SInitialPacket));
+	if (result == NULL)
+	{
+		// TODO: handle malloc error
+		return NULL;
+	}
+	SInitialPacket* handle = (SInitialPacket*)result;
+	memcpy(handle->signature, SIGNATURE_MEM, 4);
+	char buf[BUFFER_SIZE + 1] = { 0, };
+	int fd = open("/proc/meminfo", O_RDONLY);
+	int readSize;
+	if (fd == -1)
+	{
+		// TODO: handling open error
+		perror("agent");
+		return NULL;
+	}
+	readSize = read(fd, buf, BUFFER_SIZE);
+	if (readSize == -1)
+	{
+		// TODO: handling read error
+		perror("agent");
+		return NULL;
+	}
+	buf[readSize] = 0;
+	char* pbuf = buf;
+	while (*pbuf++ != ' ');
+	handle->memTotal = atol(buf);
+
+	for (int i = 0; i < 14; i++)
+		while (*pbuf++ != '\n');
+	while (*pbuf++ != ' ');
+	handle->swapTotal = atol(buf);
+	close(fd);
+	handle->collectPeriod = param->collectPeriod;
+	handle->isReconnected = 0;
+	return result;
+}
+
+uchar* GenerateInitialNetPacket(SRoutineParam* param)
+{
+	int nicCount = GetNicCount();
+	uchar* result = (uchar*)malloc(sizeof(SInitialPacket) + sizeof(SInitialPacketBody) * nicCount);
+	if (result == NULL)
+	{
+		// TODO: handle malloc error
+		return NULL;
+	}
+	SInitialPacket* handle = (SInitialPacket*)result;
+	memcpy(handle->signature, SIGNATURE_NET, 4);
+	handle->collectPeriod = param->collectPeriod;
+	handle->isReconnected = 0;
+	handle->netIFCount = nicCount;
+	int i;
+	char buf[BUFFER_SIZE + 1] = { 0, };
+	char *pbuf = buf;
+	int fd = open("/proc/net/dev", O_RDONLY);
+	if (fd == -1)
+	{
+		// TODO: handling open error
+		perror("agent");
+		return NULL;
+	}
+	int readSize = read(fd, buf, BUFFER_SIZE);
+	if (readSize == -1)
+	{
+		// TODO: handling read error
+		perror("agent");
+		return NULL;
+	}
+	buf[readSize] = 0;
+
+
+	SInitialPacketBody* hBody = (SInitialPacketBody*)(result + sizeof(SInitialPacket));
+	while (*pbuf++ != '\n');
+	while (*pbuf++ != '\n');
+	for (int j = 0; j < nicCount; j++)
+	{
+		while (*pbuf == ' ') 
+			pbuf++;
+		memset(hBody->name, 0, 15);
+		for (i = 0; *pbuf != ':' && i < 15; i++)
+			hBody->name[i] = *pbuf++;
+		hBody->nameLength = i;
+		while (*pbuf++ != '\n');
+		hBody++;
+	}
+	return result;
+}
+
+uchar* GenerateInitialProcPacket(SRoutineParam* param)
+{
+	uchar* result = (uchar*)malloc(sizeof(SInitialPacket));
+	if (result == NULL)
+	{
+		// TODO: handle malloc error
+		return NULL;
+	}
+	SInitialPacket* handle = (SInitialPacket*)result;
+	memcpy(handle->signature, SIGNATURE_PROC, 4);
+	handle->collectPeriod = param->collectPeriod;
+	handle->isReconnected = 0;
+	return result;
+}

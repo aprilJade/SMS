@@ -6,7 +6,7 @@
 #define PORT 4240
 
 #include "packets.h"
-#include "logger.h"
+#include "../../SMSutils/includes/logger.h"
 
 typedef struct SRoutineParam
 {
@@ -25,5 +25,10 @@ void* NetInfoRoutine(void* param);
 void* ProcInfoRoutine(void* param);
 
 void* SendRoutine(void* param);
+
+uchar* GenerateInitialProcPacket(SRoutineParam* param);
+uchar* GenerateInitialNetPacket(SRoutineParam* param);
+uchar* GenerateInitialMemPacket(SRoutineParam* param);
+uchar* GenerateInitialCpuPacket(SRoutineParam* param);
 
 #endif

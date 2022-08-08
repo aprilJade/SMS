@@ -22,7 +22,7 @@ int main(int argc, char** argv)
 {
 	static struct option longOptions[] =
 	{
-		{"CPU", required_argument, 0, 'C'},
+		{"CPU", required_argument, 0, 'c'},
 		{"memory", required_argument, 0, 'm'},
 		{"network", required_argument, 0, 'n'},
 		{"process", required_argument, 0, 'p'},
@@ -43,7 +43,7 @@ int main(int argc, char** argv)
 	SRoutineParam* param[ROUTINE_COUNT] = { 0, };
 	void* (*collector[ROUTINE_COUNT + 1])(void*) = { 0, };
 	Logger* logger = NewLogger(HOST, PORT);
-	while ((c = getopt_long(argc, argv, "C:m:n:p:h", longOptions, 0)) > 0)
+	while ((c = getopt_long(argc, argv, "c:m:n:p:h", longOptions, 0)) > 0)
 	{
 		if (c == '?')
 		{
@@ -57,7 +57,7 @@ int main(int argc, char** argv)
 		}
 		switch (c)
 		{
-		case 'C':
+		case 'c':
 			collector[i] = CpuInfoRoutine;
 			param[i] = GenRoutineParam(atoi(optarg), CPU);
 			param[i]->logger = logger;
