@@ -13,7 +13,7 @@
 
 #define CONNECTION_COUNT 4
 #define HOST "127.0.0.1"
-#define PORT 4244
+#define PORT 4240
 
 int OpenSocket(char* host, short port)
 {
@@ -61,7 +61,8 @@ int main(void)
     pthread_t tid;
     SServRoutineParam* param;
     char logPath[32];
-    
+    int approved = 0;
+
     printf("Start listening: %s:%d\n", HOST, PORT);
     while (1)
     {
@@ -96,6 +97,17 @@ int main(void)
             packet->swapTotal,
             packet->netIFCount);
 #endif
+        if (strncmp(packet->signature, "SMS", 3) != 0)
+        {
+            // TODO: Logging
+            printf("Not approved packet signature111. %c%c%c\n",
+                packet->signature[0],
+                packet->signature[1],
+                packet->signature[2]);
+            close(clientFd);
+            continue;
+        }
+
         switch (packet->signature[3])
         {
         case 'c':
@@ -105,6 +117,7 @@ int main(void)
             // packet->logicalCoreCount;
             routine = ServCpuInfoRoutine;
             sprintf(logPath, "Log-%s", "CPU");
+            approved = 1;
             break;
         case 'm':
             if (packet->isReconnected)
@@ -114,12 +127,14 @@ int main(void)
             // packet->swapTotal;
             routine = ServMemInfoRoutine;
             sprintf(logPath, "Log-%s", "Memory");
+            approved = 1;
             break;
         case 'p':
             if (packet->isReconnected)
                 break;
             routine = ServProcInfoRoutine;
             sprintf(logPath, "Log-%s", "Process");
+            approved = 1;
             break;
         case 'n':
             if (packet->isReconnected)
@@ -128,11 +143,17 @@ int main(void)
             // packet->netIfName;
             routine = ServNetInfoRoutine;
             sprintf(logPath, "Log-%s", "Network");
+            approved = 1;
             break;
         default:
-            printf("Undefined signature!: %c", packet->signature[3]);
+            printf("Not approved packet signature222. %c\n", packet->signature[3]);
+            close(clientFd);
+            approved = 0;
             break;
         }
+        
+        if (!approved)
+            continue;
 
         param = (SServRoutineParam*)malloc(sizeof(SServRoutineParam));
         param->clientSock = clientFd;

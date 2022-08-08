@@ -116,7 +116,7 @@ void DeleteLogger(Logger* logger)
 int Log(Logger* handle, char signature, int msg, int protocol, int optionalFlag, void* optionValue)
 {
     assert(handle != NULL);
-    assert(optionalFlag <= COLLECT_ELAPSE_OPT && optionalFlag >= NO_OPT);
+    assert(optionalFlag <= SEND_OPT && optionalFlag >= NO_OPT);
     time_t localTime;
     struct tm* timeStruct;
     LoggerOptValue* optVal = (LoggerOptValue*)optionValue;
@@ -183,6 +183,18 @@ int Log(Logger* handle, char signature, int msg, int protocol, int optionalFlag,
             logMsgs[msg],
             logProtocolStr[protocol],
             optVal->elapseTime);
+        break;
+    case SEND_OPT:
+        sprintf(msgBuf, "[%02d:%02d:%02d+0900] %c %s %s %s:%d %d\n",
+            timeStruct->tm_hour,
+            timeStruct->tm_min,
+            timeStruct->tm_sec,
+            signature,
+            logMsgs[msg],
+            logProtocolStr[protocol],
+            handle->host,
+            handle->port,
+            optVal->sendBytes);
         break;
     default:
         // TODO: handle error...

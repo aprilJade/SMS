@@ -162,7 +162,7 @@ uchar* CollectNetInfo(char* buf, int nicCount)
 	memcpy(result, SIGNATURE_NET, 4);
 	hh->bodyCount = nicCount;
 	hh->bodySize = sizeof(SBodyn);
-	SBodyn* handle = (SBodyn*)result;
+	SBodyn* handle = (SBodyn*)(result + sizeof(SHeader));
 
 	while (*buf++ != '\n');
 	while (*buf++ != '\n');
@@ -204,9 +204,8 @@ uchar* CollectProcInfo(char *buf, uchar* dataBuf)
     char path[260];
 
 	uchar* tmp = dataBuf;
-	memcpy(tmp, SIGNATURE_PROC, 4);
 	SBodyp* handle;
-	tmp += 8;
+	tmp += sizeof(SHeader);
 	int procCnt = 0;
 
 	dir = opendir("/proc");
@@ -335,6 +334,7 @@ uchar* CollectProcInfo(char *buf, uchar* dataBuf)
 	SHeader* hh = (SHeader*)result;
 	hh->bodyCount = 0;
 	hh->bodySize = tmp - dataBuf;
+	memcpy(result, SIGNATURE_PROC, 4);
 	return result;
 }
 
@@ -398,7 +398,7 @@ uchar* GenerateInitialMemPacket(SRoutineParam* param)
 uchar* GenerateInitialNetPacket(SRoutineParam* param)
 {
 	int nicCount = GetNicCount();
-	uchar* result = (uchar*)malloc(sizeof(SInitialPacket) * sizeof(SInitialPacketBody) * nicCount);
+	uchar* result = (uchar*)malloc(sizeof(SInitialPacket) + sizeof(SInitialPacketBody) * nicCount);
 	if (result == NULL)
 	{
 		// TODO: handle malloc error
@@ -408,7 +408,7 @@ uchar* GenerateInitialNetPacket(SRoutineParam* param)
 	memcpy(handle->signature, SIGNATURE_NET, 4);
 	handle->collectPeriod = param->collectPeriod;
 	handle->isReconnected = 0;
-
+	handle->netIFCount = nicCount;
 	int i;
 	char buf[BUFFER_SIZE + 1] = { 0, };
 	char *pbuf = buf;
@@ -427,12 +427,15 @@ uchar* GenerateInitialNetPacket(SRoutineParam* param)
 		return NULL;
 	}
 	buf[readSize] = 0;
+
+
 	SInitialPacketBody* hBody = (SInitialPacketBody*)(result + sizeof(SInitialPacket));
 	while (*pbuf++ != '\n');
 	while (*pbuf++ != '\n');
 	for (int j = 0; j < nicCount; j++)
 	{
-		while (*pbuf++ != ' ');
+		while (*pbuf == ' ') 
+			pbuf++;
 		memset(hBody->name, 0, 15);
 		for (i = 0; *pbuf != ':' && i < 15; i++)
 			hBody->name[i] = *pbuf++;

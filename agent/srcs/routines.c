@@ -273,6 +273,7 @@ void* SendRoutine(void* param)
         case NETWORK:
             initialPacket = (SInitialPacket*)GenerateInitialNetPacket(pParam);
             packetSize = sizeof(SHeader) + sizeof(SBodyn) * GetNicCount();
+            initialPacketSize = sizeof(SInitialPacket) + sizeof(SInitialPacketBody) * GetNicCount();
             break;
         case PROCESS:
             initialPacket = (SInitialPacket*)GenerateInitialProcPacket(pParam);
@@ -286,7 +287,7 @@ void* SendRoutine(void* param)
     void* data = NULL;
     int sockFd, reconnectTryCount = 0;
     Logger* logger = pParam->logger;
-
+    int sendBytes;
     while(1)
     {
         while (1)
@@ -333,7 +334,7 @@ void* SendRoutine(void* param)
                 packetSize = handle->bodySize;
             }
 
-            if (write(sockFd, data, packetSize) == -1)
+            if ((sendBytes = write(sockFd, data, packetSize)) == -1)
             {
                 close(sockFd);
                 pthread_mutex_lock(&queue->lock);
@@ -342,7 +343,8 @@ void* SendRoutine(void* param)
                 Log(logger, pParam->collectorID, DISCONN, TCP, DISCONN_OPT, &logOptVal);
                 break;
             }
-            
+            logOptVal.sendBytes = sendBytes;
+            Log(logger, pParam->collectorID, SND, TCP, SEND_OPT, &logOptVal);
             free(data);
             data = NULL;
         }

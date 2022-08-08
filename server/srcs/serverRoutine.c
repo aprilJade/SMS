@@ -31,6 +31,9 @@ void* ServCpuInfoRoutine(void* param)
             return 0;
         }
         
+        hHeader = (SHeader*)buf;
+        hBody = (SBodyc*)(buf + sizeof(SHeader));
+
         if (readSize == 0)
         {
             printf("Disconnected from agent side.\n");
@@ -40,8 +43,14 @@ void* ServCpuInfoRoutine(void* param)
             return 0;
         }
 
-        hHeader = (SHeader*)buf;
-        hBody = (SBodyc*)(buf + sizeof(SHeader));
+        if (strncmp(hHeader->signature, "SMSc", 4) != 0 ||
+            sizeof(SHeader) + hHeader->bodyCount * hHeader->bodySize != readSize)
+        {
+            // TODO: Logging
+            //printf("Not approved packet.\n");
+            close(pParam->clientSock);
+            return 0;
+        }
         // TODO: Store to DB
         //write(pParam->logFd, "C", 1);
 #if DETAIL_PRINT_CPU
@@ -87,6 +96,15 @@ void* ServMemInfoRoutine(void* param)
         hHeader = (SHeader*)buf;
         hBody = (SBodym*)(buf + sizeof(SHeader));
 
+        if (strncmp(hHeader->signature, "SMSm", 4) != 0 ||
+            sizeof(SHeader) + hHeader->bodyCount * hHeader->bodySize != readSize)
+        {
+            // TODO: Logging
+            //printf("Not approved packet. close SMSm socket\n");
+            close(pParam->clientSock);
+            return 0;
+        }
+
         // TODO: Store to DB
         //write(pParam->logFd, "m", 1);
 #if DETAIL_PRINT_MEM
@@ -131,6 +149,21 @@ void* ServNetInfoRoutine(void* param)
         hHeader = (SHeader*)buf;
         hBody = (SBodyn*)(buf + sizeof(SHeader));
 
+        if (strncmp(hHeader->signature, "SMSn", 4) != 0 ||
+            sizeof(SHeader) + hHeader->bodyCount * hHeader->bodySize != readSize)
+        {
+            // TODO: Logging
+            //printf("Not approved packet. close SMSn socket\n");
+            //printf("%c%c%c%c, %d, %d\n",
+            //    hHeader->signature[0],
+            //    hHeader->signature[1],
+            //    hHeader->signature[2],
+            //    hHeader->signature[3],
+            //    hHeader->bodyCount,
+            //    hHeader->bodySize);
+            close(pParam->clientSock);
+            return 0;
+        }
 #if DETAIL_PRINT_NET
         for(int i = 0; i < hHeader->bodyCount; i++)
         {
@@ -150,6 +183,8 @@ void* ServProcInfoRoutine(void* param)
     int readSize = 0;
     int totalSize = 0;
     char buf[1024 * 1024] = { 0, };
+    SHeader* hHeader;
+    SBodyn* hBody;
 
     while (1)
     {
@@ -168,6 +203,22 @@ void* ServProcInfoRoutine(void* param)
             close(pParam->logFd);
             free(pParam);
             printf("Wait to reconnect....\n");
+            return 0;
+        }
+        hHeader = (SHeader*)buf;
+        hBody = (SBodyn*)(buf + sizeof(SHeader));
+
+        if (strncmp(hHeader->signature, "SMSp", 4) != 0 ||
+            hHeader->bodySize != readSize)
+        {
+            // TODO: Logging
+            //printf("Not approved packet. close SMSp socket. %c%c%c%c %d ? %d\n",
+            //    hHeader->signature[0],
+            //    hHeader->signature[1],
+            //    hHeader->signature[2],
+            //    hHeader->signature[3],
+            //    readSize, hHeader->bodySize);
+            close(pParam->clientSock);
             return 0;
         }
         // TODO: Store to DB

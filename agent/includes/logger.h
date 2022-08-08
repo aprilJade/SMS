@@ -35,7 +35,7 @@ typedef struct LoggerOptValue
     int curQueueElemCnt;
     int connFailCnt;
     unsigned long elapseTime;
-    int collectedCount;
+    int sendBytes;
 } LoggerOptValue;
 
 enum eSig
@@ -72,7 +72,8 @@ enum eOption
     NO_OPT,
     DISCONN_OPT,
     CONN_FAIL_OPT,
-    COLLECT_ELAPSE_OPT
+    COLLECT_ELAPSE_OPT,
+    SEND_OPT
 };
 
 Logger* NewLogger(char* host, short port);

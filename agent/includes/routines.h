@@ -3,7 +3,7 @@
 #define MIN_SLEEP_MS 500
 #define ROUTINE_COUNT 4
 #define HOST "127.0.0.1"
-#define PORT 4244
+#define PORT 4240
 
 #include "packets.h"
 #include "logger.h"
