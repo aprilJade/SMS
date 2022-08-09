@@ -1,7 +1,7 @@
 #ifndef SERVER_ROUTINE_H
 #define SERVER_ROUTINE_H
 #define FUNC_TABLE_SIZE 256
-#include "../../agent/includes/packets.h"
+#include "packets.h"
 
 typedef struct SReceiveParam
 {
