@@ -39,10 +39,14 @@ int main(int argc, char** argv)
 	char c;
 	int i = 0;
 	pthread_t collectorTids[ROUTINE_COUNT] = { 0, };
-	pthread_t senderTids[ROUTINE_COUNT] = { 0, };
+	pthread_t senderTid;
 	SRoutineParam* param[ROUTINE_COUNT] = { 0, };
+	SSenderParam senderParam;
 	void* (*collector[ROUTINE_COUNT + 1])(void*) = { 0, };
 	Logger* logger = NewLogger(HOST, PORT);
+	Queue* queue = NewQueue();
+	senderParam.logger = logger;
+	senderParam.queue = queue;
 	while ((c = getopt_long(argc, argv, "c:m:n:p:h", longOptions, 0)) > 0)
 	{
 		if (c == '?')
@@ -59,23 +63,31 @@ int main(int argc, char** argv)
 		{
 		case 'c':
 			collector[i] = CpuInfoRoutine;
-			param[i] = GenRoutineParam(atoi(optarg), CPU);
+			senderParam.cpuPeriod = atoi(optarg);
+			param[i] = GenRoutineParam(atoi(optarg), CPU, queue);
 			param[i]->logger = logger;
+			param[i]->queue = queue;
 			break;
 		case 'm':
 			collector[i] = MemInfoRoutine;
-			param[i] = GenRoutineParam(atoi(optarg), MEMORY);
+			senderParam.memPeriod = atoi(optarg);
+			param[i] = GenRoutineParam(atoi(optarg), MEMORY, queue);
 			param[i]->logger = logger;
+			param[i]->queue = queue;
 			break;
 		case 'n':
 			collector[i] = NetInfoRoutine;
-			param[i] = GenRoutineParam(atoi(optarg), NETWORK);
+			senderParam.netPeriod = atoi(optarg);
+			param[i] = GenRoutineParam(atoi(optarg), NETWORK, queue);
 			param[i]->logger = logger;
+			param[i]->queue = queue;
 			break;
 		case 'p':
 			collector[i] = ProcInfoRoutine;
-			param[i] = GenRoutineParam(atoi(optarg), PROCESS);
+			senderParam.procPeriod = atoi(optarg);
+			param[i] = GenRoutineParam(atoi(optarg), PROCESS, queue);
 			param[i]->logger = logger;
+			param[i]->queue = queue;
 			break;
 		case 'h':
 			PrintHelp();
@@ -94,14 +106,15 @@ int main(int argc, char** argv)
 		// gettimeofday(&timeVal, NULL);
 		// param[i]->collectorCreateTime = timeVal.tv_sec * 1000 + timeVal.tv_usec / 1000;
 		pthread_create(&collectorTids[i], NULL, collector[i], param[i]);
-		pthread_create(&senderTids[i], NULL, SendRoutine, param[i]);
+		printf("Create collector.\n");
 	}
 
+	printf("Create sender.\n");
+	pthread_create(&senderTid, NULL, SendRoutine, &senderParam);
+
 	for (i = 0; collector[i]; i++)
-	{
 		pthread_join(collectorTids[i], NULL);
-		pthread_join(senderTids[i], NULL);
-	}
+	pthread_join(senderTid, NULL);
 		
 	exit(0);
 }

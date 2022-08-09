@@ -21,7 +21,7 @@
 // Logical CPU: get using sysconf()
 // Wall time: get using gettimeofday()
 
-uchar* CollectEachCpuInfo(ushort cpuCnt, long timeConversion, char* rdBuf)
+SCData* CollectEachCpuInfo(ushort cpuCnt, long timeConversion, char* rdBuf, int collectPeriod)
 {
 	int	fd;
 	int readSize = 0;
@@ -41,7 +41,10 @@ uchar* CollectEachCpuInfo(ushort cpuCnt, long timeConversion, char* rdBuf)
 		return NULL;
 	}
 	rdBuf[readSize] = 0;
-	uchar* result = (uchar*)malloc(cpuCnt * sizeof(SBodyc) + sizeof(SHeader));
+
+	SCData* result = (SCData*)malloc(sizeof(SCData));
+	result->dataSize = cpuCnt * sizeof(SBodyc) + sizeof(SHeader);
+	result->data = (uchar*)malloc(result->dataSize);
 	if (result == NULL)
 	{
 		// TODO: Handling malloc error
@@ -49,13 +52,13 @@ uchar* CollectEachCpuInfo(ushort cpuCnt, long timeConversion, char* rdBuf)
 	}
 	// gen header..
 
-	SHeader* hh = (SHeader*)result;
-	//memcpy(result, SIGNATURE_CPU, 4);
+	SHeader* hh = (SHeader*)result->data;
 	hh->signature = SIGNATURE_CPU;
+	hh->collectPeriod = collectPeriod;
 	hh->bodyCount = cpuCnt;
 	hh->bodySize = sizeof(SBodyc);
 
-	SBodyc* handle = (SBodyc*)(result + sizeof(SHeader));
+	SBodyc* handle = (SBodyc*)(result->data + sizeof(SHeader));
     while (*rdBuf++ != '\n');
 	for (int i = 0; i < cpuCnt; i++)
 	{
@@ -75,7 +78,7 @@ uchar* CollectEachCpuInfo(ushort cpuCnt, long timeConversion, char* rdBuf)
 	return result;
 }
 
-uchar* CollectMemInfo(char* buf)
+SCData* CollectMemInfo(char* buf, int collectPeriod)
 {
 	int fd = open("/proc/meminfo", O_RDONLY);
 	int readSize;
@@ -94,49 +97,58 @@ uchar* CollectMemInfo(char* buf)
 	}
 	buf[readSize] = 0;
 	
-	uchar* result = (uchar*)malloc(sizeof(SHeader) + sizeof(SBodym));
+	SCData* result = (SCData*)malloc(sizeof(SCData));
+	result->dataSize = sizeof(SHeader) + sizeof(SBodym);
+	result->data = (uchar*)malloc(result->dataSize);
 	if (result == NULL)
 	{
 		// TODO: handling malloc error
 		return NULL;
 	}
 
-	SHeader* hh = (SHeader*)result;
+	SHeader* hh = (SHeader*)result->data;
 	//memcpy(result, SIGNATURE_MEM, 4);
 	hh->signature = SIGNATURE_MEM;
 	hh->bodyCount = 1;
 	hh->bodySize = sizeof(SBodym);
-	SBodym* handle = (SBodym*)(result + sizeof(SHeader));
+	hh->collectPeriod = collectPeriod;
+
+	SBodym* handle = (SBodym*)(result->data + sizeof(SHeader));
 
 	while (*buf++ != ' ');
-	ulong memTotal = atol(buf);
+	handle->memTotal = atoi(buf);
 
 	while (*buf++ != '\n');
 	while (*buf++ != ' ');
-	handle->memFree = atol(buf);
+	handle->memFree = atoi(buf);
 	
 	while (*buf++ != '\n');
 	while (*buf++ != ' ');
-	handle->memAvail = atol(buf);
+	handle->memAvail = atoi(buf);
 
 	while (*buf++ != '\n');
 	while (*buf++ != ' ');
-	ulong memBuffers = atol(buf);
+	uint memBuffers = atoi(buf);
 	
 	while (*buf++ != '\n');
 	while (*buf++ != ' ');
-	ulong memCached = atol(buf);
+	uint memCached = atoi(buf);
 
-	handle->memUsed = memTotal - handle->memFree - memBuffers - memCached;
-	for (int i = 0; i < 11; i++)
+	handle->memUsed = handle->memTotal - handle->memFree - memBuffers - memCached;
+	for (int i = 0; i < 10; i++)
 		while (*buf++ != '\n');
 	while (*buf++ != ' ');
-	handle->swapFree = atol(buf);
+	handle->swapTotal = atoi(buf);
+
+	while (*buf++ != '\n');
+	while (*buf++ != ' ');
+	handle->swapFree = atoi(buf);
+
 	close(fd);
 	return result;
 }
 
-uchar* CollectNetInfo(char* buf, int nicCount)
+SCData* CollectNetInfo(char* buf, int nicCount, int collectPeriod)
 {
 	int fd = open("/proc/net/dev", O_RDONLY);
 	if (fd == -1)
@@ -154,25 +166,35 @@ uchar* CollectNetInfo(char* buf, int nicCount)
 	}
 	buf[readSize] = 0;
 
-	uchar* result = (uchar*)malloc(sizeof(SHeader) + sizeof(SBodyn) * nicCount);
+	SCData* result = (SCData*)malloc(sizeof(SCData));
+	result->dataSize = sizeof(SHeader) + sizeof(SBodyn) * nicCount;
+	result->data = (uchar*)malloc(result->dataSize);
 	if (result == NULL)
 	{
 		// TODO: handle malloc error
 		return NULL;
 	}
-	SHeader* hh = (SHeader*)result;
+	SHeader* hh = (SHeader*)result->data;
 	//memcpy(result, SIGNATURE_NET, 4);
 	hh->signature = SIGNATURE_NET;
 	hh->bodyCount = nicCount;
 	hh->bodySize = sizeof(SBodyn);
-	SBodyn* handle = (SBodyn*)(result + sizeof(SHeader));
+	hh->collectPeriod = collectPeriod;
+	SBodyn* handle = (SBodyn*)(result->data + sizeof(SHeader));
 
 	while (*buf++ != '\n');
 	while (*buf++ != '\n');
 	// while (*buf++ != '\n'); // if this code line is run, then couldn't collect loopback data
 	for (int i = 0; i < nicCount; i++)
 	{
-		while (*buf++ != ':');
+		while (*buf == ' ') 
+			buf++;
+		memset(handle->name, 0, 15);
+		for (i = 0; *buf != ':' && i < 15; i++)
+			handle->name[i] = *buf++;
+		handle->nameLength = i;
+		buf++;
+
 		handle->recvBytes = atol(buf) / 1024;
 
 		while (*buf++ == ' ');
@@ -189,12 +211,14 @@ uchar* CollectNetInfo(char* buf, int nicCount)
 		while (*buf++ == ' ');
 		while (*buf++ != ' ');
 		handle->sendPackets = atol(buf);
+
+		while (*buf++ != '\n');
 		handle++;
 	}
 	return result;
 }
 
-uchar* CollectProcInfo(char *buf, uchar* dataBuf)
+SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod)
 {
 	char filePath[260] = { 0, };
 	int fd = 0;
@@ -327,17 +351,19 @@ uchar* CollectProcInfo(char *buf, uchar* dataBuf)
 	}
 	
 	// complete collection
-	uchar* result = (uchar*)malloc(tmp - dataBuf);
+	SCData* result = (SCData*)malloc(sizeof(SCData));
+	result->dataSize = tmp - dataBuf;
+	result->data = (uchar*)malloc(result->dataSize);
 	if (result == NULL)
 	{
 		// TODO: handle malloc error
 		return NULL;
 	}
-	memcpy(result, tmp, tmp - dataBuf);
-	SHeader* hh = (SHeader*)result;
-	hh->bodyCount = 0;
+	memcpy(result->data, tmp, tmp - dataBuf);
+	SHeader* hh = (SHeader*)result->data;
+	hh->bodyCount = procCnt;
 	hh->bodySize = tmp - dataBuf;
-	//memcpy(result, SIGNATURE_PROC, 4);
+	hh->collectPeriod = collectPeriod;
 	hh->signature = SIGNATURE_PROC;
 	return result;
 }

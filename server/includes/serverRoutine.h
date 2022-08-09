@@ -1,14 +1,14 @@
 #ifndef SERVER_ROUTINE_H
 #define SERVER_ROUTINE_H
 #define FUNC_TABLE_SIZE 256
-#include "../../collector/includes/packets.h"
+#include "../../agent/includes/packets.h"
 
-typedef struct SServRoutineParam
+typedef struct SReceiveParam
 {
     int clientSock;
-    int serverSock;
-    int logFd;
-} SServRoutineParam;
+} SReceiveParam;
+
+void* ReceiveRoutine(void* param);
 
 void* ServCpuInfoRoutine(void* param);
 void* ServMemInfoRoutine(void* param);

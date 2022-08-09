@@ -12,7 +12,7 @@
 
 #define CONNECTION_COUNT 4
 #define HOST "127.0.0.1"
-#define PORT 4240
+#define PORT 4242
 
 int OpenSocket(char* host, short port)
 {
@@ -53,14 +53,10 @@ int main(void)
         return 1;
     }
 
-    char buf[512] = { 0, };
-    SInitialPacket* packet = (SInitialPacket*)buf;
     socklen_t len = sizeof(clientAddr);
     void* (*routine)(void*);
     pthread_t tid;
-    SServRoutineParam* param;
-    char logPath[32];
-    int approved = 0;
+    SReceiveParam* param;
 
     printf("Start listening: %s:%d\n", HOST, PORT);
     while (1)
@@ -68,7 +64,6 @@ int main(void)
         if (listen(servFd, CONNECTION_COUNT) == -1)
         {
             perror("server");
-            close(servFd);
             return 1;
         }
         clientFd = accept(servFd, (struct sockaddr*)&clientAddr, &len);
@@ -76,92 +71,19 @@ int main(void)
         {
             printf("Fail to connect\n");
             perror("server");
-            close(servFd);
             return 1;
         }
-        if (read(clientFd, buf, 512) == -1)
-        {
-            printf("Fail to receive...!\n");
-            close(clientFd);
-        }
-
-        // if (strncmp(packet->signature, "SMS", 3) != 0)
-        // {
-        //     // TODO: Logging
-        //     printf("Not approved packet signature111. %c%c%c\n",
-        //         packet->signature[0],
-        //         packet->signature[1],
-        //         packet->signature[2]);
-        //     close(clientFd);
-        //     continue;
-        // }
-
-        switch (packet->signature)
-        {
-        case SIGNATURE_CPU:
-            if (packet->isReconnected)
-                break;
-            // TODO: Store below data
-            // packet->logicalCoreCount;
-            routine = ServCpuInfoRoutine;
-            sprintf(logPath, "Log-%s", "CPU");
-            approved = 1;
-            break;
-        case SIGNATURE_MEM:
-            if (packet->isReconnected)
-                break;
-            // TODO: Store below data
-            // packet->memTotal;
-            // packet->swapTotal;
-            routine = ServMemInfoRoutine;
-            sprintf(logPath, "Log-%s", "Memory");
-            approved = 1;
-            break;
-        case SIGNATURE_PROC:
-            if (packet->isReconnected)
-                break;
-            routine = ServProcInfoRoutine;
-            sprintf(logPath, "Log-%s", "Process");
-            approved = 1;
-            break;
-        case SIGNATURE_NET:
-            if (packet->isReconnected)
-                break;
-            // TODO: Store below data
-            // packet->netIfName;
-            routine = ServNetInfoRoutine;
-            sprintf(logPath, "Log-%s", "Network");
-            approved = 1;
-            break;
-        default:
-            printf("Not approved packet signature. %d\n", packet->signature);
-            close(clientFd);
-            approved = 0;
-            break;
-        }
         
-        if (!approved)
-            continue;
-
-        param = (SServRoutineParam*)malloc(sizeof(SServRoutineParam));
+        param = (SReceiveParam*)malloc(sizeof(SReceiveParam));
         param->clientSock = clientFd;
-
-        param->logFd = open(logPath, O_CREAT | O_RDWR | O_APPEND, 0777);
-        if (param->logFd == -1)
+    
+        if (pthread_create(&tid, NULL, ReceiveRoutine, param) == -1)
         {
             perror("server");
             close(clientFd);
-            close(servFd);
-            return 0;
-        }
-        
-        if (pthread_create(&tid, NULL, routine, param) == -1)
-        {
-            perror("server");
-            close(clientFd);
-            close(param->logFd);
             continue;
         }
-        pthread_detach(tid);
+        printf("thread created.\n");
+        pthread_join(tid, NULL);
     }
 }   

@@ -85,10 +85,17 @@ Logger* NewLogger(char* host, short port)
     assert(host != NULL);
     assert(port >= 0 && port <= 65535);
     Logger* logger = (Logger*)malloc(sizeof(Logger));
+    if (logger == NULL)
+        return NULL;
     logger->host = strdup(host);
     logger->port = port;
     logger->queue = NewQueue();
     LoggerRoutineParam* param = (LoggerRoutineParam*)malloc(sizeof(LoggerRoutineParam));
+    if (param == NULL)
+    {
+        // TODO: handle malloc error
+        return NULL;
+    }
     // Thread start
     pthread_mutex_init(&logger->queueLock, NULL);
     pthread_mutex_init(&logger->fdLock, NULL);
@@ -204,12 +211,6 @@ int Log(Logger* handle, char signature, int msg, int protocol, int optionalFlag,
     printf("%s", msgBuf);
 #endif
     pthread_mutex_lock(&handle->queueLock);
-    while (IsFull(handle->queue))
-    {
-        pthread_mutex_unlock(&handle->queueLock);
-        usleep(2000);
-        pthread_mutex_lock(&handle->queueLock);        
-    }
     Push(msgBuf, handle->queue);
     pthread_mutex_unlock(&handle->queueLock);
 }

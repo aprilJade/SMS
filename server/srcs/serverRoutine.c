@@ -10,221 +10,64 @@
 #define DETAIL_PRINT_NET 0
 #define DETAIL_PRINT_PROC 0
 
-void* ServCpuInfoRoutine(void* param)
+int IsValidSignature(int signature)
 {
-    assert(param != NULL);
-    printf("Start serverCpuInfoRoutine\n");
-    SServRoutineParam* pParam = (SServRoutineParam*)param;
+    if (signature == SIGNATURE_CPU)
+        return 1;
+    if (signature == SIGNATURE_MEM)
+        return 1;
+    if (signature == SIGNATURE_NET)
+        return 1;
+    if (signature == SIGNATURE_PROC)
+        return 1;
+    return 0;
+}
+
+void* ReceiveRoutine(void* param)
+{
+    printf("Start receive routine.\n");
+    SReceiveParam* pParam = (SReceiveParam*)param;
     int readSize;
-    char buf[512] = { 0, };
-    //SCpuInfoPacket* packet = (SCpuInfoPacket*)buf;
-    SHeader* hHeader;
-    SBodyc* hBody;
-    while (1)
-    {
-        if ((readSize = read(pParam->clientSock, buf, 512)) == -1)
-        {
-            printf("Fail to receive...!\n");
-            close(pParam->clientSock);
-            close(pParam->logFd);
-            return 0;
-        }
-        
-        hHeader = (SHeader*)buf;
-        hBody = (SBodyc*)(buf + sizeof(SHeader));
-
-        if (readSize == 0)
-        {
-            printf("Disconnected from agent side.\n");
-            close(pParam->clientSock);
-            close(pParam->logFd);
-            printf("Wait to reconnect....\n");
-            return 0;
-        }
-
-        if (hHeader->signature != SIGNATURE_CPU ||
-            sizeof(SHeader) + hHeader->bodyCount * hHeader->bodySize != readSize)
-        {
-            // TODO: Logging
-            //printf("Not approved packet.\n");
-            close(pParam->clientSock);
-            return 0;
-        }
-        // TODO: Store to DB
-        //write(pParam->logFd, "C", 1);
-#if DETAIL_PRINT_CPU
-        for (int i = 0; i < hHeader->bodyCount; i++)
-        {
-            printf("%d: %ld %ld %ld %ld\n",
-                i, hBody->usrCpuRunTime, hBody->sysCpuRunTime, hBody->idleTime, hBody->waitTime);
-            hBody++;
-        }
-#endif
-    }
-}
-
-void* ServMemInfoRoutine(void* param)
-{
-    assert(param != NULL);    
-    printf("Start serverMemInfoRoutine\n");
-    SServRoutineParam* pParam = (SServRoutineParam*)param;
-    int readSize;
-    char buf[512] = { 0, };
-    
-    SHeader* hHeader;
-    SBodym* hBody;
-
-    while (1)
-    {
-        if ((readSize = read(pParam->clientSock, buf, 512)) == -1)
-        {
-            printf("Fail to receive...!\n");
-            close(pParam->clientSock);
-            close(pParam->logFd);
-            return 0;
-        }
-        if (readSize == 0)
-        {
-            printf("Disconnected from agent side.\n");
-            close(pParam->clientSock);
-            close(pParam->logFd);
-            printf("Wait to reconnect....\n");
-            return 0;
-        }
-
-        hHeader = (SHeader*)buf;
-        hBody = (SBodym*)(buf + sizeof(SHeader));
-
-        if (hHeader->signature != SIGNATURE_MEM ||
-            sizeof(SHeader) + hHeader->bodyCount * hHeader->bodySize != readSize)
-        {
-            // TODO: Logging
-            //printf("Not approved packet. close SMSm socket\n");
-            close(pParam->clientSock);
-            return 0;
-        }
-
-        // TODO: Store to DB
-        //write(pParam->logFd, "m", 1);
-#if DETAIL_PRINT_MEM
-        printf("%c: %ukB %ukB %ukB %ukB\n",
-            hHeader->signature[3],
-            hBody->memFree, hBody->memUsed, hBody->memAvail, hBody->swapFree);
-#endif
-    }
-}
-
-void* ServNetInfoRoutine(void* param)
-{
-    assert(param != NULL);    
-    printf("Start serverNetInfoRoutine\n");
-    SServRoutineParam* pParam = (SServRoutineParam*)param;
-    int readSize = 0;
-    int totalSize = 0;
-    char buf[512] = { 0, };
-    SHeader* hHeader;
-    SBodyn* hBody;
-
-    while (1)
-    {
-        if ((readSize = read(pParam->clientSock, buf, 512)) == -1)
-        {
-            printf("Fail to receive...!\n");
-            close(pParam->clientSock);
-            close(pParam->logFd);
-            return 0;
-        }
-        if (readSize == 0)
-        {
-            printf("Disconnected from agent side.\n");
-            close(pParam->clientSock);
-            close(pParam->logFd);
-            printf("Wait to reconnect....\n");
-            return 0;
-        }
-        // TODO: Store to DB
-        //write(pParam->logFd, "n", 1);
-
-        hHeader = (SHeader*)buf;
-        hBody = (SBodyn*)(buf + sizeof(SHeader));
-
-        if (hHeader->signature != SIGNATURE_NET ||
-            sizeof(SHeader) + hHeader->bodyCount * hHeader->bodySize != readSize)
-        {
-            // TODO: Logging
-            //printf("Not approved packet. close SMSn socket\n");
-            //printf("%c%c%c%c, %d, %d\n",
-            //    hHeader->signature[0],
-            //    hHeader->signature[1],
-            //    hHeader->signature[2],
-            //    hHeader->signature[3],
-            //    hHeader->bodyCount,
-            //    hHeader->bodySize);
-            close(pParam->clientSock);
-            return 0;
-        }
-#if DETAIL_PRINT_NET
-        for(int i = 0; i < hHeader->bodyCount; i++)
-        {
-            printf("%c: recv %ld %ld / send %ld %ld\n",
-                hHeader->signature[3],
-                hBody->recvBytes, hBody->recvPackets, hBody->sendBytes, hBody->sendPackets);
-        }
-#endif
-    }
-}
-
-void* ServProcInfoRoutine(void* param)
-{
-    assert(param != NULL);    
-    printf("Start serverProcInfoRoutine\n");
-    SServRoutineParam* pParam = (SServRoutineParam*)param;
-    int readSize = 0;
-    int totalSize = 0;
-    // TODO: modify buffer size
     char buf[1024 * 1024] = { 0, };
-    SHeader* hHeader;
-    SBodyn* hBody;
 
+    SHeader* hHeader;
     while (1)
     {
         if ((readSize = read(pParam->clientSock, buf, 1024 * 1024)) == -1)
         {
-            printf("Fail to receive...!\n");
+            printf("Disconnected from agent side.\n");
             close(pParam->clientSock);
-            close(pParam->logFd);
-            free(pParam);
+            printf("Wait to reconnect....\n");
             return 0;
         }
+        
+        hHeader = (SHeader*)buf;
+
         if (readSize == 0)
         {
             printf("Disconnected from agent side.\n");
             close(pParam->clientSock);
-            close(pParam->logFd);
-            free(pParam);
             printf("Wait to reconnect....\n");
             return 0;
         }
-        hHeader = (SHeader*)buf;
-        hBody = (SBodyn*)(buf + sizeof(SHeader));
 
-        if (hHeader->signature != SIGNATURE_PROC ||
-            hHeader->bodySize != readSize)
+        if (!IsValidSignature(hHeader->signature) ||
+            sizeof(SHeader) + hHeader->bodyCount * hHeader->bodySize != readSize)
         {
             // TODO: Logging
-            //printf("Not approved packet. close SMSp socket. %c%c%c%c %d ? %d\n",
-            //    hHeader->signature[0],
-            //    hHeader->signature[1],
-            //    hHeader->signature[2],
-            //    hHeader->signature[3],
-            //    readSize, hHeader->bodySize);
+            printf("Not approved packet.\n");
             close(pParam->clientSock);
             return 0;
         }
-        // TODO: Store to DB
-        //write(pParam->logFd, "p", 1);
-#if DETAIL_PRINT_PROC
+        // TODO: Queuing packet data
+        printf("collect period: %d ms\n", hHeader->collectPeriod);
+        //SBodyc* hBody = (SBodyc*)(buf + sizeof(SHeader));
+        //for (int i = 0; i < hHeader->bodyCount; i++)
+        //{
+        //    printf("%d: %012ld %012ld %012ld %012ld\n",
+        //        i, hBody[i].usrCpuRunTime, hBody[i].sysCpuRunTime,
+        //        hBody[i].idleTime, hBody[i].waitTime);
+        //}
         
-#endif
     }
 }

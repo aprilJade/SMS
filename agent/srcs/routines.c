@@ -19,14 +19,14 @@
 #define PRINT_PROC 0
 
 
-SRoutineParam* GenRoutineParam(int collectPeriod, int collectorID)
+SRoutineParam* GenRoutineParam(int collectPeriod, int collectorID, Queue* queue)
 {
     SRoutineParam* ret = (SRoutineParam*)malloc(sizeof(SRoutineParam));
     if (collectPeriod < MIN_SLEEP_MS)
         ret->collectPeriod = MIN_SLEEP_MS;
     else
         ret->collectPeriod = collectPeriod;
-    ret->queue = NewQueue();
+    ret->queue = queue;
     ret->collectorID = collectorID;
     return ret;
 }
@@ -43,7 +43,7 @@ void* CpuInfoRoutine(void* param)
     Logger* logger = pParam->logger;
 
     Log(logger, LOG_CPU, THRD_CRT, SYS, NO_OPT, NULL);
-    uchar* data;
+    void* data;
     LoggerOptValue logOptVal;
 
     while (1)
@@ -52,7 +52,7 @@ void* CpuInfoRoutine(void* param)
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
         //CollectCpuInfo(toMs, buf, packet);
-        data = CollectEachCpuInfo(cpuCnt, toMs, buf);
+        data = CollectEachCpuInfo(cpuCnt, toMs, buf, pParam->collectPeriod);
 #if PRINT_CPU
         printf("<CPU information as OS resources>\n");
         printf("CPU running time (user mode): %ld ms\n", packet.usrCpuRunTime);
@@ -64,12 +64,9 @@ void* CpuInfoRoutine(void* param)
 #endif       
 
         pthread_mutex_lock(&queue->lock);
-        // TODO: Handling Queue is full...more graceful
-        while (IsFull(queue))
-            usleep(500);
         Push(data, queue);
         pthread_mutex_unlock(&queue->lock);
-
+        printf("push cpu info.\n");
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
@@ -88,7 +85,7 @@ void* MemInfoRoutine(void* param)
     Queue* queue = pParam->queue;
     Logger* logger = pParam->logger;
     LoggerOptValue logOptVal;
-    uchar* data;
+    void* data;
 
     Log(logger, LOG_MEMORY, THRD_CRT, SYS, NO_OPT, NULL);
 
@@ -97,7 +94,7 @@ void* MemInfoRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
-        data = CollectMemInfo(buf);
+        data = CollectMemInfo(buf, pParam->collectPeriod);
 
 #if PRINT_MEM
         printf("<Memory information>\n");
@@ -109,9 +106,6 @@ void* MemInfoRoutine(void* param)
 #endif
 
         pthread_mutex_lock(&queue->lock);
-        // TODO: Handling Queue is full...more graceful
-        while (IsFull(queue))
-            usleep(500);
         Push(data, queue);
         pthread_mutex_unlock(&queue->lock);
 
@@ -168,14 +162,14 @@ void* NetInfoRoutine(void* param)
     int nicCount = GetNicCount();
 
     Log(logger, LOG_NETWORK, THRD_CRT, SYS, NO_OPT, NULL);
-    uchar* data;
+    void* data;
 
     while(1)
     {
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
-        data = CollectNetInfo(buf, nicCount);
+        data = CollectNetInfo(buf, nicCount, pParam->collectPeriod);
 
 #if PRINT_NET
         printf("Collected net info packet\n\
@@ -194,9 +188,6 @@ void* NetInfoRoutine(void* param)
 #endif
 
         pthread_mutex_lock(&queue->lock);
-        // TODO: Handling Queue is full...more graceful
-        while (IsFull(queue))
-            usleep(500);
         Push(data, queue);
         pthread_mutex_unlock(&queue->lock);
 
@@ -224,19 +215,16 @@ void* ProcInfoRoutine(void* param)
     Log(logger, LOG_PROCESS, THRD_CRT, SYS, NO_OPT, NULL);
 
     uchar dataBuf[1024 * 1024] = { 0, };
-    uchar* data;
+    void* data;
     while(1)
     {
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
         memset(dataBuf, 0, 1024 * 1024);
-        data = CollectProcInfo(buf, dataBuf);
+        data = CollectProcInfo(buf, dataBuf, pParam->collectPeriod);
 
         pthread_mutex_lock(&queue->lock);
-        // TODO: Handling Queue is full...more graceful
-        while (IsFull(queue))
-            usleep(500);
         Push(data, queue);
         pthread_mutex_unlock(&queue->lock);
 
@@ -252,229 +240,72 @@ void* ProcInfoRoutine(void* param)
 
 void* SendRoutine(void* param)
 {
-    SRoutineParam* pParam = (SRoutineParam*)param;
+    SSenderParam* pParam = (SSenderParam*)param;
     Queue* queue = pParam->queue;
-    int packetSize = 0;
-    char msgBuf[256];
-    SInitialPacket* initialPacket;
-    int initialPacketSize;
-    switch (pParam->collectorID)
-    {
-        case CPU:
-            initialPacket = (SInitialPacket*)GenerateInitialCpuPacket(pParam);
-            packetSize = sizeof(SHeader) + sysconf(_SC_NPROCESSORS_ONLN) * sizeof(SBodyc);
-            initialPacketSize = sizeof(SInitialPacket);
-            break;
-        case MEMORY:
-            initialPacket = (SInitialPacket*)GenerateInitialMemPacket(pParam);
-            packetSize = sizeof(SHeader) + sizeof(SBodym);
-            initialPacketSize = sizeof(SInitialPacket);
-            break;
-        case NETWORK:
-            initialPacket = (SInitialPacket*)GenerateInitialNetPacket(pParam);
-            packetSize = sizeof(SHeader) + sizeof(SBodyn) * GetNicCount();
-            initialPacketSize = sizeof(SInitialPacket) + sizeof(SInitialPacketBody) * GetNicCount();
-            break;
-        case PROCESS:
-            initialPacket = (SInitialPacket*)GenerateInitialProcPacket(pParam);
-            initialPacketSize = sizeof(SInitialPacket);
-            break;
-    }
+    Logger* logger = pParam->logger;
 
     LoggerOptValue logOptVal;
     logOptVal.connFailCnt = 0;
-    logOptVal.queueSize = QUEUE_SIZE;
-    void* data = NULL;
+    logOptVal.queueSize = 0;
+
+    SCData* colletecData = NULL;
     int sockFd, reconnectTryCount = 0;
-    Logger* logger = pParam->logger;
     int sendBytes;
+    
+    int i = 0;
     while(1)
     {
         while (1)
         {
-            Log(logger, pParam->collectorID, TRY_CONN, TCP, NO_OPT, NULL);
+            //Log(logger, pParam->collectorID, TRY_CONN, TCP, NO_OPT, NULL);
             if ((sockFd = ConnectToServer(HOST, PORT)) != -1)
                 break;
             logOptVal.connFailCnt++;
-            pthread_mutex_lock(&queue->lock);
-            logOptVal.curQueueElemCnt = queue->count;
-            pthread_mutex_unlock(&queue->lock);
-            Log(logger, pParam->collectorID, FAIL_CONN, TCP, CONN_FAIL_OPT, &logOptVal);
+            printf("fail to connect.%d\n", i++);
+            //Log(logger, pParam->collectorID, FAIL_CONN, TCP, CONN_FAIL_OPT, &logOptVal);
             sleep(RECONNECT_PERIOD);
         }
 
-        Log(logger, pParam->collectorID, CONN, TCP, NO_OPT, NULL);
-
-        if (write(sockFd, initialPacket, initialPacketSize) == -1)
-        {
-            close(sockFd);
-            Log(logger, pParam->collectorID, DISCONN, TCP, NO_OPT, NULL);
-            continue;
-        }
-        initialPacket->isReconnected = 1;
-
+        //Log(logger, pParam->collectorID, CONN, TCP, NO_OPT, NULL);
+        printf("connected.\n");
         while (1)
         {
-            if (data == NULL)
+            if (colletecData == NULL)
             {
                 pthread_mutex_lock(&queue->lock);
                 while (IsEmpty(queue))
                 {
                     pthread_mutex_unlock(&queue->lock);
-                    usleep(pParam->collectPeriod * 800);
+                    usleep(500);
                     pthread_mutex_lock(&queue->lock);
                 }
-                data = Pop(queue);
+                colletecData = Pop(queue);
                 pthread_mutex_unlock(&queue->lock);
             }
             
-            if (pParam->collectorID == PROCESS)
-            {
-                SHeader* handle = (SHeader*)data;
-                packetSize = handle->bodySize;
-            }
-
-            if ((sendBytes = write(sockFd, data, packetSize)) == -1)
+            if ((sendBytes = write(sockFd, colletecData->data, colletecData->dataSize)) == -1)
             {
                 close(sockFd);
-                pthread_mutex_lock(&queue->lock);
-                logOptVal.curQueueElemCnt = queue->count;
-                pthread_mutex_unlock(&queue->lock);
-                Log(logger, pParam->collectorID, DISCONN, TCP, DISCONN_OPT, &logOptVal);
+                printf("disconnected.\n");
+                //Log(logger, pParam->collectorID, DISCONN, TCP, DISCONN_OPT, &logOptVal);
                 break;
             }
             logOptVal.sendBytes = sendBytes;
-            Log(logger, pParam->collectorID, SND, TCP, SEND_OPT, &logOptVal);
-            free(data);
-            data = NULL;
+            printf("send data\n");
+            //SHeader* hHeader = (SHeader*)(colletecData->data);
+            //SBodyc* hBody = (SBodyc*)(colletecData->data + sizeof(SHeader));
+            //for (int i = 0; i < hHeader->bodyCount; i++)
+            //{
+            //    printf("%d: %012ld %012ld %012ld %012ld\n",
+            //        i, hBody->usrCpuRunTime, hBody->sysCpuRunTime,
+            //        hBody->idleTime, hBody->waitTime);
+            //    hBody++;
+            //}
+        //
+            //Log(logger, pParam->collectorID, SND, TCP, SEND_OPT, &logOptVal);
+            free(colletecData->data);
+            free(colletecData);
+            colletecData = NULL;
         }
     }
-}
-
-
-uchar* GenerateInitialCpuPacket(SRoutineParam* param)
-{
-	uchar* result = (uchar*)malloc(sizeof(SInitialPacket));
-	if (result == NULL)
-	{
-		// TODO: handle malloc error
-		return NULL;
-	}
-	SInitialPacket* handle = (SInitialPacket*)result;
-	handle->logicalCoreCount = sysconf(_SC_NPROCESSORS_ONLN);
-	//memcpy(handle->signature, SIGNATURE_CPU, 4);
-    handle->signature = SIGNATURE_CPU;
-	handle->collectPeriod = param->collectPeriod;
-	handle->isReconnected = 0;
-	return result;
-}
-
-uchar* GenerateInitialMemPacket(SRoutineParam* param)
-{
-	uchar* result = (uchar*)malloc(sizeof(SInitialPacket));
-	if (result == NULL)
-	{
-		// TODO: handle malloc error
-		return NULL;
-	}
-	SInitialPacket* handle = (SInitialPacket*)result;
-	//memcpy(handle->signature, SIGNATURE_MEM, 4);
-    handle->signature = SIGNATURE_MEM;
-	char buf[BUFFER_SIZE + 1] = { 0, };
-	int fd = open("/proc/meminfo", O_RDONLY);
-	int readSize;
-	if (fd == -1)
-	{
-		// TODO: handling open error
-		perror("agent");
-		return NULL;
-	}
-	readSize = read(fd, buf, BUFFER_SIZE);
-	if (readSize == -1)
-	{
-		// TODO: handling read error
-		perror("agent");
-		return NULL;
-	}
-	buf[readSize] = 0;
-	char* pbuf = buf;
-	while (*pbuf++ != ' ');
-	handle->memTotal = atol(buf);
-
-	for (int i = 0; i < 14; i++)
-		while (*pbuf++ != '\n');
-	while (*pbuf++ != ' ');
-	handle->swapTotal = atol(buf);
-	close(fd);
-	handle->collectPeriod = param->collectPeriod;
-	handle->isReconnected = 0;
-	return result;
-}
-
-uchar* GenerateInitialNetPacket(SRoutineParam* param)
-{
-	int nicCount = GetNicCount();
-	uchar* result = (uchar*)malloc(sizeof(SInitialPacket) + sizeof(SInitialPacketBody) * nicCount);
-	if (result == NULL)
-	{
-		// TODO: handle malloc error
-		return NULL;
-	}
-	SInitialPacket* handle = (SInitialPacket*)result;
-	//memcpy(handle->signature, SIGNATURE_NET, 4);
-    handle->signature = SIGNATURE_NET;
-	handle->collectPeriod = param->collectPeriod;
-	handle->isReconnected = 0;
-	handle->netIFCount = nicCount;
-	int i;
-	char buf[BUFFER_SIZE + 1] = { 0, };
-	char *pbuf = buf;
-	int fd = open("/proc/net/dev", O_RDONLY);
-	if (fd == -1)
-	{
-		// TODO: handling open error
-		perror("agent");
-		return NULL;
-	}
-	int readSize = read(fd, buf, BUFFER_SIZE);
-	if (readSize == -1)
-	{
-		// TODO: handling read error
-		perror("agent");
-		return NULL;
-	}
-	buf[readSize] = 0;
-
-
-	SInitialPacketBody* hBody = (SInitialPacketBody*)(result + sizeof(SInitialPacket));
-	while (*pbuf++ != '\n');
-	while (*pbuf++ != '\n');
-	for (int j = 0; j < nicCount; j++)
-	{
-		while (*pbuf == ' ') 
-			pbuf++;
-		memset(hBody->name, 0, 15);
-		for (i = 0; *pbuf != ':' && i < 15; i++)
-			hBody->name[i] = *pbuf++;
-		hBody->nameLength = i;
-		while (*pbuf++ != '\n');
-		hBody++;
-	}
-	return result;
-}
-
-uchar* GenerateInitialProcPacket(SRoutineParam* param)
-{
-	uchar* result = (uchar*)malloc(sizeof(SInitialPacket));
-	if (result == NULL)
-	{
-		// TODO: handle malloc error
-		return NULL;
-	}
-	SInitialPacket* handle = (SInitialPacket*)result;
-	//memcpy(handle->signature, SIGNATURE_PROC, 4);
-    handle->signature = SIGNATURE_PROC;
-	handle->collectPeriod = param->collectPeriod;
-	handle->isReconnected = 0;
-	return result;
 }

@@ -1,6 +1,6 @@
 NAME		=	server
 CFLAG		=	-g
-INCLUDES	=	-I./includes/
+INCLUDES	=	-I./includes/ -I../agent/includes
 LIB			=	-lpthread
 SRC_DIR		=	./srcs
 OBJ_DIR		=	./objs
