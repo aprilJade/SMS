@@ -27,6 +27,12 @@ make
 sh run-agent.sh
 ```
 
+# 2022.08.09 Feedback
+- [ ] 배열로 구현한 큐를 링크드 리스트로 구현하기(큐의 사이즈가 정적인 것이 큰 문제를 일으킬 수 있음)
+- [ ] 서버 스레드 구조 개편
+  - [ ] 수신스레드를 하나로 만들고 Queuing (비즈니스 로직과 수신을 분리)
+  - [ ] 복수의 워커스레드를 만들어 Queue에서 데이터를 가져와 가공 및 DB저장
+
 
 # Todo List
 생각 나는 것을 위주로 적어가고 있습니다. 완전한 것은 아니고 계속 변경될 여지가 있습니다.
@@ -34,10 +40,6 @@ sh run-agent.sh
 - [ ] 공통
   - [ ] 코드 정리 (수시로 반복할 것)
   - [ ] signature검증법 개선 (strncmp()말고 좀더 좋게...)
-  - [x] ~패킷 데이터 자료형 다시 생각해보기 (man 5 proc 참조(각 자료에 대한 자료형 명시되어있음))~
-  - [x] ~동적 라이브러리로 분할하기~
-    - [x] ~SMSutils - Logger, Queue, ...~
-    - [x] ~collector - CPU, Memory, Network, Process, ...~
   - [ ] Logger 고도화
     - [ ] Logger 옵션 설정
       - [ ] 시간대 설정
@@ -89,6 +91,10 @@ sh run-agent.sh
 
 # Checked todo list 
 - [ ] 공통
+  - [x] ~패킷 데이터 자료형 다시 생각해보기 (man 5 proc 참조(각 자료에 대한 자료형 명시되어있음))~
+  - [x] ~동적 라이브러리로 분할하기~
+    - [x] ~SMSutils - Logger, Queue, ...~
+    - [x] ~collector - CPU, Memory, Network, Process, ...~
   - [x] ~Logger~
     - [x] ~서버와 클라이언트의 동작을 로깅하기 위한 로깅 라이브러리 제작~
     - [x] ~로깅은 저장소 설계 (파일에 text or DB)~

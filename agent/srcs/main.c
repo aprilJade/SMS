@@ -87,12 +87,12 @@ int main(int argc, char** argv)
 	}
 	
 	signal(SIGPIPE, SIG_IGN);
-    struct timeval timeVal;
-	ulong collectorCreateTime;
+    // struct timeval timeVal;
+	// ulong collectorCreateTime;
 	for (i = 0; collector[i]; i++)
 	{
-		gettimeofday(&timeVal, NULL);
-		param[i]->collectorCreateTime = timeVal.tv_sec * 1000 + timeVal.tv_usec / 1000;
+		// gettimeofday(&timeVal, NULL);
+		// param[i]->collectorCreateTime = timeVal.tv_sec * 1000 + timeVal.tv_usec / 1000;
 		pthread_create(&collectorTids[i], NULL, collector[i], param[i]);
 		pthread_create(&senderTids[i], NULL, SendRoutine, param[i]);
 	}
