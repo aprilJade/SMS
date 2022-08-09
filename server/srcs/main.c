@@ -84,18 +84,7 @@ int main(void)
             printf("Fail to receive...!\n");
             close(clientFd);
         }
-#if 0
-        char str[5] = { 0, };
-        strncpy(str, packet->signature, 4);
-        printf("%s\n%d\n%d\n%d\n%ld\n%ld\n%d\n",
-            str,
-            packet->collectPeriod,
-            packet->isReconnected,
-            packet->logicalCoreCount,
-            packet->memTotal,
-            packet->swapTotal,
-            packet->netIFCount);
-#endif
+
         if (strncmp(packet->signature, "SMS", 3) != 0)
         {
             // TODO: Logging
