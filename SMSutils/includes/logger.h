@@ -76,8 +76,9 @@ enum eOption
     SEND_OPT
 };
 
-Logger* NewLogger(char* host, short port);
+Logger* NewLogger();
 int Log(Logger* handle, char signature, int msg, int protocol, int optionalFlag, void* optionValue);
+int SetLoggerParam(Logger* logger, char* host, short port);
 void DeleteLogger(Logger* logger);
 
 #endif

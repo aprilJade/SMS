@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include "routines.h"
 #include "collector.h"
-#include "tcpCtrl.h"
 
 #define RECONNECT_PERIOD 6    // seconds
 #define RECONNECT_MAX_TRY 100
@@ -258,7 +257,7 @@ void* SendRoutine(void* param)
         while (1)
         {
             //Log(logger, pParam->collectorID, TRY_CONN, TCP, NO_OPT, NULL);
-            if ((sockFd = ConnectToServer(HOST, PORT)) != -1)
+            if ((sockFd = ConnectToServer(pParam->host, pParam->port)) != -1)
                 break;
             logOptVal.connFailCnt++;
             printf("fail to connect.%d\n", i++);

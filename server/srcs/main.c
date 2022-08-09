@@ -11,10 +11,10 @@
 #include "serverRoutine.h"
 
 #define CONNECTION_COUNT 4
-#define HOST "127.0.0.1"
-#define PORT 4242
+#define DEFAULT_HOST "127.0.0.1"
+#define DEFAULT_PORT 4242
 
-int OpenSocket(char* host, short port)
+int OpenSocket(short port)
 {
     struct sockaddr_in servAddr;
     int servFd = socket(PF_INET, SOCK_STREAM, 0);
@@ -25,7 +25,7 @@ int OpenSocket(char* host, short port)
     }
     memset(&servAddr, 0, sizeof(servAddr));
     servAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servAddr.sin_port = htons(PORT);
+    servAddr.sin_port = htons(port);
     servAddr.sin_family = AF_INET;
 
     if (bind(servFd, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1)
@@ -38,16 +38,18 @@ int OpenSocket(char* host, short port)
     return servFd;
 }
 
-int main(void)
+int main(int argc, char** argv)
 {
     printf("Simple SMS server...\n");
     printf("This server just print received data.\n");
     printf("Parse received data and print it.\n");
     printf("When agent implematation is over, this server implemented...!\n");
     
+    short port = (short)atoi(argv[1]);
+
     int servFd, clientFd;
     struct sockaddr_in clientAddr;
-    if ((servFd = OpenSocket(HOST, PORT)) == -1)
+    if ((servFd = OpenSocket(port)) == -1)
     {
         perror("server");
         return 1;
@@ -58,7 +60,7 @@ int main(void)
     pthread_t tid;
     SReceiveParam* param;
 
-    printf("Start listening: %s:%d\n", HOST, PORT);
+    printf("Start listening: %s:%d\n", DEFAULT_HOST, port);
     while (1)
     {
         if (listen(servFd, CONNECTION_COUNT) == -1)

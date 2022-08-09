@@ -2,11 +2,12 @@
 #define ROUTINES_H
 #define MIN_SLEEP_MS 500
 #define ROUTINE_COUNT 4
-#define HOST "127.0.0.1"
-#define PORT 4242
+#define DEFAULT_HOST "127.0.0.1"
+#define DEFAULT_PORT 4242
 
 #include "packets.h"
 #include "logger.h"
+#include "tcpCtrl.h"
 
 typedef struct SRoutineParam
 {
@@ -25,6 +26,8 @@ typedef struct SSenderParam
     uint procPeriod;
     Queue* queue;
     Logger* logger;
+    char host[16];
+    short port;
 } SSenderParam;
 
 int GetNicCount();

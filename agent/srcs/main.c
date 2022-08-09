@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <sys/time.h>
+#include <string.h>
 #include "routines.h"
 #include "collector.h"
 
@@ -18,6 +19,8 @@ void PrintUsage()
 	fprintf(stderr, "Try \"./agent -h\" or \"./agent --help\" for more information.\n");
 }
 
+
+
 int main(int argc, char** argv)
 {
 	static struct option longOptions[] =
@@ -26,6 +29,7 @@ int main(int argc, char** argv)
 		{"memory", required_argument, 0, 'm'},
 		{"network", required_argument, 0, 'n'},
 		{"process", required_argument, 0, 'p'},
+		{"host", required_argument, 0, 'H'},
 		{"help", no_argument, 0, 'h'},
 		{0, 0, 0, 0} 
 	};
@@ -43,11 +47,12 @@ int main(int argc, char** argv)
 	SRoutineParam* param[ROUTINE_COUNT] = { 0, };
 	SSenderParam senderParam;
 	void* (*collector[ROUTINE_COUNT + 1])(void*) = { 0, };
-	Logger* logger = NewLogger(HOST, PORT);
+	Logger* logger = NewLogger();
 	Queue* queue = NewQueue();
 	senderParam.logger = logger;
 	senderParam.queue = queue;
-	while ((c = getopt_long(argc, argv, "c:m:n:p:h", longOptions, 0)) > 0)
+	senderParam.port = 0;
+	while ((c = getopt_long(argc, argv, "c:m:n:p:H:h", longOptions, 0)) > 0)
 	{
 		if (c == '?')
 		{
@@ -89,6 +94,12 @@ int main(int argc, char** argv)
 			param[i]->logger = logger;
 			param[i]->queue = queue;
 			break;
+		case 'H':
+			int ret = ParseHost(optarg, senderParam.host, &senderParam.port);
+			printf("%s:%d\n", senderParam.host, senderParam.port);
+			if (ret)
+				exit(1);
+			break;
 		case 'h':
 			PrintHelp();
 			exit(0);
@@ -110,6 +121,12 @@ int main(int argc, char** argv)
 	}
 
 	printf("Create sender.\n");
+	if (senderParam.port == 0)
+	{
+		strcpy(senderParam.host, DEFAULT_HOST);
+		senderParam.port = DEFAULT_PORT;
+	}
+	SetLoggerParam(logger, senderParam.host, senderParam.port);
 	pthread_create(&senderTid, NULL, SendRoutine, &senderParam);
 
 	for (i = 0; collector[i]; i++)

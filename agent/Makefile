@@ -18,7 +18,7 @@ $(shell mkdir $(OBJ_DIR))
 endif
 
 $(OBJ_DIR)/%.o	: $(SRC_DIR)/%.c
-	$(CC) $(CFLAG) $(LIB_DIR) $(LIB) -c $< -o $@ $(INCLUDES) 
+	cc $(CFLAG) $(LIB_DIR) $(LIB) -c $< -o $@ $(INCLUDES) 
 
 $(NAME): $(OBJECTS)
 	cc $(CFLAG) $(LIB_DIR) $(LIB)  $(INCLUDES) -o $(NAME) $(OBJECTS)

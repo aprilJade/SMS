@@ -80,15 +80,11 @@ void* LoggingRoutine(void* param)
     }
 }
 
-Logger* NewLogger(char* host, short port)
+Logger* NewLogger()
 {
-    assert(host != NULL);
-    assert(port >= 0 && port <= 65535);
     Logger* logger = (Logger*)malloc(sizeof(Logger));
     if (logger == NULL)
         return NULL;
-    logger->host = strdup(host);
-    logger->port = port;
     logger->queue = NewQueue();
     LoggerRoutineParam* param = (LoggerRoutineParam*)malloc(sizeof(LoggerRoutineParam));
     if (param == NULL)
@@ -118,6 +114,14 @@ Logger* NewLogger(char* host, short port)
 void DeleteLogger(Logger* logger)
 {
     // not implemented yet
+}
+
+int SetLoggerParam(Logger* logger, char* host, short port)
+{
+    assert(host != NULL);
+    assert(port >= 0 && port <= 65535);
+    logger->host = strdup(host);
+    logger->port = port;
 }
 
 int Log(Logger* handle, char signature, int msg, int protocol, int optionalFlag, void* optionValue)
