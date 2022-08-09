@@ -85,20 +85,20 @@ int main(void)
             close(clientFd);
         }
 
-        if (strncmp(packet->signature, "SMS", 3) != 0)
-        {
-            // TODO: Logging
-            printf("Not approved packet signature111. %c%c%c\n",
-                packet->signature[0],
-                packet->signature[1],
-                packet->signature[2]);
-            close(clientFd);
-            continue;
-        }
+        // if (strncmp(packet->signature, "SMS", 3) != 0)
+        // {
+        //     // TODO: Logging
+        //     printf("Not approved packet signature111. %c%c%c\n",
+        //         packet->signature[0],
+        //         packet->signature[1],
+        //         packet->signature[2]);
+        //     close(clientFd);
+        //     continue;
+        // }
 
-        switch (packet->signature[3])
+        switch (packet->signature)
         {
-        case 'c':
+        case SIGNATURE_CPU:
             if (packet->isReconnected)
                 break;
             // TODO: Store below data
@@ -107,7 +107,7 @@ int main(void)
             sprintf(logPath, "Log-%s", "CPU");
             approved = 1;
             break;
-        case 'm':
+        case SIGNATURE_MEM:
             if (packet->isReconnected)
                 break;
             // TODO: Store below data
@@ -117,14 +117,14 @@ int main(void)
             sprintf(logPath, "Log-%s", "Memory");
             approved = 1;
             break;
-        case 'p':
+        case SIGNATURE_PROC:
             if (packet->isReconnected)
                 break;
             routine = ServProcInfoRoutine;
             sprintf(logPath, "Log-%s", "Process");
             approved = 1;
             break;
-        case 'n':
+        case SIGNATURE_NET:
             if (packet->isReconnected)
                 break;
             // TODO: Store below data
@@ -134,7 +134,7 @@ int main(void)
             approved = 1;
             break;
         default:
-            printf("Not approved packet signature222. %c\n", packet->signature[3]);
+            printf("Not approved packet signature. %d\n", packet->signature);
             close(clientFd);
             approved = 0;
             break;

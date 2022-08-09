@@ -42,7 +42,7 @@ void* ServCpuInfoRoutine(void* param)
             return 0;
         }
 
-        if (strncmp(hHeader->signature, "SMSc", 4) != 0 ||
+        if (hHeader->signature != SIGNATURE_CPU ||
             sizeof(SHeader) + hHeader->bodyCount * hHeader->bodySize != readSize)
         {
             // TODO: Logging
@@ -95,7 +95,7 @@ void* ServMemInfoRoutine(void* param)
         hHeader = (SHeader*)buf;
         hBody = (SBodym*)(buf + sizeof(SHeader));
 
-        if (strncmp(hHeader->signature, "SMSm", 4) != 0 ||
+        if (hHeader->signature != SIGNATURE_MEM ||
             sizeof(SHeader) + hHeader->bodyCount * hHeader->bodySize != readSize)
         {
             // TODO: Logging
@@ -132,7 +132,6 @@ void* ServNetInfoRoutine(void* param)
             printf("Fail to receive...!\n");
             close(pParam->clientSock);
             close(pParam->logFd);
-            printf("Wait to reconnect....\n");
             return 0;
         }
         if (readSize == 0)
@@ -140,6 +139,7 @@ void* ServNetInfoRoutine(void* param)
             printf("Disconnected from agent side.\n");
             close(pParam->clientSock);
             close(pParam->logFd);
+            printf("Wait to reconnect....\n");
             return 0;
         }
         // TODO: Store to DB
@@ -148,7 +148,7 @@ void* ServNetInfoRoutine(void* param)
         hHeader = (SHeader*)buf;
         hBody = (SBodyn*)(buf + sizeof(SHeader));
 
-        if (strncmp(hHeader->signature, "SMSn", 4) != 0 ||
+        if (hHeader->signature != SIGNATURE_NET ||
             sizeof(SHeader) + hHeader->bodyCount * hHeader->bodySize != readSize)
         {
             // TODO: Logging
@@ -181,6 +181,7 @@ void* ServProcInfoRoutine(void* param)
     SServRoutineParam* pParam = (SServRoutineParam*)param;
     int readSize = 0;
     int totalSize = 0;
+    // TODO: modify buffer size
     char buf[1024 * 1024] = { 0, };
     SHeader* hHeader;
     SBodyn* hBody;
@@ -207,7 +208,7 @@ void* ServProcInfoRoutine(void* param)
         hHeader = (SHeader*)buf;
         hBody = (SBodyn*)(buf + sizeof(SHeader));
 
-        if (strncmp(hHeader->signature, "SMSp", 4) != 0 ||
+        if (hHeader->signature != SIGNATURE_PROC ||
             hHeader->bodySize != readSize)
         {
             // TODO: Logging

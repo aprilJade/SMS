@@ -362,7 +362,8 @@ uchar* GenerateInitialCpuPacket(SRoutineParam* param)
 	}
 	SInitialPacket* handle = (SInitialPacket*)result;
 	handle->logicalCoreCount = sysconf(_SC_NPROCESSORS_ONLN);
-	memcpy(handle->signature, SIGNATURE_CPU, 4);
+	//memcpy(handle->signature, SIGNATURE_CPU, 4);
+    handle->signature = SIGNATURE_CPU;
 	handle->collectPeriod = param->collectPeriod;
 	handle->isReconnected = 0;
 	return result;
@@ -377,7 +378,8 @@ uchar* GenerateInitialMemPacket(SRoutineParam* param)
 		return NULL;
 	}
 	SInitialPacket* handle = (SInitialPacket*)result;
-	memcpy(handle->signature, SIGNATURE_MEM, 4);
+	//memcpy(handle->signature, SIGNATURE_MEM, 4);
+    handle->signature = SIGNATURE_MEM;
 	char buf[BUFFER_SIZE + 1] = { 0, };
 	int fd = open("/proc/meminfo", O_RDONLY);
 	int readSize;
@@ -419,7 +421,8 @@ uchar* GenerateInitialNetPacket(SRoutineParam* param)
 		return NULL;
 	}
 	SInitialPacket* handle = (SInitialPacket*)result;
-	memcpy(handle->signature, SIGNATURE_NET, 4);
+	//memcpy(handle->signature, SIGNATURE_NET, 4);
+    handle->signature = SIGNATURE_NET;
 	handle->collectPeriod = param->collectPeriod;
 	handle->isReconnected = 0;
 	handle->netIFCount = nicCount;
@@ -469,7 +472,8 @@ uchar* GenerateInitialProcPacket(SRoutineParam* param)
 		return NULL;
 	}
 	SInitialPacket* handle = (SInitialPacket*)result;
-	memcpy(handle->signature, SIGNATURE_PROC, 4);
+	//memcpy(handle->signature, SIGNATURE_PROC, 4);
+    handle->signature = SIGNATURE_PROC;
 	handle->collectPeriod = param->collectPeriod;
 	handle->isReconnected = 0;
 	return result;

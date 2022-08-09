@@ -1,6 +1,11 @@
 #ifndef PACKETS_H
 #define PACKETS_H
 
+#define SIGNATURE_CPU 0x534E5363    // SMSc
+#define SIGNATURE_MEM 0x534E536D    // SMSm
+#define SIGNATURE_NET 0x534E536E    // SMSn
+#define SIGNATURE_PROC 0x534E5370   // SMSp
+
 typedef unsigned long ulong;
 typedef unsigned int uint;
 typedef unsigned short ushort;
@@ -8,7 +13,7 @@ typedef unsigned char uchar;
 
 typedef struct SInitialPacket
 {
-    uchar signature[4];
+    uint signature;
     uint collectPeriod;
     uint logicalCoreCount;
     ulong memTotal;
@@ -25,7 +30,7 @@ typedef struct SInitialPacketBody
 
 typedef struct SHeader
 {
-    uchar signature[4];
+    uint signature;
     ushort bodyCount;
     ushort bodySize;
 } SHeader;

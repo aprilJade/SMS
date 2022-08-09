@@ -50,7 +50,8 @@ uchar* CollectEachCpuInfo(ushort cpuCnt, long timeConversion, char* rdBuf)
 	// gen header..
 
 	SHeader* hh = (SHeader*)result;
-	memcpy(result, SIGNATURE_CPU, 4);
+	//memcpy(result, SIGNATURE_CPU, 4);
+	hh->signature = SIGNATURE_CPU;
 	hh->bodyCount = cpuCnt;
 	hh->bodySize = sizeof(SBodyc);
 
@@ -101,7 +102,8 @@ uchar* CollectMemInfo(char* buf)
 	}
 
 	SHeader* hh = (SHeader*)result;
-	memcpy(result, SIGNATURE_MEM, 4);
+	//memcpy(result, SIGNATURE_MEM, 4);
+	hh->signature = SIGNATURE_MEM;
 	hh->bodyCount = 1;
 	hh->bodySize = sizeof(SBodym);
 	SBodym* handle = (SBodym*)(result + sizeof(SHeader));
@@ -159,7 +161,8 @@ uchar* CollectNetInfo(char* buf, int nicCount)
 		return NULL;
 	}
 	SHeader* hh = (SHeader*)result;
-	memcpy(result, SIGNATURE_NET, 4);
+	//memcpy(result, SIGNATURE_NET, 4);
+	hh->signature = SIGNATURE_NET;
 	hh->bodyCount = nicCount;
 	hh->bodySize = sizeof(SBodyn);
 	SBodyn* handle = (SBodyn*)(result + sizeof(SHeader));
@@ -334,6 +337,7 @@ uchar* CollectProcInfo(char *buf, uchar* dataBuf)
 	SHeader* hh = (SHeader*)result;
 	hh->bodyCount = 0;
 	hh->bodySize = tmp - dataBuf;
-	memcpy(result, SIGNATURE_PROC, 4);
+	//memcpy(result, SIGNATURE_PROC, 4);
+	hh->signature = SIGNATURE_PROC;
 	return result;
 }
