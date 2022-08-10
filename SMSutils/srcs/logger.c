@@ -64,45 +64,8 @@ static int OpenLogFile(char* logPath)
     localTime = time(NULL);
     timeStruct = localtime(&localTime);
     if (access(logPath, F_OK) != 0)
-    {
-        printf("Create dir\n");
-        int idx = 0;
-        int dirCnt = 0;
-        while (1)
-        {
-            while (logPath[idx] != '/')
-            {
-                if (logPath[idx] == '\0')
-                    break;
-                printf("%c\n", logPath[idx]);
-                idx++;
-            }
-            dirCnt++;
-            if (logPath[idx++] == '\0')
-                break;
-        }
-        printf("dir cnt: %d\n", dirCnt);
-        char buf[260];
-        idx = 0;
-        for (int i = 0; i < dirCnt; i++)
-        {
-            while (logPath[idx] != '/')
-            {
-                if (logPath[idx] == '\0')
-                    break;
-                idx++;
-            }
-            strncpy(buf, logPath, idx);
-            buf[idx] = 0;
-#if LOGGER_DEBUG
-            printf("%s\n", buf);
-#endif
-            if (access(buf, F_OK) != 0)
-                mkdir(buf, 0777);
-            idx++;
-        }
-    }
-    
+        CreateDir(logPath);
+        
     sprintf(buf, "%s/%04d-%02d-%02d.log",
         logPath,
         timeStruct->tm_year + 1900,

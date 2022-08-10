@@ -26,7 +26,6 @@ agent:
 	make -C ./SMSutils
 	make -C ./collector
 	make -C ./agent
-	make fclean -C ./agent
 SMSutils:
 	make fclean -C ./SMSutils
 	make -C ./SMSutils

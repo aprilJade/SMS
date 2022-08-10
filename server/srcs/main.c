@@ -40,11 +40,6 @@ int OpenSocket(short port)
 
 int main(int argc, char** argv)
 {
-    printf("Simple SMS server...\n");
-    printf("This server just print received data.\n");
-    printf("Parse received data and print it.\n");
-    printf("When agent implematation is over, this server implemented...!\n");
-    
     short port = (short)atoi(argv[1]);
 
     int servFd, clientFd;
@@ -59,21 +54,23 @@ int main(int argc, char** argv)
     void* (*routine)(void*);
     pthread_t tid;
     SReceiveParam* param;
+    Logger* logger = NewLogger("./log/server");
 
-    printf("Start listening: %s:%d\n", DEFAULT_HOST, port);
+    char logMsg[128];
+    sprintf(logMsg, "listen at %s:%d", DEFAULT_HOST, port);
+    Log(logger, logMsg);
     while (1)
     {
         if (listen(servFd, CONNECTION_COUNT) == -1)
         {
-            perror("server");
-            return 1;
+            Log(logger, "fail listen");
+            exit(1);
         }
         clientFd = accept(servFd, (struct sockaddr*)&clientAddr, &len);
         if (clientFd == -1)
         {
-            printf("Fail to connect\n");
-            perror("server");
-            return 1;
+            Log(logger, "fail accept");
+            exit(1);
         }
         
         param = (SReceiveParam*)malloc(sizeof(SReceiveParam));
@@ -81,11 +78,11 @@ int main(int argc, char** argv)
     
         if (pthread_create(&tid, NULL, ReceiveRoutine, param) == -1)
         {
-            perror("server");
+            Log(logger, "fail create receiver");
             close(clientFd);
             continue;
         }
-        printf("thread created.\n");
-        pthread_join(tid, NULL);
+        Log(logger, "run-receiver");
+        //pthread_join(tid, NULL);
     }
 }   

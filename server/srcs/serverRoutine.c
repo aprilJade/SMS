@@ -60,7 +60,7 @@ void* ReceiveRoutine(void* param)
             return 0;
         }
         // TODO: Queuing packet data
-        printf("collect period: %d ms\n", hHeader->collectPeriod);
+        //printf("collect period: %d ms\n", hHeader->collectPeriod);
         //SBodyc* hBody = (SBodyc*)(buf + sizeof(SHeader));
         //for (int i = 0; i < hHeader->bodyCount; i++)
         //{

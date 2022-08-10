@@ -1,5 +1,5 @@
 NAME		=	server
-CFLAG		=	-g
+CFLAG		=	-g -fsanitize=address
 INCLUDES	=	-I./includes/ -I../SMSutils/includes -I../collector/includes
 LIB			=	-lpthread -lSMSutils
 LIB_DIR		=	-L../SMSutils
@@ -18,10 +18,10 @@ $(shell mkdir $(OBJ_DIR))
 endif
 
 $(OBJ_DIR)/%.o	: $(SRC_DIR)/%.c
-	cc $(CFLAG) $(LIB_DIR) $(LIB) $(INCLUDES) -c $< -o $@ 
+	cc $(CFLAG) $(LIB_DIR) $(LIB) -c $< -o $@ $(INCLUDES) 
 
 $(NAME): $(OBJECTS)
-	cc $(CFLAG) $(LIB_DIR) $(LIB) $(INCLUDES) -o $(NAME) $(OBJECTS)
+	cc $(CFLAG) $(LIB_DIR) $(LIB)  $(INCLUDES) -o $(NAME) $(OBJECTS)
 
 all: $(NAME)
 

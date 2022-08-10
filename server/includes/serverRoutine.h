@@ -2,6 +2,7 @@
 #define SERVER_ROUTINE_H
 #define FUNC_TABLE_SIZE 256
 #include "packets.h"
+#include "logger.h"
 
 typedef struct SReceiveParam
 {
