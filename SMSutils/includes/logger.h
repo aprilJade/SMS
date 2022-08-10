@@ -1,6 +1,8 @@
 #ifndef LOGGER_H
 #define LOGGER_H
-#define KIND_OF_LOG 9
+#define SYS_LOG_CNT 10
+#define AGENT_LOG_CNT 8
+#define SERVER_LOG_CNT 6
 #define LOG_BUFFER_SIZE 128
 #include <pthread.h>
 #include "Queue.h"
@@ -25,8 +27,6 @@ typedef struct Logger
     pthread_mutex_t fdLock;
     Queue* queue;
     const char* logfilePath;
-    char* host;
-    short port;
 } Logger;
 
 typedef struct LoggerOptValue
@@ -38,47 +38,8 @@ typedef struct LoggerOptValue
     int sendBytes;
 } LoggerOptValue;
 
-enum eSig
-{
-    LOG_CPU = 'c',
-    LOG_MEMORY = 'm',
-    LOG_NETWORK = 'n',
-    LOG_PROCESS = 'p'
-};
-
-enum eMessage
-{
-    TRY_CONN,
-    FAIL_CONN,
-    CONN,
-    DISCONN,
-    RCV,
-    SND,
-    QRY,
-    THRD_CRT,
-    COLL_COMPLETE
-};
-
-enum eProtocol
-{
-    TCP,
-    UDP,
-    DB,
-    SYS
-};
-
-enum eOption
-{
-    NO_OPT,
-    DISCONN_OPT,
-    CONN_FAIL_OPT,
-    COLLECT_ELAPSE_OPT,
-    SEND_OPT
-};
-
-Logger* NewLogger();
-int Log(Logger* handle, char signature, int msg, int protocol, int optionalFlag, void* optionValue);
-int SetLoggerParam(Logger* logger, char* host, short port);
+Logger* NewLogger(char* logPath);
+int Log(Logger* handle, char* logMsg);
 void DeleteLogger(Logger* logger);
 
 #endif

@@ -19,8 +19,6 @@ void PrintUsage()
 	fprintf(stderr, "Try \"./agent -h\" or \"./agent --help\" for more information.\n");
 }
 
-
-
 int main(int argc, char** argv)
 {
 	static struct option longOptions[] =
@@ -47,7 +45,9 @@ int main(int argc, char** argv)
 	SRoutineParam* param[ROUTINE_COUNT] = { 0, };
 	SSenderParam senderParam;
 	void* (*collector[ROUTINE_COUNT + 1])(void*) = { 0, };
-	Logger* logger = NewLogger();
+	char logmsgBuf[128];
+	sprintf(logmsgBuf, "./log/agent");
+	Logger* logger = NewLogger(logmsgBuf);
 	Queue* queue = NewQueue();
 	senderParam.logger = logger;
 	senderParam.queue = queue;
@@ -72,6 +72,8 @@ int main(int argc, char** argv)
 			param[i] = GenRoutineParam(atoi(optarg), CPU, queue);
 			param[i]->logger = logger;
 			param[i]->queue = queue;
+			sprintf(logmsgBuf, "c collect every %dms", senderParam.cpuPeriod);
+			Log(logger, logmsgBuf);
 			break;
 		case 'm':
 			collector[i] = MemInfoRoutine;
@@ -79,6 +81,8 @@ int main(int argc, char** argv)
 			param[i] = GenRoutineParam(atoi(optarg), MEMORY, queue);
 			param[i]->logger = logger;
 			param[i]->queue = queue;
+			sprintf(logmsgBuf, "m collect every %dms", senderParam.cpuPeriod);
+			Log(logger, logmsgBuf);
 			break;
 		case 'n':
 			collector[i] = NetInfoRoutine;
@@ -86,6 +90,8 @@ int main(int argc, char** argv)
 			param[i] = GenRoutineParam(atoi(optarg), NETWORK, queue);
 			param[i]->logger = logger;
 			param[i]->queue = queue;
+			sprintf(logmsgBuf, "n collect every %dms", senderParam.cpuPeriod);
+			Log(logger, logmsgBuf);
 			break;
 		case 'p':
 			collector[i] = ProcInfoRoutine;
@@ -93,11 +99,11 @@ int main(int argc, char** argv)
 			param[i] = GenRoutineParam(atoi(optarg), PROCESS, queue);
 			param[i]->logger = logger;
 			param[i]->queue = queue;
+			sprintf(logmsgBuf, "p collect every %dms", senderParam.cpuPeriod);
+			Log(logger, logmsgBuf);
 			break;
 		case 'H':
-			int ret = ParseHost(optarg, senderParam.host, &senderParam.port);
-			printf("%s:%d\n", senderParam.host, senderParam.port);
-			if (ret)
+			if (ParseHost(optarg, senderParam.host, &senderParam.port))
 				exit(1);
 			break;
 		case 'h':
@@ -117,16 +123,13 @@ int main(int argc, char** argv)
 		// gettimeofday(&timeVal, NULL);
 		// param[i]->collectorCreateTime = timeVal.tv_sec * 1000 + timeVal.tv_usec / 1000;
 		pthread_create(&collectorTids[i], NULL, collector[i], param[i]);
-		printf("Create collector.\n");
 	}
 
-	printf("Create sender.\n");
 	if (senderParam.port == 0)
 	{
 		strcpy(senderParam.host, DEFAULT_HOST);
 		senderParam.port = DEFAULT_PORT;
 	}
-	SetLoggerParam(logger, senderParam.host, senderParam.port);
 	pthread_create(&senderTid, NULL, SendRoutine, &senderParam);
 
 	for (i = 0; collector[i]; i++)

@@ -40,17 +40,15 @@ void* CpuInfoRoutine(void* param)
     SRoutineParam* pParam = (SRoutineParam*)param;
     Queue* queue = pParam->queue;
     Logger* logger = pParam->logger;
+    char logmsgBuf[128];
 
-    Log(logger, LOG_CPU, THRD_CRT, SYS, NO_OPT, NULL);
     void* data;
-    LoggerOptValue logOptVal;
 
     while (1)
     {
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
-        //CollectCpuInfo(toMs, buf, packet);
         data = CollectEachCpuInfo(cpuCnt, toMs, buf, pParam->collectPeriod);
 #if PRINT_CPU
         printf("<CPU information as OS resources>\n");
@@ -65,12 +63,13 @@ void* CpuInfoRoutine(void* param)
         pthread_mutex_lock(&queue->lock);
         Push(data, queue);
         pthread_mutex_unlock(&queue->lock);
-        printf("push cpu info.\n");
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
-        logOptVal.elapseTime = elapseTime;
-        Log(logger, LOG_CPU, COLL_COMPLETE, SYS, COLLECT_ELAPSE_OPT, &logOptVal);
+
+        sprintf(logmsgBuf, "cpu info collected in %ldus", elapseTime);
+        Log(logger, logmsgBuf);
+
         usleep(pParam->collectPeriod * 1000 - elapseTime);
     }
 }
@@ -83,10 +82,8 @@ void* MemInfoRoutine(void* param)
     SRoutineParam* pParam = (SRoutineParam*)param;
     Queue* queue = pParam->queue;
     Logger* logger = pParam->logger;
-    LoggerOptValue logOptVal;
+    char logmsgBuf[128]; 
     void* data;
-
-    Log(logger, LOG_MEMORY, THRD_CRT, SYS, NO_OPT, NULL);
 
     while(1)
     {
@@ -112,8 +109,9 @@ void* MemInfoRoutine(void* param)
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 
-        logOptVal.elapseTime = elapseTime;
-        Log(logger, LOG_MEMORY, COLL_COMPLETE, SYS, COLLECT_ELAPSE_OPT, &logOptVal);
+        sprintf(logmsgBuf, "m collected in %ldus", elapseTime);
+        Log(logger, logmsgBuf);
+
         usleep(pParam->collectPeriod * 1000 - elapseTime);
     }
 }
@@ -156,11 +154,9 @@ void* NetInfoRoutine(void* param)
     SRoutineParam* pParam = (SRoutineParam*)param;
     Queue* queue = pParam->queue;
     Logger* logger = pParam->logger;
-    LoggerOptValue logOptVal;
-
+    char logmsgBuf[128];
     int nicCount = GetNicCount();
 
-    Log(logger, LOG_NETWORK, THRD_CRT, SYS, NO_OPT, NULL);
     void* data;
 
     while(1)
@@ -194,8 +190,9 @@ void* NetInfoRoutine(void* param)
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 
-        logOptVal.elapseTime = elapseTime;
-        Log(logger, LOG_NETWORK, COLL_COMPLETE, SYS, COLLECT_ELAPSE_OPT, &logOptVal);
+
+        sprintf(logmsgBuf, "net info collected in %ldus", elapseTime);
+        Log(logger, logmsgBuf);
         usleep(pParam->collectPeriod * 1000 - elapseTime);
     }
 }
@@ -208,10 +205,9 @@ void* ProcInfoRoutine(void* param)
     SRoutineParam* pParam = (SRoutineParam*)param;
     Queue* queue = pParam->queue;
     Logger* logger = pParam->logger;
-    LoggerOptValue logOptVal;
+    char logmsgBuf[128];
     int collectedCount;
 
-    Log(logger, LOG_PROCESS, THRD_CRT, SYS, NO_OPT, NULL);
 
     uchar dataBuf[1024 * 1024] = { 0, };
     void* data;
@@ -231,8 +227,8 @@ void* ProcInfoRoutine(void* param)
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 
-        logOptVal.elapseTime = elapseTime;
-        Log(logger, LOG_PROCESS, COLL_COMPLETE, SYS, COLLECT_ELAPSE_OPT, &logOptVal);
+        sprintf(logmsgBuf, "proc info collected in %ldus", elapseTime);
+        Log(logger, logmsgBuf);
         usleep(pParam->collectPeriod * 1000 - elapseTime);
     }
 }
@@ -243,30 +239,31 @@ void* SendRoutine(void* param)
     Queue* queue = pParam->queue;
     Logger* logger = pParam->logger;
 
-    LoggerOptValue logOptVal;
-    logOptVal.connFailCnt = 0;
-    logOptVal.queueSize = 0;
-
     SCData* colletecData = NULL;
-    int sockFd, reconnectTryCount = 0;
+    int sockFd, connFailCount = 0;
     int sendBytes;
-    
+    char logmsgBuf[128];
+
+    Log(logger, "run-sender");
+
     int i = 0;
     while(1)
     {
         while (1)
         {
-            //Log(logger, pParam->collectorID, TRY_CONN, TCP, NO_OPT, NULL);
+            sprintf(logmsgBuf, "try-connection %s:%d", pParam->host, pParam->port);
+            Log(logger, logmsgBuf);
             if ((sockFd = ConnectToServer(pParam->host, pParam->port)) != -1)
                 break;
-            logOptVal.connFailCnt++;
-            printf("fail to connect.%d\n", i++);
-            //Log(logger, pParam->collectorID, FAIL_CONN, TCP, CONN_FAIL_OPT, &logOptVal);
+            connFailCount++;
+            sprintf(logmsgBuf, "fail-connection %s:%d %d", pParam->host, pParam->port, connFailCount);
+            Log(logger, logmsgBuf);
             sleep(RECONNECT_PERIOD);
         }
 
-        //Log(logger, pParam->collectorID, CONN, TCP, NO_OPT, NULL);
-        printf("connected.\n");
+        sprintf(logmsgBuf, "connected %s:%d", pParam->host, pParam->port);
+        Log(logger, logmsgBuf);
+
         while (1)
         {
             if (colletecData == NULL)
@@ -285,23 +282,13 @@ void* SendRoutine(void* param)
             if ((sendBytes = write(sockFd, colletecData->data, colletecData->dataSize)) == -1)
             {
                 close(sockFd);
-                printf("disconnected.\n");
-                //Log(logger, pParam->collectorID, DISCONN, TCP, DISCONN_OPT, &logOptVal);
+                sprintf(logmsgBuf, "disconnected %s:%d", pParam->host, pParam->port);
+                Log(logger, logmsgBuf);
                 break;
             }
-            logOptVal.sendBytes = sendBytes;
-            printf("send data\n");
-            //SHeader* hHeader = (SHeader*)(colletecData->data);
-            //SBodyc* hBody = (SBodyc*)(colletecData->data + sizeof(SHeader));
-            //for (int i = 0; i < hHeader->bodyCount; i++)
-            //{
-            //    printf("%d: %012ld %012ld %012ld %012ld\n",
-            //        i, hBody->usrCpuRunTime, hBody->sysCpuRunTime,
-            //        hBody->idleTime, hBody->waitTime);
-            //    hBody++;
-            //}
-        //
-            //Log(logger, pParam->collectorID, SND, TCP, SEND_OPT, &logOptVal);
+            
+            sprintf(logmsgBuf, "send %s:%d %dB", pParam->host, pParam->port, sendBytes);
+            Log(logger, logmsgBuf);
             free(colletecData->data);
             free(colletecData);
             colletecData = NULL;

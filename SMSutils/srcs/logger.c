@@ -9,28 +9,53 @@
 #include <sys/stat.h>
 
 #define LOGGER_DEBUG 0
+#define TIME_FORMAT "[%02d:%02d:%02d+0900]"
 
-static const char* logMsgs[KIND_OF_LOG] = {
-    "try-connection",   // TRY_CONN
-    "fail-connection",  // FAIL_CONN
-    "connected",        // CONN
-    "disconnected",     // DISCONN
-    "received",         // RCV
-    "send",             // SND
-    "query",            // QRY
-    "thread-created",   // THRD_CRT
-    "collected"         // COLL_COMPLETE
-};
+static int CreateDir(char* logPath)
+{
+#if LOGGER_DEBUG
+        printf("MakeDirectory");
+#endif
+    int idx = 0;
+    int dirCnt = 0;
+    while (1)
+    {
+        while (logPath[idx] != '/')
+        {
+            if (logPath[idx] == '\0')
+                break;
+            printf("%c\n", logPath[idx]);
+            idx++;
+        }
+        dirCnt++;
+        if (logPath[idx++] == '\0')
+            break;
+    }
+#if LOGGER_DEBUG
+    printf("dir cnt: %d\n", dirCnt);
+#endif
+    char buf[260];
+    idx = 0;
+    for (int i = 0; i < dirCnt; i++)
+    {
+        while (logPath[idx] != '/')
+        {
+            if (logPath[idx] == '\0')
+                break;
+            idx++;
+        }
+        strncpy(buf, logPath, idx);
+        buf[idx] = 0;
+#if LOGGER_DEBUG
+        printf("%s\n", buf);
+#endif
+        if (access(buf, F_OK) != 0)
+            mkdir(buf, 0777);
+        idx++;
+    }
+}
 
-static const char* logProtocolStr[4] = {
-    "TCP",
-    "UDP",
-    "DB",
-    "SYS"
-};
-
-// TODO: User could set log directory.
-int OpenLogFile()
+static int OpenLogFile(char* logPath)
 {
     char buf[260];
     time_t localTime;
@@ -38,17 +63,52 @@ int OpenLogFile()
 
     localTime = time(NULL);
     timeStruct = localtime(&localTime);
-    if (access("../log", F_OK) != 0)
-        mkdir("../log", 0777);
-    if (access("../log/agent", F_OK) != 0)
-        mkdir("../log/agent", 0777);
-
-    sprintf(buf, "../log/agent/%04d-%02d-%02d.log",
+    if (access(logPath, F_OK) != 0)
+    {
+        printf("Create dir\n");
+        int idx = 0;
+        int dirCnt = 0;
+        while (1)
+        {
+            while (logPath[idx] != '/')
+            {
+                if (logPath[idx] == '\0')
+                    break;
+                printf("%c\n", logPath[idx]);
+                idx++;
+            }
+            dirCnt++;
+            if (logPath[idx++] == '\0')
+                break;
+        }
+        printf("dir cnt: %d\n", dirCnt);
+        char buf[260];
+        idx = 0;
+        for (int i = 0; i < dirCnt; i++)
+        {
+            while (logPath[idx] != '/')
+            {
+                if (logPath[idx] == '\0')
+                    break;
+                idx++;
+            }
+            strncpy(buf, logPath, idx);
+            buf[idx] = 0;
+#if LOGGER_DEBUG
+            printf("%s\n", buf);
+#endif
+            if (access(buf, F_OK) != 0)
+                mkdir(buf, 0777);
+            idx++;
+        }
+    }
+    
+    sprintf(buf, "%s/%04d-%02d-%02d.log",
+        logPath,
         timeStruct->tm_year + 1900,
         timeStruct->tm_mon + 1,
         timeStruct->tm_mday);
-    int fd = open(buf, O_WRONLY | O_APPEND | O_CREAT, 0777);
-    return fd == -1 ? -1 : fd;
+    return open(buf, O_WRONLY | O_APPEND | O_CREAT, 0777);
 }
 
 void* LoggingRoutine(void* param)
@@ -80,7 +140,7 @@ void* LoggingRoutine(void* param)
     }
 }
 
-Logger* NewLogger()
+Logger* NewLogger(char* logPath)
 {
     Logger* logger = (Logger*)malloc(sizeof(Logger));
     if (logger == NULL)
@@ -95,11 +155,12 @@ Logger* NewLogger()
     // Thread start
     pthread_mutex_init(&logger->queueLock, NULL);
     pthread_mutex_init(&logger->fdLock, NULL);
-    if ((param->logFd = OpenLogFile()) == -1)
+#if LOGGER_DEBUG
+    printf("open log file: %s\n", logPath);
+#endif
+    if ((param->logFd = OpenLogFile(logPath)) == -1)
     {
         printf("file open failed\n");
-        free(logger->queue);
-        free(logger->host);
         free(logger);
         return NULL;
     }
@@ -116,101 +177,21 @@ void DeleteLogger(Logger* logger)
     // not implemented yet
 }
 
-int SetLoggerParam(Logger* logger, char* host, short port)
-{
-    assert(host != NULL);
-    assert(port >= 0 && port <= 65535);
-    logger->host = strdup(host);
-    logger->port = port;
-}
-
-int Log(Logger* handle, char signature, int msg, int protocol, int optionalFlag, void* optionValue)
+int Log(Logger* handle, char* logMsg)
 {
     assert(handle != NULL);
-    assert(optionalFlag <= SEND_OPT && optionalFlag >= NO_OPT);
     time_t localTime;
     struct tm* timeStruct;
-    LoggerOptValue* optVal = (LoggerOptValue*)optionValue;
     localTime = time(NULL);
     timeStruct = localtime(&localTime);
 
-    // TODO: Think of performance of switch case. Consider to convert from switch case to function pointer table.
-    char* msgBuf = (char*)malloc(sizeof(char) * (LOG_BUFFER_SIZE + 1));
-    switch (optionalFlag)
-    {
-    case NO_OPT:
-#if LOGGER_DEBUG
-        printf("Log NO_OPT\n");
-#endif
-        sprintf(msgBuf, "[%02d:%02d:%02d+0900] %c %s %s %s:%d\n",
-            timeStruct->tm_hour,
-            timeStruct->tm_min,
-            timeStruct->tm_sec,
-            signature,
-            logMsgs[msg],
-            logProtocolStr[protocol],
-            handle->host,
-            handle->port);
-        break;
-    case DISCONN_OPT:
-#if LOGGER_DEBUG
-        printf("Log QUEUE_OPT\n");
-#endif
-        sprintf(msgBuf, "[%02d:%02d:%02d+0900] %c %s %s %s:%d %d/%d\n",
-            timeStruct->tm_hour,
-            timeStruct->tm_min,
-            timeStruct->tm_sec,
-            signature,
-            logMsgs[msg],
-            logProtocolStr[protocol],
-            handle->host,
-            handle->port,
-            optVal->curQueueElemCnt,
-            optVal->queueSize);
-        break;
-    case CONN_FAIL_OPT:
-#if LOGGER_DEBUG
-        printf("Log CONN_FAIL_OPT\n");
-#endif
-        sprintf(msgBuf, "[%02d:%02d:%02d+0900] %c %s %s %s:%d %d %d/%d\n",
-            timeStruct->tm_hour,
-            timeStruct->tm_min,
-            timeStruct->tm_sec,
-            signature,
-            logMsgs[msg],
-            logProtocolStr[protocol],
-            handle->host,
-            handle->port,
-            optVal->connFailCnt,
-            optVal->curQueueElemCnt,
-            optVal->queueSize);
-        break;
-    case COLLECT_ELAPSE_OPT:
-        sprintf(msgBuf, "[%02d:%02d:%02d+0900] %c %s %s %ld\n",
-            timeStruct->tm_hour,
-            timeStruct->tm_min,
-            timeStruct->tm_sec,
-            signature,
-            logMsgs[msg],
-            logProtocolStr[protocol],
-            optVal->elapseTime);
-        break;
-    case SEND_OPT:
-        sprintf(msgBuf, "[%02d:%02d:%02d+0900] %c %s %s %s:%d %d\n",
-            timeStruct->tm_hour,
-            timeStruct->tm_min,
-            timeStruct->tm_sec,
-            signature,
-            logMsgs[msg],
-            logProtocolStr[protocol],
-            handle->host,
-            handle->port,
-            optVal->sendBytes);
-        break;
-    default:
-        // TODO: handle error...
-        break;
-    }
+    int msgLen = strlen(logMsg);
+    char* msgBuf = (char*)malloc(sizeof(char) * (msgLen + 24));
+    sprintf(msgBuf, "[%02d:%02d:%02d+0900] %s\n", 
+        timeStruct->tm_hour,
+        timeStruct->tm_min,
+        timeStruct->tm_sec,
+        logMsg);
 #if LOGGER_DEBUG
     printf("%s", msgBuf);
 #endif
