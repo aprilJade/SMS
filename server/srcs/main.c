@@ -72,17 +72,22 @@ int main(int argc, char** argv)
             Log(logger, "fail accept");
             exit(1);
         }
-        
+
         param = (SReceiveParam*)malloc(sizeof(SReceiveParam));
         param->clientSock = clientFd;
-    
+        param->logger = logger;
+        param->host = inet_ntoa(clientAddr.sin_addr);
+        sprintf(logMsg, "connected %s", param->host);
+        Log(logger, logMsg);
+
         if (pthread_create(&tid, NULL, ReceiveRoutine, param) == -1)
         {
             Log(logger, "fail create receiver");
             close(clientFd);
             continue;
         }
-        Log(logger, "run-receiver");
+        sprintf(logMsg, "run-receiver for %s", param->host);
+        Log(logger, logMsg);
         //pthread_join(tid, NULL);
     }
 }   

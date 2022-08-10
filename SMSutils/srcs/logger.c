@@ -24,8 +24,7 @@ static int CreateDir(char* logPath)
         {
             if (logPath[idx] == '\0')
                 break;
-            printf("%c\n", logPath[idx]);
-            idx++;
+                idx++;
         }
         dirCnt++;
         if (logPath[idx++] == '\0')

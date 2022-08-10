@@ -7,13 +7,10 @@
 typedef struct SReceiveParam
 {
     int clientSock;
+    Logger* logger;
+    char* host;
 } SReceiveParam;
 
 void* ReceiveRoutine(void* param);
-
-void* ServCpuInfoRoutine(void* param);
-void* ServMemInfoRoutine(void* param);
-void* ServNetInfoRoutine(void* param);
-void* ServProcInfoRoutine(void* param);
 
 #endif

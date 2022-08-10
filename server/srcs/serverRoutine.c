@@ -25,39 +25,39 @@ int IsValidSignature(int signature)
 
 void* ReceiveRoutine(void* param)
 {
-    printf("Start receive routine.\n");
     SReceiveParam* pParam = (SReceiveParam*)param;
     int readSize;
     char buf[1024 * 1024] = { 0, };
+    Logger* logger = pParam->logger;
+    char logMsg[128];
 
     SHeader* hHeader;
     while (1)
     {
         if ((readSize = read(pParam->clientSock, buf, 1024 * 1024)) == -1)
         {
-            printf("Disconnected from agent side.\n");
+            sprintf(logMsg, "fail to receive from %s", pParam->host);
+            Log(logger, logMsg);
             close(pParam->clientSock);
-            printf("Wait to reconnect....\n");
-            return 0;
+            break;
         }
         
         hHeader = (SHeader*)buf;
 
         if (readSize == 0)
         {
-            printf("Disconnected from agent side.\n");
+            sprintf(logMsg, "disconnected %s", pParam->host);
+            Log(logger, logMsg);
             close(pParam->clientSock);
-            printf("Wait to reconnect....\n");
-            return 0;
+            break;
         }
 
         if (!IsValidSignature(hHeader->signature) ||
             sizeof(SHeader) + hHeader->bodyCount * hHeader->bodySize != readSize)
         {
-            // TODO: Logging
-            printf("Not approved packet.\n");
+            sprintf(logMsg, "invalid packet from %s %x", pParam->host, hHeader->signature);
             close(pParam->clientSock);
-            return 0;
+            break;
         }
         // TODO: Queuing packet data
         //printf("collect period: %d ms\n", hHeader->collectPeriod);
@@ -70,4 +70,6 @@ void* ReceiveRoutine(void* param)
         //}
         
     }
+    sprintf(logMsg, "kill receiver for %s", pParam->host);
+    Log(logger, logMsg);
 }
