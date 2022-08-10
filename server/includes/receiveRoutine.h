@@ -8,6 +8,7 @@ typedef struct SReceiveParam
 {
     int clientSock;
     Logger* logger;
+    Queue* queue;
     char* host;
     short port;
 } SReceiveParam;

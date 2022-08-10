@@ -8,9 +8,11 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <fcntl.h>
-#include "serverRoutine.h"
+#include "receiveRoutine.h"
+#include "workerRoutine.h"
 
 #define CONNECTION_COUNT 4
+#define WORKER_COUNT 1
 #define DEFAULT_HOST "127.0.0.1"
 #define DEFAULT_PORT 4242
 
@@ -38,6 +40,22 @@ int OpenSocket(short port)
     return servFd;
 }
 
+void CreateWorker(Logger* logger, Queue* queue)
+{
+    SWorkerParam* param;
+    pthread_t tid;
+
+    for (int i = 0; i < WORKER_COUNT; i++)
+    {
+        param = (SWorkerParam*)malloc(sizeof(SWorkerParam));
+        param->workerId = i;
+        param->logger = logger;
+        param->queue = queue;
+        pthread_create(&tid, NULL, WorkerRoutine, param);
+        pthread_detach(tid);
+    }
+}
+
 int main(int argc, char** argv)
 {
     short port = (short)atoi(argv[1]);
@@ -55,6 +73,9 @@ int main(int argc, char** argv)
     pthread_t tid;
     SReceiveParam* param;
     Logger* logger = NewLogger("./log/server");
+    Queue* queue = NewQueue();
+
+    CreateWorker(logger, queue);
 
     char logMsg[128];
     while (1)
@@ -78,6 +99,7 @@ int main(int argc, char** argv)
         param->logger = logger;
         param->host = inet_ntoa(clientAddr.sin_addr);
         param->port = ntohs(clientAddr.sin_port);
+        param->queue = queue;
         sprintf(logMsg, "connected with %s:%d", param->host, param->port);
         Log(logger, logMsg);
 

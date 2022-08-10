@@ -184,29 +184,29 @@ SCData* CollectNetInfo(char* buf, int nicCount, int collectPeriod)
 
 	while (*buf++ != '\n');
 	while (*buf++ != '\n');
-	// while (*buf++ != '\n'); // if this code line is run, then couldn't collect loopback data
+	int j;
 	for (int i = 0; i < nicCount; i++)
 	{
 		while (*buf == ' ') 
 			buf++;
 		memset(handle->name, 0, 15);
-		for (i = 0; *buf != ':' && i < 15; i++)
+		for (j = 0; *buf != ':' && j < 15; j++)
 			handle->name[i] = *buf++;
-		handle->nameLength = i;
-		buf++;
+		handle->nameLength = j;
+		while (*buf++ != ' ');
 
-		handle->recvBytes = atol(buf) / 1024;
+		handle->recvBytes = atol(buf);
 
 		while (*buf++ == ' ');
 		while (*buf++ != ' ');
 		handle->recvPackets = atol(buf);
 
-		for (int i = 0; i < 7; i++)
+		for (j = 0; j < 7; j++)
 		{
 			while (*buf++ == ' ');
 			while (*buf++ != ' ');
 		}
-		handle->sendBytes = atol(buf) / 1024;
+		handle->sendBytes = atol(buf);
 
 		while (*buf++ == ' ');
 		while (*buf++ != ' ');

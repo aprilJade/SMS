@@ -17,10 +17,10 @@ typedef unsigned char uchar;
 typedef struct SHeader
 {
     uint signature;
-    ushort collectPeriod;
+    uint collectPeriod;
     ushort bodyCount;
     ushort bodySize;
-} SHeader;  // 10
+} SHeader;  // 12
 
 typedef struct SBodyc
 {

@@ -20,10 +20,6 @@ typedef struct SRoutineParam
 
 typedef struct SSenderParam
 {
-    uint cpuPeriod;
-    uint netPeriod;
-    uint memPeriod;
-    uint procPeriod;
     Queue* queue;
     Logger* logger;
     char host[16];

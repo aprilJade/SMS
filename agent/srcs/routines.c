@@ -167,19 +167,23 @@ void* NetInfoRoutine(void* param)
         data = CollectNetInfo(buf, nicCount, pParam->collectPeriod);
 
 #if PRINT_NET
-        printf("Collected net info packet\n\
-                network interface name: %s\n\
-                Collect Time: %ld ms\n\
-                Receive Bytes: %ld kB\n\
-                Receive Packet Count: %ld\n\
-                Send Bytes: %ld kB\n\
-                Send Packet Count: %ld\n",
-                initPacket.netIfName,
-                packet.collectTime,
-                packet.recvBytes,
-                packet.recvPackets,
-                packet.sendBytes,
-                packet.sendPackets);
+        SCData* pd = (SCData*)data;
+        SHeader* hHeader = (SHeader*)(pd->data);
+        SBodyn* hBody = (SBodyn*)(pd->data + sizeof(SHeader));
+
+        printf("signature: %x, body count: %d, body size: %d, collect period: %d\n",
+            hHeader->signature,
+            hHeader->bodyCount,
+            hHeader->bodySize,
+            hHeader->collectPeriod);
+        for (int i = 0; i < hHeader->bodyCount; i++)
+            printf("%d: %ld B %ld %ld B %ld %d\n",
+                i,
+                hBody[i].recvBytes,
+                hBody[i].recvPackets,
+                hBody[i].sendBytes,
+                hBody[i].sendPackets,
+                hBody[i].nameLength);
 #endif
 
         pthread_mutex_lock(&queue->lock);

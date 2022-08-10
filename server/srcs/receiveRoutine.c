@@ -1,4 +1,4 @@
-#include "serverRoutine.h"
+#include "receiveRoutine.h"
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
@@ -27,14 +27,15 @@ void* ReceiveRoutine(void* param)
 {
     SReceiveParam* pParam = (SReceiveParam*)param;
     int readSize;
-    char buf[1024 * 1024] = { 0, };
+    char buf[1024 * 48] = { 0, };
     Logger* logger = pParam->logger;
+    Queue* queue = pParam->queue;
     char logMsg[128];
 
     SHeader* hHeader;
     while (1)
     {
-        if ((readSize = read(pParam->clientSock, buf, 1024 * 1024)) == -1)
+        if ((readSize = read(pParam->clientSock, buf, 1024 * 48)) == -1)
         {
             sprintf(logMsg, "fail to receive from %s:%d", pParam->host, pParam->port);
             Log(logger, logMsg);
@@ -70,16 +71,12 @@ void* ReceiveRoutine(void* param)
             readSize,
             hHeader->signature);
         Log(logger, logMsg);
-        // TODO: Queuing packet data
-        //printf("collect period: %d ms\n", hHeader->collectPeriod);
-        //SBodyc* hBody = (SBodyc*)(buf + sizeof(SHeader));
-        //for (int i = 0; i < hHeader->bodyCount; i++)
-        //{
-        //    printf("%d: %012ld %012ld %012ld %012ld\n",
-        //        i, hBody[i].usrCpuRunTime, hBody[i].sysCpuRunTime,
-        //        hBody[i].idleTime, hBody[i].waitTime);
-        //}
-        
+
+        uchar* receivedData = (uchar*)malloc(sizeof(uchar) * readSize);
+        memcpy(receivedData, buf, readSize);
+        pthread_mutex_lock(&queue->lock);
+        Push(receivedData, queue);
+        pthread_mutex_unlock(&queue->lock);
     }
     sprintf(logMsg, "kill receiver for %s:%d", pParam->host, pParam->port);
     Log(logger, logMsg);
