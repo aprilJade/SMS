@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define EXTRACT_SIGNATURE 0x000000FF
 
 // Calc delta value, average value
 // And save to DB
@@ -14,11 +13,12 @@ void WorkCpuInfo(void* data)
     SHeader* hHeader = (SHeader*)data;
     SBodyc* hBody;
 
-    printf("signature: %x, body count: %d, body size: %d, collect period: %d\n",
+    printf("signature: %x, body count: %d, body size: %d, collect period: %d collect time: %d\n",
         hHeader->signature,
         hHeader->bodyCount,
         hHeader->bodySize,
-        hHeader->collectPeriod);
+        hHeader->collectPeriod,
+        hHeader->collectTime);
     hBody = (SBodyc*)(data + sizeof(SHeader));
     for (int i = 0; i < hHeader->bodyCount; i++)
         printf("%d: %010ld %010ld %010ld %010ld\n",

@@ -1,10 +1,11 @@
 #ifndef PACKETS_H
 #define PACKETS_H
 
-#define SIGNATURE_CPU   0x534E5363   // SMSc
-#define SIGNATURE_MEM   0x534E536D   // SMSm
-#define SIGNATURE_NET   0x534E536E   // SMSn
-#define SIGNATURE_PROC  0x534E5370   // SMSp
+#define SIGNATURE_CPU     0x534E5363   // SMSc
+#define SIGNATURE_MEM     0x534E536D   // SMSm
+#define SIGNATURE_NET     0x534E536E   // SMSn
+#define SIGNATURE_PROC    0x534E5370   // SMSp
+#define EXTRACT_SIGNATURE 0x000000FF
 
 typedef unsigned long ulong;
 typedef unsigned int uint;
@@ -17,10 +18,11 @@ typedef unsigned char uchar;
 typedef struct SHeader
 {
     uint signature;
+    ulong collectTime;
     uint collectPeriod;
     ushort bodyCount;
     ushort bodySize;
-} SHeader;  // 12
+} SHeader;  // 16
 
 typedef struct SBodyc
 {

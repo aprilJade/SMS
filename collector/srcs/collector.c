@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <dirent.h>
+#include <sys/time.h>
 #include "collector.h"
 #include "packets.h"
 
@@ -42,6 +43,9 @@ SCData* CollectEachCpuInfo(ushort cpuCnt, long timeConversion, char* rdBuf, int 
 	}
 	rdBuf[readSize] = 0;
 
+    struct timeval timeVal;
+	gettimeofday(&timeVal, NULL);
+
 	SCData* result = (SCData*)malloc(sizeof(SCData));
 	result->dataSize = cpuCnt * sizeof(SBodyc) + sizeof(SHeader);
 	result->data = (uchar*)malloc(result->dataSize);
@@ -50,14 +54,13 @@ SCData* CollectEachCpuInfo(ushort cpuCnt, long timeConversion, char* rdBuf, int 
 		// TODO: Handling malloc error
 		return NULL;
 	}
-	// gen header..
 
 	SHeader* hh = (SHeader*)result->data;
 	hh->signature = SIGNATURE_CPU;
 	hh->collectPeriod = collectPeriod;
 	hh->bodyCount = cpuCnt;
 	hh->bodySize = sizeof(SBodyc);
-
+	hh->collectTime = timeVal.tv_sec * 1000 + timeVal.tv_usec / 1000;
 	SBodyc* handle = (SBodyc*)(result->data + sizeof(SHeader));
     while (*rdBuf++ != '\n');
 	for (int i = 0; i < cpuCnt; i++)
@@ -82,6 +85,9 @@ SCData* CollectMemInfo(char* buf, int collectPeriod)
 {
 	int fd = open("/proc/meminfo", O_RDONLY);
 	int readSize;
+    struct timeval timeVal;
+	gettimeofday(&timeVal, NULL);
+
 	if (fd == -1)
 	{
 		// TODO: handling open error
@@ -112,6 +118,7 @@ SCData* CollectMemInfo(char* buf, int collectPeriod)
 	hh->bodyCount = 1;
 	hh->bodySize = sizeof(SBodym);
 	hh->collectPeriod = collectPeriod;
+	hh->collectTime = timeVal.tv_sec * 1000 + timeVal.tv_usec / 1000;
 
 	SBodym* handle = (SBodym*)(result->data + sizeof(SHeader));
 
@@ -150,6 +157,8 @@ SCData* CollectMemInfo(char* buf, int collectPeriod)
 
 SCData* CollectNetInfo(char* buf, int nicCount, int collectPeriod)
 {
+    struct timeval timeVal;
+	gettimeofday(&timeVal, NULL);
 	int fd = open("/proc/net/dev", O_RDONLY);
 	if (fd == -1)
 	{
@@ -180,6 +189,7 @@ SCData* CollectNetInfo(char* buf, int nicCount, int collectPeriod)
 	hh->bodyCount = nicCount;
 	hh->bodySize = sizeof(SBodyn);
 	hh->collectPeriod = collectPeriod;
+	hh->collectTime = timeVal.tv_sec * 1000 + timeVal.tv_usec / 1000;
 	SBodyn* handle = (SBodyn*)(result->data + sizeof(SHeader));
 
 	while (*buf++ != '\n');
@@ -220,6 +230,8 @@ SCData* CollectNetInfo(char* buf, int nicCount, int collectPeriod)
 
 SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod)
 {
+    struct timeval timeVal;
+	gettimeofday(&timeVal, NULL);
 	char filePath[260] = { 0, };
 	int fd = 0;
 	int readSize = 0;
@@ -365,5 +377,6 @@ SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod)
 	hh->bodySize = tmp - dataBuf - sizeof(SHeader);
 	hh->collectPeriod = collectPeriod;
 	hh->signature = SIGNATURE_PROC;
+	hh->collectTime = timeVal.tv_sec * 1000 + timeVal.tv_usec / 1000;
 	return result;
 }

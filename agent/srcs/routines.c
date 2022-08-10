@@ -66,7 +66,6 @@ void* CpuInfoRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
-
         sprintf(logmsgBuf, "cpu info collected in %ldus", elapseTime);
         Log(logger, logmsgBuf);
 
