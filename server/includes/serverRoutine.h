@@ -9,6 +9,7 @@ typedef struct SReceiveParam
     int clientSock;
     Logger* logger;
     char* host;
+    short port;
 } SReceiveParam;
 
 void* ReceiveRoutine(void* param);

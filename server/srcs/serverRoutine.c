@@ -36,7 +36,7 @@ void* ReceiveRoutine(void* param)
     {
         if ((readSize = read(pParam->clientSock, buf, 1024 * 1024)) == -1)
         {
-            sprintf(logMsg, "fail to receive from %s", pParam->host);
+            sprintf(logMsg, "fail to receive from %s:%d", pParam->host, pParam->port);
             Log(logger, logMsg);
             close(pParam->clientSock);
             break;
@@ -46,19 +46,30 @@ void* ReceiveRoutine(void* param)
 
         if (readSize == 0)
         {
-            sprintf(logMsg, "disconnected %s", pParam->host);
+            sprintf(logMsg, "disconnected %s:%d", pParam->host, pParam->port);
             Log(logger, logMsg);
             close(pParam->clientSock);
             break;
         }
+        buf[readSize] = 0;
 
-        if (!IsValidSignature(hHeader->signature) ||
-            sizeof(SHeader) + hHeader->bodyCount * hHeader->bodySize != readSize)
+        if (!IsValidSignature(hHeader->signature))
         {
-            sprintf(logMsg, "invalid packet from %s %x", pParam->host, hHeader->signature);
+            sprintf(logMsg, "invalid packet from %s:%d %d B %x",
+                pParam->host,
+                pParam->port,
+                readSize,
+                hHeader->signature);
+            Log(logger, logMsg);
             close(pParam->clientSock);
             break;
         }
+        sprintf(logMsg, "received from %s:%d %d B %x",
+            pParam->host,
+            pParam->port,
+            readSize,
+            hHeader->signature);
+        Log(logger, logMsg);
         // TODO: Queuing packet data
         //printf("collect period: %d ms\n", hHeader->collectPeriod);
         //SBodyc* hBody = (SBodyc*)(buf + sizeof(SHeader));
@@ -70,6 +81,6 @@ void* ReceiveRoutine(void* param)
         //}
         
     }
-    sprintf(logMsg, "kill receiver for %s", pParam->host);
+    sprintf(logMsg, "kill receiver for %s:%d", pParam->host, pParam->port);
     Log(logger, logMsg);
 }

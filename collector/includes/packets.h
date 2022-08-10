@@ -13,13 +13,14 @@ typedef unsigned char uchar;
 
 
 // Normal packet 
+#pragma pack(push, 1)
 typedef struct SHeader
 {
     uint signature;
     ushort collectPeriod;
     ushort bodyCount;
     ushort bodySize;
-} SHeader;
+} SHeader;  // 10
 
 typedef struct SBodyc
 {
@@ -27,7 +28,7 @@ typedef struct SBodyc
     ulong sysCpuRunTime;
     ulong idleTime;
     ulong waitTime;
-} SBodyc;
+} SBodyc; // 32
 
 typedef struct SBodym
 {
@@ -47,9 +48,8 @@ typedef struct SBodyn
     ulong recvPackets;
     ulong sendBytes;
     ulong sendPackets;
-} SBodyn;
+} SBodyn;   // 48
 
-#pragma pack(push, 1)
 typedef struct SBodyp
 {
     uint pid;

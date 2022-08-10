@@ -362,7 +362,7 @@ SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod)
 	memcpy(result->data, tmp, tmp - dataBuf);
 	SHeader* hh = (SHeader*)result->data;
 	hh->bodyCount = procCnt;
-	hh->bodySize = tmp - dataBuf;
+	hh->bodySize = tmp - dataBuf - sizeof(SHeader);
 	hh->collectPeriod = collectPeriod;
 	hh->signature = SIGNATURE_PROC;
 	return result;

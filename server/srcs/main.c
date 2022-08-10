@@ -57,10 +57,10 @@ int main(int argc, char** argv)
     Logger* logger = NewLogger("./log/server");
 
     char logMsg[128];
-    sprintf(logMsg, "listen at %s:%d", DEFAULT_HOST, port);
-    Log(logger, logMsg);
     while (1)
     {
+        sprintf(logMsg, "listen at %d", port);
+        Log(logger, logMsg);
         if (listen(servFd, CONNECTION_COUNT) == -1)
         {
             Log(logger, "fail listen");
@@ -77,7 +77,8 @@ int main(int argc, char** argv)
         param->clientSock = clientFd;
         param->logger = logger;
         param->host = inet_ntoa(clientAddr.sin_addr);
-        sprintf(logMsg, "connected %s", param->host);
+        param->port = ntohs(clientAddr.sin_port);
+        sprintf(logMsg, "connected with %s:%d", param->host, param->port);
         Log(logger, logMsg);
 
         if (pthread_create(&tid, NULL, ReceiveRoutine, param) == -1)
@@ -86,8 +87,8 @@ int main(int argc, char** argv)
             close(clientFd);
             continue;
         }
-        sprintf(logMsg, "run-receiver for %s", param->host);
+        sprintf(logMsg, "run-receiver for %s:%d", param->host, param->port);
         Log(logger, logMsg);
-        //pthread_join(tid, NULL);
+        pthread_detach(tid);
     }
 }   
