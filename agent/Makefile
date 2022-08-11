@@ -1,8 +1,8 @@
 NAME		=	agent
 CFLAG		=	-g -fsanitize=address
-INCLUDES	=	-I./includes/ -I../SMSutils/includes -I../collector/includes
+INCLUDES	=	-I./includes/ -I../libs/SMSutils/includes -I../libs/collector/includes
 LIB			=	-lpthread -lSMSutils -lcollector
-LIB_DIR		=	-L../SMSutils -L../collector
+LIB_DIR		=	-L../libs/SMSutils -L../libs/collector
 SRC_DIR		=	./srcs
 OBJ_DIR		=	./objs
 SRCS		=	$(notdir $(wildcard $(SRC_DIR)/*.c))

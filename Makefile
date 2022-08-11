@@ -1,35 +1,34 @@
 all:
-	make -C ./SMSutils
-	make -C ./collector
+	make -C ./libs/SMSutils
+	make -C ./libs/collector
 	make -C ./agent
 	make -C ./server
 fclean:
-	make fclean -C ./SMSutils
-	make fclean -C ./collector
+	make fclean -C ./libs/SMSutils
+	make fclean -C ./libs/collector
 	make fclean -C ./agent
 	make fclean -C ./server
 clean:
-	make clean -C ./SMSutils
-	make clean -C ./collector
+	make clean -C ./libs/SMSutils
+	make clean -C ./libs/collector
 	make clean -C ./agent
 	make clean -C ./server
 re:
-	make re -C ./SMSutils
-	make re -C ./collector
+	make re -C ./libs/SMSutils
+	make re -C ./libs/collector
 	make re -C ./agent
 	make re -C ./server
 server:
-	make -C ./SMSutils
+	make -C ./libs/SMSutils
 	make -C ./server
-	make fclean -C ./server
 agent:
-	make -C ./SMSutils
-	make -C ./collector
+	make -C ./libs/SMSutils
+	make -C ./libs/collector
 	make -C ./agent
 SMSutils:
-	make fclean -C ./SMSutils
-	make -C ./SMSutils
+	make fclean -C ./libs/SMSutils
+	make -C ./libs/SMSutils
 collector:
-	make fclean -C ./collector
-	make -C ./collector
+	make fclean -C ./libs/collector
+	make -C ./libs/collector
 .PHONY: all fclean clean re server agent SMSutils collector

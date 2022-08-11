@@ -1,8 +1,8 @@
 NAME		=	server
 CFLAG		=	-g -fsanitize=address
-INCLUDES	=	-I./includes/ -I../SMSutils/includes -I../collector/includes
+INCLUDES	=	-I./includes/ -I../libs/SMSutils/includes -I../libs/collector/includes
 LIB			=	-lpthread -lSMSutils
-LIB_DIR		=	-L../SMSutils
+LIB_DIR		=	-L../libs/SMSutils
 SRC_DIR		=	./srcs
 OBJ_DIR		=	./objs
 SRCS		=	$(notdir $(wildcard $(SRC_DIR)/*.c))

@@ -21,6 +21,14 @@ void PrintUsage()
 
 int main(int argc, char** argv)
 {
+	char logmsgBuf[128] = { 0, };
+	sprintf(logmsgBuf, "./log/agent");
+	Logger* logger = NewLogger(logmsgBuf);
+
+	pid_t agentPid = getpid();
+	sprintf(logmsgBuf, "agent loaded: %d", agentPid);
+	Log(logger, logmsgBuf);
+
 	static struct option longOptions[] =
 	{
 		{"CPU", required_argument, 0, 'c'},
@@ -45,9 +53,6 @@ int main(int argc, char** argv)
 	SRoutineParam* param[ROUTINE_COUNT] = { 0, };
 	SSenderParam senderParam;
 	void* (*collector[ROUTINE_COUNT + 1])(void*) = { 0, };
-	char logmsgBuf[128] = { 0, };
-	sprintf(logmsgBuf, "./log/agent");
-	Logger* logger = NewLogger(logmsgBuf);
 	Queue* queue = NewQueue();
 	senderParam.logger = logger;
 	senderParam.queue = queue;
