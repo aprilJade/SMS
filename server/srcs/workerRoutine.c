@@ -12,8 +12,9 @@ void WorkCpuInfo(void* data)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodyc* hBody;
+    return ;
 
-    printf("signature: %x, body count: %d, body size: %d, collect period: %d collect time: %d\n",
+    printf("signature: %x, body count: %d, body size: %d, collect period: %d collect time: %ld\n",
         hHeader->signature,
         hHeader->bodyCount,
         hHeader->bodySize,
@@ -33,7 +34,7 @@ void WorkMemInfo(void* data)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodym* hBody;
-
+    return ;
     printf("signature: %x, body count: %d, body size: %d, collect period: %d\n",
         hHeader->signature,
         hHeader->bodyCount,
@@ -56,6 +57,7 @@ void WorkNetInfo(void* data)
     SHeader* hHeader = (SHeader*)data;
     SBodyn* hBody;
     char nicName[16];
+    return ;
 
     printf("signature: %x, body count: %d, body size: %d, collect period: %d\n",
         hHeader->signature,
@@ -80,6 +82,7 @@ void WorkProcInfo(void* data)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodyp* hBody;
+    return ;
 
     printf("signature: %x, body count: %d, body size: %d, collect period: %d\n",
         hHeader->signature,

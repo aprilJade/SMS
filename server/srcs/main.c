@@ -82,6 +82,9 @@ int main(int argc, char** argv)
     {
         sprintf(logMsg, "listen at %d", port);
         Log(logger, logMsg);
+
+        puts("listen");
+
         if (listen(servFd, CONNECTION_COUNT) == -1)
         {
             Log(logger, "fail listen");
@@ -103,12 +106,17 @@ int main(int argc, char** argv)
         sprintf(logMsg, "connected with %s:%d", param->host, param->port);
         Log(logger, logMsg);
 
+        puts("connected");
+
         if (pthread_create(&tid, NULL, ReceiveRoutine, param) == -1)
         {
             Log(logger, "fail create receiver");
             close(clientFd);
             continue;
         }
+
+        puts("run receiver");
+
         sprintf(logMsg, "run-receiver for %s:%d", param->host, param->port);
         Log(logger, logMsg);
         pthread_detach(tid);

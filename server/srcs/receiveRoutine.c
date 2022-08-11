@@ -27,7 +27,7 @@ void* ReceiveRoutine(void* param)
 {
     SReceiveParam* pParam = (SReceiveParam*)param;
     int readSize;
-    char buf[1024 * 48] = { 0, };
+    char buf[1024 * 1024] = { 0, };
     Logger* logger = pParam->logger;
     Queue* queue = pParam->queue;
     char logMsg[128];
@@ -35,13 +35,14 @@ void* ReceiveRoutine(void* param)
     SHeader* hHeader;
     while (1)
     {
-        if ((readSize = read(pParam->clientSock, buf, 1024 * 48)) == -1)
+        if ((readSize = read(pParam->clientSock, buf, 1024 * 1024)) == -1)
         {
             sprintf(logMsg, "fail to receive from %s:%d", pParam->host, pParam->port);
             Log(logger, logMsg);
             close(pParam->clientSock);
             break;
         }
+        printf("%d\n", readSize);
         
         hHeader = (SHeader*)buf;
 
@@ -65,6 +66,7 @@ void* ReceiveRoutine(void* param)
             close(pParam->clientSock);
             break;
         }
+
         sprintf(logMsg, "received from %s:%d %d B %x",
             pParam->host,
             pParam->port,

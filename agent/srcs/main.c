@@ -45,7 +45,7 @@ int main(int argc, char** argv)
 	SRoutineParam* param[ROUTINE_COUNT] = { 0, };
 	SSenderParam senderParam;
 	void* (*collector[ROUTINE_COUNT + 1])(void*) = { 0, };
-	char logmsgBuf[128];
+	char logmsgBuf[128] = { 0, };
 	sprintf(logmsgBuf, "./log/agent");
 	Logger* logger = NewLogger(logmsgBuf);
 	Queue* queue = NewQueue();

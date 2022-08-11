@@ -3,6 +3,7 @@
 #define FUNC_TABLE_SIZE 256
 #include "packets.h"
 #include "logger.h"
+#include "Queue.h"
 
 typedef struct SReceiveParam
 {

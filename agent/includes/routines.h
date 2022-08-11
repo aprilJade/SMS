@@ -7,6 +7,7 @@
 
 #include "packets.h"
 #include "logger.h"
+#include "Queue.h"
 #include "tcpCtrl.h"
 
 typedef struct SRoutineParam

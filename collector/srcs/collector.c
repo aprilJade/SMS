@@ -225,6 +225,7 @@ SCData* CollectNetInfo(char* buf, int nicCount, int collectPeriod)
 		while (*buf++ != '\n');
 		handle++;
 	}
+	close(fd);
 	return result;
 }
 
