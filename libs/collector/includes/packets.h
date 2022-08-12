@@ -56,8 +56,8 @@ typedef struct SBodyp
 {
     uint pid;
     uint ppid;
-    ulong utime;
-    ulong stime;
+    uint utime;
+    uint stime;
     uchar procName[16];
     uchar userName[32];
     uchar state;

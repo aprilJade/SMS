@@ -8,100 +8,145 @@
 
 // Calc delta value, average value
 // And save to DB
-const char* cpuInsertSql = "INSERT INTO cpu_informations(collect_time, core_id, usr_run_time, sys_run_time, idle_time, wait_time) VALUES";
+const char* cpuInsertSql = 
+    "INSERT INTO cpu_informations(collect_time, core_id, usr_run_time, sys_run_time, idle_time, wait_time) VALUES";
+const char* memInsertSql = 
+    "INSERT INTO memory_informations(collect_time, total, free, avail, used, swap_total, swap_free) VALUES";
+const char* netInsertSql = 
+    "INSERT INTO network_informations(collect_time, interface_name, receive_bytes, receive_packets, send_bytes, send_packets) VALUES";
+const char* procInsertSql =
+    "INSERT INTO process_informations(collect_time, pid, process_name, usr_run_time, sys_run_time, uname, ppid, cmdline) VALUES";
+
 void WorkCpuInfo(void* data, SPgWrapper* wrapper)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodyc* hBody;
     struct tm* ts;
     hBody = (SBodyc*)(data + sizeof(SHeader));
+    ts = localtime(&hHeader->collectTime);
 
     
     char sql[512];
     for (int i = 0; i < hHeader->bodyCount; i++)
     {
-        ts = localtime(&hHeader->collectTime);
         sprintf(sql, "%s (\'%04d-%02d-%02d %02d:%02d:%02d\', %d, %ld, %ld, %ld, %ld);",
                     cpuInsertSql,
                     ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
                     ts->tm_hour, ts->tm_min, ts->tm_sec,
-                    hHeader->collectTime, i,
+                    i,
                     hBody[i].usrCpuRunTime,
                     hBody[i].sysCpuRunTime,
                     hBody[i].idleTime,
                     hBody[i].waitTime);
         if (Query(wrapper, sql) == -1)
             printf("fail query\n");
-        
-        printf("%d-%d-%d %d:%d:%d\n",
-            ts->tm_year,
-            ts->tm_mon,
-            ts->tm_mday,
-            ts->tm_hour,
-            ts->tm_min,
-            ts->tm_sec);
     }
 }
 
-void WorkMemInfo(void* data)
+void WorkMemInfo(void* data, SPgWrapper* wrapper)
 {
     SHeader* hHeader = (SHeader*)data;
-    SBodym* hBody;
-    return ;
-    printf("signature: %x, body count: %d, body size: %d, collect period: %d\n",
-        hHeader->signature,
-        hHeader->bodyCount,
-        hHeader->bodySize,
-        hHeader->collectPeriod);
-    hBody = (SBodym*)(data + sizeof(SHeader));
-    for (int i = 0; i < hHeader->bodyCount; i++)
-        printf("%d: %08d kB %08d kB %08d kB %08d kB %08d kB %08d kB\n",
-            i,
-            hBody[i].memTotal,
-            hBody[i].memFree,
-            hBody[i].memUsed,
-            hBody[i].memAvail,
-            hBody[i].swapTotal,
-            hBody[i].swapFree);
+    SBodym* hBody = (SBodym*)(data + sizeof(SHeader));
+    struct tm* ts;
+
+    char sql[512];
+    ts = localtime(&hHeader->collectTime);
+    sprintf(sql, "%s (\'%04d-%02d-%02d %02d:%02d:%02d\', %d, %d, %d, %d, %d, %d);",
+        memInsertSql,
+        ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
+        ts->tm_hour, ts->tm_min, ts->tm_sec,
+        hBody->memTotal,
+        hBody->memFree,
+        hBody->memUsed,
+        hBody->memAvail,
+        hBody->swapTotal,
+        hBody->swapFree);
+    if (Query(wrapper, sql) == -1)
+        printf("fail query\n");
 }
 
-void WorkNetInfo(void* data)
+void WorkNetInfo(void* data, SPgWrapper* wrapper)
 {
     SHeader* hHeader = (SHeader*)data;
-    SBodyn* hBody;
+    SBodyn* hBody = (SBodyn*)(data + sizeof(SHeader));
     char nicName[16];
-    return ;
+    struct tm* ts;
+    ts = localtime(&hHeader->collectTime);
 
-    printf("signature: %x, body count: %d, body size: %d, collect period: %d\n",
-        hHeader->signature,
-        hHeader->bodyCount,
-        hHeader->bodySize,
-        hHeader->collectPeriod);
-    //hBody = (SBodyn*)(data + sizeof(SHeader));
-    //for (int i = 0; i < hHeader->bodyCount; i++)
-    //{
-    //    //strncpy(nicName, hBody[i].name, hBody[i].nameLength);
-    //    printf("%d: %ld B %ld %ld B %ld %d\n",
-    //        i,
-    //        hBody[i].recvBytes,
-    //        hBody[i].recvPackets,
-    //        hBody[i].sendBytes,
-    //        hBody[i].sendPackets,
-    //        hBody[i].nameLength);
-    //}
+    char sql[512];
+    for (int i = 0; i < hHeader->bodyCount; i++)
+    {
+        memcpy(nicName, hBody[i].name, hBody[i].nameLength);
+        nicName[hBody[i].nameLength] = 0;
+        sprintf(sql, "%s (\'%04d-%02d-%02d %02d:%02d:%02d\', \'%s\', %ld, %ld, %ld, %ld);",
+            netInsertSql,
+            ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
+            ts->tm_hour, ts->tm_min, ts->tm_sec,
+            nicName,
+            hBody[i].recvBytes,
+            hBody[i].recvPackets,
+            hBody[i].sendBytes,
+            hBody[i].sendPackets);
+        //printf("%s\n", sql);
+        if (Query(wrapper, sql) == -1)
+            printf("fail query\n");
+    }
 }
 
-void WorkProcInfo(void* data)
+void WorkProcInfo(void* data, SPgWrapper* wrapper)
 {
     SHeader* hHeader = (SHeader*)data;
-    SBodyp* hBody;
-    return ;
+    struct tm* ts;
+    ts = localtime(&hHeader->collectTime);
+    char sql[1024];
+    char sTimestamp[22];
+    sprintf(sTimestamp, "\'%04d-%02d-%02d %02d:%02d:%02d\'",
+        ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
+        ts->tm_hour, ts->tm_min, ts->tm_sec);
 
-    printf("signature: %x, body count: %d, body size: %d, collect period: %d\n",
-        hHeader->signature,
-        hHeader->bodyCount,
-        hHeader->bodySize,
-        hHeader->collectPeriod);
+    data += sizeof(SHeader);
+    SBodyp* hBody;
+    char* cmdline;
+    for (int i = 0; i < hHeader->bodyCount; i++)
+    {
+        hBody = (SBodyp*)data;
+
+        data += sizeof(SBodyp);
+        if (hBody->cmdlineLen > 0)
+        {
+            cmdline = (char*)malloc(hBody->cmdlineLen + 1);
+            cmdline[hBody->cmdlineLen] = 0;
+            data += hBody->cmdlineLen;
+            memcpy(cmdline, data, hBody->cmdlineLen);
+            sprintf(sql, "%s (%s, %d, \'%s\', \'%c\', %d, %d, %d, \'%s\', \'%s\');",
+                procInsertSql,
+                sTimestamp,
+                hBody->pid,
+                hBody->procName,
+                hBody->state,
+                hBody->ppid,
+                hBody->utime,
+                hBody->stime,
+                hBody->userName,
+                cmdline);
+                free(cmdline);
+        }
+        else
+        {
+            sprintf(sql, "%s (%s, %d, \'%s\', \'%c\', %d, %d, %d, \'%s\');",
+                procInsertSql,
+                sTimestamp,
+                hBody->pid,
+                hBody->procName,
+                hBody->state,
+                hBody->ppid,
+                hBody->utime,
+                hBody->stime,
+                hBody->userName);
+        }
+        if (Query(wrapper, sql) == -1)
+            printf("fail query\n");
+    }
 }
 
 void* WorkerRoutine(void* param)
@@ -140,13 +185,13 @@ void* WorkerRoutine(void* param)
             WorkCpuInfo(data, pgWrapper);
             break;
         case 'm':
-            WorkMemInfo(data);
+            WorkMemInfo(data, pgWrapper);
             break;
         case 'n':
-            WorkNetInfo(data);
+            WorkNetInfo(data, pgWrapper);
             break;
         case 'p':
-            WorkProcInfo(data);
+            WorkProcInfo(data, pgWrapper);
             break;
         }
         free(data);

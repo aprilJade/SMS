@@ -194,10 +194,12 @@ SCData* CollectNetInfo(char* buf, int nicCount, int collectPeriod)
 	{
 		while (*buf == ' ') 
 			buf++;
+
 		memset(handle->name, 0, 15);
 		for (j = 0; *buf != ':' && j < 15; j++)
-			handle->name[i] = *buf++;
+			handle->name[j] = *buf++;
 		handle->nameLength = j;
+		
 		while (*buf++ != ' ');
 
 		handle->recvBytes = atol(buf);
