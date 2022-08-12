@@ -15,7 +15,7 @@ const char* memInsertSql =
 const char* netInsertSql = 
     "INSERT INTO network_informations(collect_time, interface_name, receive_bytes, receive_packets, send_bytes, send_packets) VALUES";
 const char* procInsertSql =
-    "INSERT INTO process_informations(collect_time, pid, process_name, usr_run_time, sys_run_time, uname, ppid, cmdline) VALUES";
+    "INSERT INTO process_informations(collect_time, pid, process_name, process_state, ppid, usr_run_time, sys_run_time, uname, cmdline) VALUES";
 
 void WorkCpuInfo(void* data, SPgWrapper* wrapper)
 {

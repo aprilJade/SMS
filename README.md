@@ -71,7 +71,14 @@ sh run-agent.sh
   
 - [ ] Server
   - [ ] UDP 통신 스레드 생성
-  - [ ] DB 저장 구현
+  - [ ] DB 관련 처리
+    - [ ] 각종 수집 정보 저장
+      - [x] ~CPU 정보 저장~
+      - [x] ~Memory 정보 저장~
+      - [x] ~Network 정보 저장~
+      - [ ] Process 정보 저장
+    - [ ] 서버 프로세스 시작 시 PostgreSQL이 설치되어있지 않다면 안내메시지 출력 후 종료
+    - [x] ~N개의 Worker 스레드에서 하나의 DB 커넥션에 문제없이 Query할 수 있도록 처리 (locking)~
   - [ ] 데이터 수집 시 특정 자료구조에 담아두고 Delta, Average 계산
     - [ ] CPU usage
       - [ ] CPU usage per process
