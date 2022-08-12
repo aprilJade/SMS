@@ -3,7 +3,7 @@ CFLAG		=	-g -fsanitize=address
 INCLUDES	=	-I./includes/ -I../libs/SMSutils/includes \
 				-I../libs/collector/includes -I/usr/include/postgresql/
 LIB			=	-lpthread -lSMSutils -lpq
-LIB_DIR		=	-L../libs/SMSutils -L/usr/local/pgsql/lib
+LIB_DIR		=	-L../libs/SMSutils -L/usr/lib/postgresql/14/lib
 SRC_DIR		=	./srcs
 OBJ_DIR		=	./objs
 SRCS		=	$(notdir $(wildcard $(SRC_DIR)/*.c))

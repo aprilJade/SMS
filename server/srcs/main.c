@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include "receiveRoutine.h"
 #include "workerRoutine.h"
+#include "pgWrapper.h"
 
 #define CONNECTION_COUNT 4
 #define WORKER_COUNT 1
@@ -44,6 +45,7 @@ void CreateWorker(Logger* logger, Queue* queue)
 {
     SWorkerParam* param;
     pthread_t tid;
+    SPgWrapper* db = NewPgWrapper("dbname = postgres");
 
     for (int i = 0; i < WORKER_COUNT; i++)
     {
@@ -51,6 +53,7 @@ void CreateWorker(Logger* logger, Queue* queue)
         param->workerId = i;
         param->logger = logger;
         param->queue = queue;
+        param->db = db;
         pthread_create(&tid, NULL, WorkerRoutine, param);
         pthread_detach(tid);
     }
@@ -74,7 +77,6 @@ int main(int argc, char** argv)
     SReceiveParam* param;
     Logger* logger = NewLogger("./log/server");
     Queue* queue = NewQueue();
-
     CreateWorker(logger, queue);
 
     char logMsg[128];
@@ -82,8 +84,6 @@ int main(int argc, char** argv)
     {
         sprintf(logMsg, "listen at %d", port);
         Log(logger, logMsg);
-
-        puts("listen");
 
         if (listen(servFd, CONNECTION_COUNT) == -1)
         {
@@ -106,16 +106,12 @@ int main(int argc, char** argv)
         sprintf(logMsg, "connected with %s:%d", param->host, param->port);
         Log(logger, logMsg);
 
-        puts("connected");
-
         if (pthread_create(&tid, NULL, ReceiveRoutine, param) == -1)
         {
             Log(logger, "fail create receiver");
             close(clientFd);
             continue;
         }
-
-        puts("run receiver");
 
         sprintf(logMsg, "run-receiver for %s:%d", param->host, param->port);
         Log(logger, logMsg);

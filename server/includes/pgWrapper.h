@@ -10,7 +10,7 @@ typedef struct SPgWrapper
     pthread_mutex_t lock;
 } SPgWrapper;
 
-PGconn* NewPsql();
-int Query(SPgWrapper* conn, const char* sql);
+SPgWrapper* NewPgWrapper(const char* conninfo);
+int Query(SPgWrapper* handle, const char* sql);
 
 #endif

@@ -4,30 +4,43 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
-
+#include <sys/stat.h>
 
 // Calc delta value, average value
 // And save to DB
-void WorkCpuInfo(void* data)
+const char* cpuInsertSql = "INSERT INTO cpu_informations(collect_time, core_id, usr_run_time, sys_run_time, idle_time, wait_time) VALUES";
+void WorkCpuInfo(void* data, SPgWrapper* wrapper)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodyc* hBody;
-    return ;
-
-    printf("signature: %x, body count: %d, body size: %d, collect period: %d collect time: %ld\n",
-        hHeader->signature,
-        hHeader->bodyCount,
-        hHeader->bodySize,
-        hHeader->collectPeriod,
-        hHeader->collectTime);
+    struct tm* ts;
     hBody = (SBodyc*)(data + sizeof(SHeader));
+
+    
+    char sql[512];
     for (int i = 0; i < hHeader->bodyCount; i++)
-        printf("%d: %010ld %010ld %010ld %010ld\n",
-            i,
-            hBody[i].usrCpuRunTime,
-            hBody[i].sysCpuRunTime,
-            hBody[i].idleTime,
-            hBody[i].waitTime);
+    {
+        ts = localtime(&hHeader->collectTime);
+        sprintf(sql, "%s (\'%04d-%02d-%02d %02d:%02d:%02d\', %d, %ld, %ld, %ld, %ld);",
+                    cpuInsertSql,
+                    ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
+                    ts->tm_hour, ts->tm_min, ts->tm_sec,
+                    hHeader->collectTime, i,
+                    hBody[i].usrCpuRunTime,
+                    hBody[i].sysCpuRunTime,
+                    hBody[i].idleTime,
+                    hBody[i].waitTime);
+        if (Query(wrapper, sql) == -1)
+            printf("fail query\n");
+        
+        printf("%d-%d-%d %d:%d:%d\n",
+            ts->tm_year,
+            ts->tm_mon,
+            ts->tm_mday,
+            ts->tm_hour,
+            ts->tm_min,
+            ts->tm_sec);
+    }
 }
 
 void WorkMemInfo(void* data)
@@ -64,18 +77,18 @@ void WorkNetInfo(void* data)
         hHeader->bodyCount,
         hHeader->bodySize,
         hHeader->collectPeriod);
-    hBody = (SBodyn*)(data + sizeof(SHeader));
-    for (int i = 0; i < hHeader->bodyCount; i++)
-    {
-        //strncpy(nicName, hBody[i].name, hBody[i].nameLength);
-        printf("%d: %ld B %ld %ld B %ld %d\n",
-            i,
-            hBody[i].recvBytes,
-            hBody[i].recvPackets,
-            hBody[i].sendBytes,
-            hBody[i].sendPackets,
-            hBody[i].nameLength);
-    }
+    //hBody = (SBodyn*)(data + sizeof(SHeader));
+    //for (int i = 0; i < hHeader->bodyCount; i++)
+    //{
+    //    //strncpy(nicName, hBody[i].name, hBody[i].nameLength);
+    //    printf("%d: %ld B %ld %ld B %ld %d\n",
+    //        i,
+    //        hBody[i].recvBytes,
+    //        hBody[i].recvPackets,
+    //        hBody[i].sendBytes,
+    //        hBody[i].sendPackets,
+    //        hBody[i].nameLength);
+    //}
 }
 
 void WorkProcInfo(void* data)
@@ -98,6 +111,7 @@ void* WorkerRoutine(void* param)
     Logger* logger = pParam->logger;
     char logMsg[128];
     SHeader* hHeader;
+    SPgWrapper* pgWrapper = pParam->db;
     void (*work)(void*);
     void* data;
 
@@ -123,7 +137,7 @@ void* WorkerRoutine(void* param)
         switch(pktId)
         {
         case 'c':
-            WorkCpuInfo(data);
+            WorkCpuInfo(data, pgWrapper);
             break;
         case 'm':
             WorkMemInfo(data);

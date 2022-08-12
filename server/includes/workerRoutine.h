@@ -3,11 +3,13 @@
 #include "logger.h"
 #include "packets.h"
 #include "Queue.h"
+#include "pgWrapper.h"
 
 typedef struct SWorkerParam
 {
     Logger* logger;
     Queue* queue;
+    SPgWrapper* db;
     int workerId;
 } SWorkerParam;
 
