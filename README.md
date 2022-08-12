@@ -38,7 +38,7 @@ sh run-agent.sh
 # Todo List
 - [ ] 공통
   - [ ] 코드 정리 (수시로 반복할 것)
-  - [ ] signature검증법 개선 (strncmp()말고 좀더 좋게...)
+  - [x] ~signature검증법 개선 (strncmp()말고 좀더 좋게...)~
   - [ ] Logger 고도화
     - [ ] Logger 옵션 설정
       - [ ] 시간대 설정
@@ -70,9 +70,8 @@ sh run-agent.sh
     - [ ] Log 저장 경로 옵션으로 입력. 미입력시 기본값 
   
 - [ ] Server
-  
   - [ ] UDP 통신 스레드 생성
-  - [ ] DB 저장 구현   
+  - [ ] DB 저장 구현
   - [ ] 데이터 수집 시 특정 자료구조에 담아두고 Delta, Average 계산
     - [ ] CPU usage
       - [ ] CPU usage per process
@@ -84,9 +83,10 @@ sh run-agent.sh
       - [ ] I/O bytes per seconds
   - [ ] Daemon 전환 준비
     - [x] ~서버가 동작 중일 때 agent는 언제든 다시 연결 가능하게 한다.~
-    - [ ] 표준 출력이나 에러 출력으로 출력하면 안되고 Log를 남긴다.
-      - [ ] 자체제작 Log라이브러리를 통해 Logging
-      - [ ] Server 시작할 때 Log를 남길지 말지 옵션 선택 가능하도록.
+    - [x] ~표준 출력이나 에러 출력으로 출력하면 안되고 Log를 남긴다.~
+      - [x] ~자체제작 Log라이브러리를 통해 Logging~
+    - [ ] 시스템 로깅 하기
+      - [ ] server 시작 혹은 종료 혹은 에러 등
 
 # Checked todo list 
 - [ ] 공통
