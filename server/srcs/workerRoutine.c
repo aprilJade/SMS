@@ -16,6 +16,8 @@ const char* netInsertSql =
     "INSERT INTO network_informations(collect_time, interface_name, receive_bytes, receive_packets, send_bytes, send_packets) VALUES";
 const char* procInsertSql =
     "INSERT INTO process_informations(collect_time, pid, process_name, process_state, ppid, usr_run_time, sys_run_time, uname, cmdline) VALUES";
+const char* procInsertSqlNoCmd =
+    "INSERT INTO process_informations(collect_time, pid, process_name, process_state, ppid, usr_run_time, sys_run_time, uname) VALUES";
 
 void WorkCpuInfo(void* data, SPgWrapper* wrapper)
 {
@@ -98,7 +100,7 @@ void WorkProcInfo(void* data, SPgWrapper* wrapper)
     SHeader* hHeader = (SHeader*)data;
     struct tm* ts;
     ts = localtime(&hHeader->collectTime);
-    char sql[1024];
+    char sql[4096];
     char sTimestamp[22];
     sprintf(sTimestamp, "\'%04d-%02d-%02d %02d:%02d:%02d\'",
         ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
@@ -106,16 +108,17 @@ void WorkProcInfo(void* data, SPgWrapper* wrapper)
 
     data += sizeof(SHeader);
     SBodyp* hBody;
-    char* cmdline;
-    for (int i = 0; i < 3; i++)
+    char cmdline[2048];
+    
+    for (int i = 0; i < hHeader->bodyCount; i++)
     {
         hBody = (SBodyp*)data;
+        data += sizeof(SBodyp);
 
         if (hBody->cmdlineLen > 0)
         {
-            cmdline = (char*)malloc(hBody->cmdlineLen + 1);
+            strncpy(cmdline, data, hBody->cmdlineLen);
             cmdline[hBody->cmdlineLen] = 0;
-            memcpy(cmdline, data, hBody->cmdlineLen);
             sprintf(sql, "%s (%s, %d, \'%s\', \'%c\', %d, %d, %d, \'%s\', \'%s\');",
                 procInsertSql,
                 sTimestamp,
@@ -127,12 +130,12 @@ void WorkProcInfo(void* data, SPgWrapper* wrapper)
                 hBody->stime,
                 hBody->userName,
                 cmdline);
-                free(cmdline);
+            data += hBody->cmdlineLen + 1;
         }
         else
         {
             sprintf(sql, "%s (%s, %d, \'%s\', \'%c\', %d, %d, %d, \'%s\');",
-                procInsertSql,
+                procInsertSqlNoCmd,
                 sTimestamp,
                 hBody->pid,
                 hBody->procName,
@@ -142,21 +145,12 @@ void WorkProcInfo(void* data, SPgWrapper* wrapper)
                 hBody->stime,
                 hBody->userName);
         }
-        if (Query(wrapper, sql) == -1)
-            printf("fail query\n");
 
-        data += sizeof(SBodyp);
-        data += hBody->cmdlineLen;
-        
-        printf("(%s, %d, \'%s\', \'%c\', %d, %d, %d, \'%s\');\n",
-            sTimestamp,
-            hBody->pid,
-            hBody->procName,
-            hBody->state,
-            hBody->ppid,
-            hBody->utime,
-            hBody->stime,
-            hBody->userName);
+        if (Query(wrapper, sql) == -1)
+        {
+            // Logging...
+            printf("fail query\n");
+        }
     }
 }
 

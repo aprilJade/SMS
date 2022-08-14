@@ -9,4 +9,4 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/libs/collector
 # process info every 3000ms, then start below command
 # ./agent/agent -c 500 -m 500 -n 500 -p 3000
 
-./agent/agent -p 1000 -H 127.0.0.1:4240
+./agent/agent -p 5000 -H 127.0.0.1:4242

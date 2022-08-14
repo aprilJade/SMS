@@ -259,7 +259,6 @@ SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod)
 				continue;
 			
 			// start parsing
-			procCnt++;
 			handle = (SBodyp*)tmp;
 
 
@@ -346,19 +345,19 @@ SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod)
 				perror("agent");
 				return NULL;
 			}
-			buf[readSize] = 0;
-			handle->cmdlineLen = strlen(buf);
+			handle->cmdlineLen = readSize;
 			tmp += sizeof(SBodyp);
-			//printf("%p: %d %s %s %c %d %d\n",
-			//	handle,
-			//	handle->pid, handle->userName, handle->procName, handle->state, handle->utime, handle->stime);
-			if (handle->cmdlineLen > 0)
+						
+			if (readSize > 0)
 			{
+				buf[readSize] = 0;
 				strcpy(tmp, buf);
+				tmp[handle->cmdlineLen] = 0;
 				//printf("%d, %s\n", handle->pid,tmp);
 				tmp += handle->cmdlineLen + 1;
 			}
 			close(fd);
+			procCnt++;
 		}
 	}
 	
