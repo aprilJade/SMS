@@ -226,7 +226,7 @@ SCData* CollectNetInfo(char* buf, int nicCount, int collectPeriod)
 	return result;
 }
 
-SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod)
+SCData** CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod)
 {
 	char filePath[260] = { 0, };
 	int fd = 0;
@@ -239,9 +239,11 @@ SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod)
     char path[260];
 
 	uchar* tmp = dataBuf;
-	SBodyp* handle;
 	int procCnt = 0;
-
+	SBodyp* hBody;
+	SHeader* hHeader;
+	SCData** ret = (SCData**)malloc(sizeof(SCData*) * 1024);
+	
 	dir = opendir("/proc");
 	if (dir == NULL)
 	{
@@ -258,10 +260,34 @@ SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod)
 			if (access(path, F_OK) != 0)
 				continue;
 			
-			// start parsing
-			handle = (SBodyp*)tmp;
+			// start parsing			
+			// 1. parse /proc/[pid]/cmdline
+			sprintf(filePath, "%s/cmdline", path);
+			fd = open(filePath, O_RDONLY);
+			if (fd == -1)
+			{
+				// TODO: handling open error
+				perror("agent");
+				return NULL;
+			}
+			readSize = read(fd, buf, BUFFER_SIZE);
+			if (readSize == -1)
+			{
+				// TODO: handling read error
+				perror("agent");
+				return NULL;
+			}
 
+			SCData* cBuf = (SCData*)malloc(sizeof(SCData));
+			cBuf->dataSize =  sizeof(SHeader) + sizeof(SBodyp) + readSize;
+			cBuf->data = (uchar*)malloc(cBuf->dataSize);
+			hBody = (SBodyp*)(cBuf->data + sizeof(SHeader));
+			hBody->cmdlineLen = readSize;
+			if (readSize > 0)
+				memcpy(cBuf->data + sizeof(SHeader) + sizeof(SBodyp), buf, readSize);
+			close(fd);
 
+			// 2. parse /proc/[pid]/stat
 			sprintf(filePath, "%s/stat", path);
 			fd = open(filePath, O_RDONLY);
 			if (fd == -1)
@@ -280,24 +306,24 @@ SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod)
 			}
 			pbuf[readSize] = 0;
 
-			handle->pid = atoi(pbuf);
+			hBody->pid = atoi(pbuf);
 			while (*pbuf++ != '(');
 			int j;
 			for (j = 0; *pbuf != ')' && j < 15; j++)
-				handle->procName[j] = *pbuf++;
-			handle->procName[j] = 0;
+				hBody->procName[j] = *pbuf++;
+			hBody->procName[j] = 0;
 			while (*pbuf++ != ')');
 			pbuf++;
-			handle->state = *pbuf++;
-			handle->ppid = atoi(pbuf);
+			hBody->state = *pbuf++;
+			hBody->ppid = atoi(pbuf);
 
 			for (int cnt = 0; cnt < 11; cnt++)
 				while (*pbuf++ != ' ');
 
-			handle->utime = atoi(pbuf);
+			hBody->utime = atoi(pbuf);
 
 			while (*pbuf++ != ' ');
-			handle->stime = atoi(pbuf);
+			hBody->stime = atoi(pbuf);
 			close(fd);
 			
 
@@ -327,58 +353,20 @@ SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod)
 			pbuf += 4;
 			size_t uid = atoi(pbuf);
 			pwd = getpwuid(uid);
-			strcpy(handle->userName, pwd->pw_name);
+			strcpy(hBody->userName, pwd->pw_name);
 			close(fd);
 
-			sprintf(filePath, "%s/cmdline", path);
-			fd = open(filePath, O_RDONLY);
-			if (fd == -1)
-			{
-				// TODO: handling open error
-				perror("agent");
-				return NULL;
-			}
-			readSize = read(fd, buf, BUFFER_SIZE);
-			if (readSize == -1)
-			{
-				// TODO: handling read error
-				perror("agent");
-				return NULL;
-			}
-			handle->cmdlineLen = readSize;
-			tmp += sizeof(SBodyp);
-						
-			if (readSize > 0)
-			{
-				buf[readSize] = 0;
-				strcpy(tmp, buf);
-				tmp[handle->cmdlineLen] = 0;
-				//printf("%d, %s\n", handle->pid,tmp);
-				tmp += handle->cmdlineLen + 1;
-			}
-			close(fd);
-			procCnt++;
+			hHeader = (SHeader*)cBuf->data;
+
+			hHeader->bodyCount = 1;
+			hHeader->bodySize = sizeof(SBodyp) + hBody->cmdlineLen;
+			hHeader->collectPeriod = collectPeriod;
+			hHeader->signature = SIGNATURE_PROC;
+			hHeader->collectTime = time(NULL);
+			
+			ret[procCnt++] = cBuf;
 		}
 	}
-	
-	// complete collection
-	SCData* result = (SCData*)malloc(sizeof(SCData));
-	result->dataSize = tmp - dataBuf + sizeof(SHeader);
-	result->data = (uchar*)malloc(result->dataSize);
-	if (result == NULL)
-	{
-		// TODO: handle malloc error
-		return NULL;
-	}
-	SHeader* hh = (SHeader*)result->data;
-	hh->bodyCount = procCnt;
-	hh->bodySize = result->dataSize - sizeof(SHeader);
-	hh->collectPeriod = collectPeriod;
-	hh->signature = SIGNATURE_PROC;
-	hh->collectTime = time(NULL);
-	memcpy(result->data + sizeof(SHeader), dataBuf, result->dataSize - sizeof(SHeader));
-	//SBodyp* pb = (SBodyp*)(result->data + sizeof(SHeader));
-	//SBodyp* pb = (SBodyp*)(dataBuf);
-	//printf("%d %s %s %d\n", pb->pid, pb->userName, pb->procName, pb->stime);
-	return result;
+	ret[procCnt] = NULL;
+	return ret;
 }

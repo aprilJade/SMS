@@ -213,19 +213,25 @@ void* ProcInfoRoutine(void* param)
 
 
     uchar dataBuf[1024 * 1024] = { 0, };
-    void* data;
+    SCData** data;
+    SCData** hData;
     while(1)
     {
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
+
         memset(dataBuf, 0, 1024 * 1024);
         data = CollectProcInfo(buf, dataBuf, pParam->collectPeriod);
-
-        pthread_mutex_lock(&queue->lock);
-        Push(data, queue);
-        pthread_mutex_unlock(&queue->lock);
-
+        hData = data;
+        while (*hData)
+        {
+            pthread_mutex_lock(&queue->lock);
+            Push(*hData, queue);
+            pthread_mutex_unlock(&queue->lock);
+            hData++;
+        }
+        free(data);
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;

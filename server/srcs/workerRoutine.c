@@ -110,47 +110,44 @@ void WorkProcInfo(void* data, SPgWrapper* wrapper)
     SBodyp* hBody;
     char cmdline[2048];
     
-    for (int i = 0; i < hHeader->bodyCount; i++)
+    hBody = (SBodyp*)data;
+    data += sizeof(SBodyp);
+
+    if (hBody->cmdlineLen > 0)
     {
-        hBody = (SBodyp*)data;
-        data += sizeof(SBodyp);
+        strncpy(cmdline, data, hBody->cmdlineLen);
+        cmdline[hBody->cmdlineLen] = 0;
+        sprintf(sql, "%s (%s, %d, \'%s\', \'%c\', %d, %d, %d, \'%s\', \'%s\');",
+            procInsertSql,
+            sTimestamp,
+            hBody->pid,
+            hBody->procName,
+            hBody->state,
+            hBody->ppid,
+            hBody->utime,
+            hBody->stime,
+            hBody->userName,
+            cmdline);
+        data += hBody->cmdlineLen + 1;
+    }
+    else
+    {
+        sprintf(sql, "%s (%s, %d, \'%s\', \'%c\', %d, %d, %d, \'%s\');",
+            procInsertSqlNoCmd,
+            sTimestamp,
+            hBody->pid,
+            hBody->procName,
+            hBody->state,
+            hBody->ppid,
+            hBody->utime,
+            hBody->stime,
+            hBody->userName);
+    }
 
-        if (hBody->cmdlineLen > 0)
-        {
-            strncpy(cmdline, data, hBody->cmdlineLen);
-            cmdline[hBody->cmdlineLen] = 0;
-            sprintf(sql, "%s (%s, %d, \'%s\', \'%c\', %d, %d, %d, \'%s\', \'%s\');",
-                procInsertSql,
-                sTimestamp,
-                hBody->pid,
-                hBody->procName,
-                hBody->state,
-                hBody->ppid,
-                hBody->utime,
-                hBody->stime,
-                hBody->userName,
-                cmdline);
-            data += hBody->cmdlineLen + 1;
-        }
-        else
-        {
-            sprintf(sql, "%s (%s, %d, \'%s\', \'%c\', %d, %d, %d, \'%s\');",
-                procInsertSqlNoCmd,
-                sTimestamp,
-                hBody->pid,
-                hBody->procName,
-                hBody->state,
-                hBody->ppid,
-                hBody->utime,
-                hBody->stime,
-                hBody->userName);
-        }
-
-        if (Query(wrapper, sql) == -1)
-        {
-            // Logging...
-            printf("fail query\n");
-        }
+    if (Query(wrapper, sql) == -1)
+    {
+        // Logging...
+        printf("fail query\n");
     }
 }
 

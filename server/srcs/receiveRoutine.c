@@ -31,6 +31,8 @@ void* ReceiveRoutine(void* param)
     Logger* logger = pParam->logger;
     Queue* queue = pParam->queue;
     char logMsg[128];
+    char* pb;
+    int packetSize;
 
     SHeader* hHeader;
     while (1)
@@ -42,9 +44,7 @@ void* ReceiveRoutine(void* param)
             close(pParam->clientSock);
             break;
         }
-        printf("%d\n", readSize);
-        
-        hHeader = (SHeader*)buf;
+        pb = buf;
 
         if (readSize == 0)
         {
@@ -53,32 +53,42 @@ void* ReceiveRoutine(void* param)
             close(pParam->clientSock);
             break;
         }
-        buf[readSize] = 0;
+        pb[readSize] = 0;
 
-        if (!IsValidSignature(hHeader->signature))
+
+        while (readSize > 0)
         {
-            sprintf(logMsg, "invalid packet from %s:%d %d B %x",
+            printf("%d\n", readSize);
+            hHeader = (SHeader*)pb;
+            if (!IsValidSignature(hHeader->signature))
+            {
+                sprintf(logMsg, "invalid packet from %s:%d %d B %x",
+                    pParam->host,
+                    pParam->port,
+                    readSize,
+                    hHeader->signature);
+                Log(logger, logMsg);
+                close(pParam->clientSock);
+                break;
+            }
+
+            sprintf(logMsg, "received from %s:%d %d B %x",
                 pParam->host,
                 pParam->port,
                 readSize,
                 hHeader->signature);
             Log(logger, logMsg);
-            close(pParam->clientSock);
-            break;
+
+            packetSize = (hHeader->bodyCount * hHeader->bodySize + sizeof(SHeader));
+            
+            uchar* receivedData = (uchar*)malloc(sizeof(uchar) * packetSize);
+            memcpy(receivedData, pb, packetSize);
+            readSize -= packetSize;
+            pb += packetSize;
+            pthread_mutex_lock(&queue->lock);
+            Push(receivedData, queue);
+            pthread_mutex_unlock(&queue->lock);
         }
-
-        sprintf(logMsg, "received from %s:%d %d B %x",
-            pParam->host,
-            pParam->port,
-            readSize,
-            hHeader->signature);
-        Log(logger, logMsg);
-
-        uchar* receivedData = (uchar*)malloc(sizeof(uchar) * readSize);
-        memcpy(receivedData, buf, readSize);
-        pthread_mutex_lock(&queue->lock);
-        Push(receivedData, queue);
-        pthread_mutex_unlock(&queue->lock);
     }
     sprintf(logMsg, "kill receiver for %s:%d", pParam->host, pParam->port);
     Log(logger, logMsg);
