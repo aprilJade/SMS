@@ -43,7 +43,7 @@ int main(int argc, char** argv)
 	if (argc == 1)
 	{
 		PrintUsage();
-		return 1;
+		return EXIT_SUCCESS;
 	}
 
 	char c;
@@ -62,12 +62,12 @@ int main(int argc, char** argv)
 		if (c == '?')
 		{
 			PrintUsage();
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 		if (optarg == NULL)
 		{
 			PrintHelp();
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 		switch (c)
 		{
@@ -76,7 +76,7 @@ int main(int argc, char** argv)
 			param[i] = GenRoutineParam(atoi(optarg), CPU, queue);
 			param[i]->logger = logger;
 			param[i]->queue = queue;
-			sprintf(logmsgBuf, "c collect every %dms", param[i]->collectPeriod);
+			sprintf(logmsgBuf, "INFO: Collect every %dms: CPU", param[i]->collectPeriod);
 			Log(logger, logmsgBuf);
 			break;
 		case 'm':
@@ -84,7 +84,7 @@ int main(int argc, char** argv)
 			param[i] = GenRoutineParam(atoi(optarg), MEMORY, queue);
 			param[i]->logger = logger;
 			param[i]->queue = queue;
-			sprintf(logmsgBuf, "m collect every %dms", param[i]->collectPeriod);
+			sprintf(logmsgBuf, "INFO: Collect every %dms: Memory", param[i]->collectPeriod);
 			Log(logger, logmsgBuf);
 			break;
 		case 'n':
@@ -92,7 +92,7 @@ int main(int argc, char** argv)
 			param[i] = GenRoutineParam(atoi(optarg), NETWORK, queue);
 			param[i]->logger = logger;
 			param[i]->queue = queue;
-			sprintf(logmsgBuf, "n collect every %dms", param[i]->collectPeriod);
+			sprintf(logmsgBuf, "INFO: Collect every %dms: Network", param[i]->collectPeriod);
 			Log(logger, logmsgBuf);
 			break;
 		case 'p':
@@ -100,16 +100,16 @@ int main(int argc, char** argv)
 			param[i] = GenRoutineParam(atoi(optarg), PROCESS, queue);
 			param[i]->logger = logger;
 			param[i]->queue = queue;
-			sprintf(logmsgBuf, "p collect every %dms", param[i]->collectPeriod);
+			sprintf(logmsgBuf, "INFO: Collect every %dms: Process", param[i]->collectPeriod);
 			Log(logger, logmsgBuf);
 			break;
 		case 'H':
 			if (ParseHost(optarg, senderParam.host, &senderParam.port))
-				exit(1);
+				exit(EXIT_FAILURE);
 			break;
 		case 'h':
 			PrintHelp();
-			exit(0);
+			exit(EXIT_SUCCESS);
 		default:
 			abort();
 		}
@@ -117,25 +117,34 @@ int main(int argc, char** argv)
 	}
 	
 	signal(SIGPIPE, SIG_IGN);
-    // struct timeval timeVal;
-	// ulong collectorCreateTime;
 	for (i = 0; collector[i]; i++)
 	{
-		// gettimeofday(&timeVal, NULL);
-		// param[i]->collectorCreateTime = timeVal.tv_sec * 1000 + timeVal.tv_usec / 1000;
-		pthread_create(&collectorTids[i], NULL, collector[i], param[i]);
+		if (pthread_create(&collectorTids[i], NULL, collector[i], param[i]) == -1)
+		{
+			sprintf(logmsgBuf, "ERR: FATAL: Failed to start collector");
+			Log(logger, logmsgBuf);
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	if (senderParam.port == 0)
 	{
 		strcpy(senderParam.host, DEFAULT_HOST);
 		senderParam.port = DEFAULT_PORT;
+		sprintf(logmsgBuf, "INFO: Set server host by default %s:%d", DEFAULT_HOST, DEFAULT_PORT);
+		Log(logger, logmsgBuf);
 	}
-	pthread_create(&senderTid, NULL, SendRoutine, &senderParam);
+
+	if (pthread_create(&senderTid, NULL, SendRoutine, &senderParam) == -1)
+	{
+		sprintf(logmsgBuf, "ERR: FATAL: Fail to start sender");
+		Log(logger, logmsgBuf);
+		exit(EXIT_FAILURE);
+	}
 
 	for (i = 0; collector[i]; i++)
 		pthread_join(collectorTids[i], NULL);
 	pthread_join(senderTid, NULL);
 		
-	exit(0);
+	exit(EXIT_SUCCESS);
 }
