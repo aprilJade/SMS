@@ -107,16 +107,14 @@ void WorkProcInfo(void* data, SPgWrapper* wrapper)
     data += sizeof(SHeader);
     SBodyp* hBody;
     char* cmdline;
-    for (int i = 0; i < hHeader->bodyCount; i++)
+    for (int i = 0; i < 3; i++)
     {
         hBody = (SBodyp*)data;
 
-        data += sizeof(SBodyp);
         if (hBody->cmdlineLen > 0)
         {
             cmdline = (char*)malloc(hBody->cmdlineLen + 1);
             cmdline[hBody->cmdlineLen] = 0;
-            data += hBody->cmdlineLen;
             memcpy(cmdline, data, hBody->cmdlineLen);
             sprintf(sql, "%s (%s, %d, \'%s\', \'%c\', %d, %d, %d, \'%s\', \'%s\');",
                 procInsertSql,
@@ -146,6 +144,19 @@ void WorkProcInfo(void* data, SPgWrapper* wrapper)
         }
         if (Query(wrapper, sql) == -1)
             printf("fail query\n");
+
+        data += sizeof(SBodyp);
+        data += hBody->cmdlineLen;
+        
+        printf("(%s, %d, \'%s\', \'%c\', %d, %d, %d, \'%s\');\n",
+            sTimestamp,
+            hBody->pid,
+            hBody->procName,
+            hBody->state,
+            hBody->ppid,
+            hBody->utime,
+            hBody->stime,
+            hBody->userName);
     }
 }
 

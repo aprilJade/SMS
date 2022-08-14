@@ -233,6 +233,38 @@ void* ProcInfoRoutine(void* param)
         sprintf(logmsgBuf, "proc info collected in %ldus", elapseTime);
         Log(logger, logmsgBuf);
         usleep(pParam->collectPeriod * 1000 - elapseTime);
+
+        /*
+        SCData* pd = (SCData*)data;
+        uchar* ppd = pd->data;
+        SHeader* hHeader = (SHeader*)ppd;
+        //ppd += sizeof(SHeader);
+        SBodyp* hBody;
+        printf("%x %d %d %d\n", hHeader->signature, hHeader->bodyCount, hHeader->bodySize,
+            hHeader->collectPeriod);
+        ppd += sizeof(SHeader);
+        for (int i = 0; i < hHeader->bodyCount; i++)
+        {
+            hBody = (SBodyp*)ppd;
+            printf("(%d, \'%s\', \'%c\', %d, %d, %d, \'%s\');\n",
+                hBody->pid,
+                hBody->procName,
+                hBody->state,
+                hBody->ppid,
+                hBody->utime,
+                hBody->stime,
+                hBody->userName);
+
+            ppd += sizeof(SBodyp);
+            if (hBody->cmdlineLen > 0)
+            {
+                char buf[2048];
+                strcpy(buf, ppd);
+                printf("%s\n", buf);
+                ppd += hBody->cmdlineLen + 1;
+            }
+        }
+        */
     }
 }
 

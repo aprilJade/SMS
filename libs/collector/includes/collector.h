@@ -1,7 +1,7 @@
 #ifndef COLLECTOR_H
 #define COLLECTOR_H
 
-#define BUFFER_SIZE 512
+#define BUFFER_SIZE 2048
 
 #include <stddef.h>
 #include "packets.h"
