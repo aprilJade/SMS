@@ -82,18 +82,18 @@ int main(int argc, char** argv)
     char logMsg[128];
     while (1)
     {
-        sprintf(logMsg, "listen at %d", port);
+        sprintf(logMsg, "INFO: Listen at %d", port);
         Log(logger, logMsg);
 
         if (listen(servFd, CONNECTION_COUNT) == -1)
         {
-            Log(logger, "fail listen");
+            Log(logger, "ERR: FATAL: Failed listening");
             exit(1);
         }
         clientFd = accept(servFd, (struct sockaddr*)&clientAddr, &len);
         if (clientFd == -1)
         {
-            Log(logger, "fail accept");
+            Log(logger, "ERR: FATAL: Failed to accept connection");
             exit(1);
         }
 
@@ -103,17 +103,15 @@ int main(int argc, char** argv)
         param->host = inet_ntoa(clientAddr.sin_addr);
         param->port = ntohs(clientAddr.sin_port);
         param->queue = queue;
-        sprintf(logMsg, "connected with %s:%d", param->host, param->port);
-        Log(logger, logMsg);
 
         if (pthread_create(&tid, NULL, ReceiveRoutine, param) == -1)
         {
-            Log(logger, "fail create receiver");
+            Log(logger, "ERR: FATAL: Failed to create receiver");
             close(clientFd);
             continue;
         }
 
-        sprintf(logMsg, "run-receiver for %s:%d", param->host, param->port);
+        sprintf(logMsg, "INFO: Run receiver for %s:%d", param->host, param->port);
         Log(logger, logMsg);
         pthread_detach(tid);
     }

@@ -13,6 +13,13 @@ typedef struct SWorkerParam
     int workerId;
 } SWorkerParam;
 
+typedef struct SWorkTools
+{
+    Logger* logger;
+    SPgWrapper* dbWrapper;
+    int workerId;
+} SWorkTools;
+
 void* WorkerRoutine(void* param);
 
 #endif

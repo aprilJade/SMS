@@ -19,7 +19,7 @@ const char* procInsertSql =
 const char* procInsertSqlNoCmd =
     "INSERT INTO process_informations(collect_time, pid, process_name, process_state, ppid, usr_run_time, sys_run_time, uname) VALUES";
 
-void WorkCpuInfo(void* data, SPgWrapper* wrapper)
+void WorkCpuInfo(void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodyc* hBody;
@@ -27,7 +27,6 @@ void WorkCpuInfo(void* data, SPgWrapper* wrapper)
     hBody = (SBodyc*)(data + sizeof(SHeader));
     ts = localtime(&hHeader->collectTime);
 
-    
     char sql[512];
     for (int i = 0; i < hHeader->bodyCount; i++)
     {
@@ -40,12 +39,15 @@ void WorkCpuInfo(void* data, SPgWrapper* wrapper)
                     hBody[i].sysCpuRunTime,
                     hBody[i].idleTime,
                     hBody[i].waitTime);
-        if (Query(wrapper, sql) == -1)
-            printf("fail query\n");
+        if (Query(tools->dbWrapper, sql) == -1)
+        {
+            sprintf(sql, "ERR: %d: Failed to store in DB: CPU", tools->workerId);
+            Log(tools->logger, sql);
+        }
     }
 }
 
-void WorkMemInfo(void* data, SPgWrapper* wrapper)
+void WorkMemInfo(void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodym* hBody = (SBodym*)(data + sizeof(SHeader));
@@ -63,11 +65,14 @@ void WorkMemInfo(void* data, SPgWrapper* wrapper)
         hBody->memAvail,
         hBody->swapTotal,
         hBody->swapFree);
-    if (Query(wrapper, sql) == -1)
-        printf("fail query\n");
+    if (Query(tools->dbWrapper, sql) == -1)
+    {
+        sprintf(sql, "ERR: %d: Failed to store in DB: Memory", tools->workerId);
+        Log(tools->logger, sql);
+    }
 }
 
-void WorkNetInfo(void* data, SPgWrapper* wrapper)
+void WorkNetInfo(void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodyn* hBody = (SBodyn*)(data + sizeof(SHeader));
@@ -89,13 +94,15 @@ void WorkNetInfo(void* data, SPgWrapper* wrapper)
             hBody[i].recvPackets,
             hBody[i].sendBytes,
             hBody[i].sendPackets);
-        //printf("%s\n", sql);
-        if (Query(wrapper, sql) == -1)
-            printf("fail query\n");
+        if (Query(tools->dbWrapper, sql) == -1)
+        {
+            sprintf(sql, "ERR: %d: Failed to store in DB: Network", tools->workerId);
+            Log(tools->logger, sql);
+        }
     }
 }
 
-void WorkProcInfo(void* data, SPgWrapper* wrapper)
+void WorkProcInfo(void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     struct tm* ts;
@@ -144,10 +151,10 @@ void WorkProcInfo(void* data, SPgWrapper* wrapper)
             hBody->userName);
     }
 
-    if (Query(wrapper, sql) == -1)
+    if (Query(tools->dbWrapper, sql) == -1)
     {
-        // Logging...
-        printf("fail query\n");
+        sprintf(sql, "ERR: %d: Failed to store in DB: Process", tools->workerId);
+        Log(tools->logger, sql);
     }
 }
 
@@ -158,13 +165,19 @@ void* WorkerRoutine(void* param)
     Logger* logger = pParam->logger;
     char logMsg[128];
     SHeader* hHeader;
-    SPgWrapper* pgWrapper = pParam->db;
-    void (*work)(void*);
     void* data;
+    SWorkTools workTools;
+    struct timeval timeVal;
+    ulong prevTime, postTime, elapseTime, totalElapsed;
+
+    workTools.dbWrapper = pParam->db;
+    workTools.workerId = pParam->workerId;
+    workTools.logger = logger;
 
     while (1)
     {
-        sprintf(logMsg, "%d worker-ready", pParam->workerId);
+
+        sprintf(logMsg, "INFO: %d wait for work", pParam->workerId);
         Log(logger, logMsg);
         pthread_mutex_lock(&queue->lock);
         while (IsEmpty(queue))
@@ -176,28 +189,34 @@ void* WorkerRoutine(void* param)
         data = Pop(queue);
         pthread_mutex_unlock(&queue->lock);
 
-        sprintf(logMsg, "%d work-start", pParam->workerId);
+        sprintf(logMsg, "INFO: %d start work", pParam->workerId);
         Log(logger, logMsg);
+
+        gettimeofday(&timeVal, NULL);
+        prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
         hHeader = (SHeader*)data;
         char pktId = hHeader->signature & EXTRACT_SIGNATURE;
         switch(pktId)
         {
         case 'c':
-            WorkCpuInfo(data, pgWrapper);
+            WorkCpuInfo(data, &workTools);
             break;
         case 'm':
-            WorkMemInfo(data, pgWrapper);
+            WorkMemInfo(data, &workTools);
             break;
         case 'n':
-            WorkNetInfo(data, pgWrapper);
+            WorkNetInfo(data, &workTools);
             break;
         case 'p':
-            WorkProcInfo(data, pgWrapper);
+            WorkProcInfo(data, &workTools);
             break;
         }
         free(data);
-        sprintf(logMsg, "%d work-done %c", pParam->workerId, pktId);
+
+        gettimeofday(&timeVal, NULL);
+        elapseTime = (timeVal.tv_sec * 1000000 + timeVal.tv_usec) - prevTime;
+        sprintf(logMsg, "INFO: %d work-done in %ld us", pParam->workerId, elapseTime);
         Log(logger, logMsg);
     }
 }

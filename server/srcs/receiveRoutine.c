@@ -39,7 +39,7 @@ void* ReceiveRoutine(void* param)
     {
         if ((readSize = read(pParam->clientSock, buf, 1024 * 1024)) == -1)
         {
-            sprintf(logMsg, "fail to receive from %s:%d", pParam->host, pParam->port);
+            sprintf(logMsg, "ERR: FATAL: Failed to receive packet from %s:%d", pParam->host, pParam->port);
             Log(logger, logMsg);
             close(pParam->clientSock);
             break;
@@ -48,7 +48,7 @@ void* ReceiveRoutine(void* param)
 
         if (readSize == 0)
         {
-            sprintf(logMsg, "disconnected %s:%d", pParam->host, pParam->port);
+            sprintf(logMsg, "ERR: Disconnected from %s:%d", pParam->host, pParam->port);
             Log(logger, logMsg);
             close(pParam->clientSock);
             break;
@@ -62,21 +62,22 @@ void* ReceiveRoutine(void* param)
             hHeader = (SHeader*)pb;
             if (!IsValidSignature(hHeader->signature))
             {
-                sprintf(logMsg, "invalid packet from %s:%d %d B %x",
+                char strSig[5];
+                memcpy(strSig, &hHeader->signature, 4);
+                strSig[4] = 0;
+                sprintf(logMsg, "ERR: FATAL: Invalid packet signature from %s:%d %s",
                     pParam->host,
                     pParam->port,
-                    readSize,
-                    hHeader->signature);
+                    strSig);
                 Log(logger, logMsg);
                 close(pParam->clientSock);
                 break;
             }
 
-            sprintf(logMsg, "received from %s:%d %d B %x",
+            sprintf(logMsg, "INFO: Received packet from %s:%d %d B",
                 pParam->host,
                 pParam->port,
-                readSize,
-                hHeader->signature);
+                readSize);
             Log(logger, logMsg);
 
             packetSize = (hHeader->bodyCount * hHeader->bodySize + sizeof(SHeader));
@@ -90,6 +91,6 @@ void* ReceiveRoutine(void* param)
             pthread_mutex_unlock(&queue->lock);
         }
     }
-    sprintf(logMsg, "kill receiver for %s:%d", pParam->host, pParam->port);
+    sprintf(logMsg, "INFO: Close receiver for %s:%d", pParam->host, pParam->port);
     Log(logger, logMsg);
 }
