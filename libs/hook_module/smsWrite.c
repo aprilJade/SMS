@@ -3,20 +3,21 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <sys/stat.h>
 
 ssize_t write(int fd, const void* buf, size_t count)
 {
     static ssize_t (*orgWrite)(int, const void*, size_t) = 0;
-    static int fd = 0;
+    static int sockFd = 0;
     static struct sockaddr_in sockaddr;
 
     if (orgWrite == NULL)
         orgWrite = (ssize_t (*)(int, const void*, size_t))dlsym(RTLD_NEXT, "write");
 
-    if (fd == 0)
+    if (sockFd == 0)
     {
-        fd = socket(PF_INET, SOCK_DGRAM, 0);
-        if (fd == -1)
+        sockFd = socket(PF_INET, SOCK_DGRAM, 0);
+        if (sockFd == -1)
         {
             // TODO: handle error
             perror("agent");
@@ -26,11 +27,10 @@ ssize_t write(int fd, const void* buf, size_t count)
         sockaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
         sockaddr.sin_port = htons(4848);
     }
-    char tmp[4];
-    memcpy(tmp, buf, 3);
-    
-    
-    sendto(fd, buf, count, 0, (struct sockaddr*)&sockaddr, sizeof(sockaddr));
+    struct stat statBuf;
+    fstat(fd, &statBuf);
+    if (S_ISSOCK(statBuf.st_mode))
+        sendto(sockFd, buf, count, 0, (struct sockaddr*)&sockaddr, sizeof(sockaddr));
 
     return orgWrite(fd, buf, count);
 }
