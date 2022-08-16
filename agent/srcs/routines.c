@@ -218,9 +218,13 @@ void* ProcInfoRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
-
         memset(dataBuf, 0, 1024 * 1024);
         data = CollectProcInfo(buf, dataBuf, pParam->collectPeriod);
+
+        pthread_mutex_lock(&queue->lock);
+        Push(data, queue);
+        pthread_mutex_unlock(&queue->lock);
+
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
@@ -228,7 +232,7 @@ void* ProcInfoRoutine(void* param)
         uchar* pData = data->data;
         SHeader* hHeader = (SHeader*)pData;
 
-        printf("TRACE: Collected in %ldus: %d Process", elapseTime, hHeader->bodyCount);
+        //printf("TRACE: Collected in %ldus: %d Process", elapseTime, hHeader->bodyCount);
 
         sprintf(logmsgBuf, "TRACE: Collected in %ldus: %d Process", elapseTime, hHeader->bodyCount);
         Log(logger, logmsgBuf);

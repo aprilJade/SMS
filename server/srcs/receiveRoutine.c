@@ -39,7 +39,7 @@ void* ReceiveRoutine(void* param)
     {
         if ((readSize = read(pParam->clientSock, buf, 1024 * 1024)) == -1)
         {
-            sprintf(logMsg, "ERR: FATAL: Failed to receive packet from %s:%d", pParam->host, pParam->port);
+            sprintf(logMsg, "ERROR: FATAL: Failed to receive packet from %s:%d", pParam->host, pParam->port);
             Log(logger, logMsg);
             close(pParam->clientSock);
             break;
@@ -48,7 +48,7 @@ void* ReceiveRoutine(void* param)
 
         if (readSize == 0)
         {
-            sprintf(logMsg, "ERR: Disconnected from %s:%d", pParam->host, pParam->port);
+            sprintf(logMsg, "ERROR: Disconnected from %s:%d", pParam->host, pParam->port);
             Log(logger, logMsg);
             close(pParam->clientSock);
             break;
@@ -61,22 +61,20 @@ void* ReceiveRoutine(void* param)
             hHeader = (SHeader*)pb;
             if (!IsValidSignature(hHeader->signature))
             {
-                char strSig[5];
-                memcpy(strSig, &hHeader->signature, 4);
-                strSig[4] = 0;
-                sprintf(logMsg, "ERR: FATAL: Invalid packet signature from %s:%d %s",
+                sprintf(logMsg, "ERROR: FATAL: Invalid packet signature from %s:%d",
                     pParam->host,
-                    pParam->port,
-                    strSig);
+                    pParam->port);
                 Log(logger, logMsg);
                 close(pParam->clientSock);
                 break;
             }
 
-
-            packetSize = (hHeader->bodyCount * hHeader->bodySize + sizeof(SHeader));
+            if (hHeader->signature == SIGNATURE_PROC)
+                packetSize = hHeader->bodySize + sizeof(SHeader);
+            else
+                packetSize = (hHeader->bodyCount * hHeader->bodySize + sizeof(SHeader));
             
-            sprintf(logMsg, "INFO: Received packet from %s:%d %d B",
+            sprintf(logMsg, "TRACE: Received packet from %s:%d %d B",
                 pParam->host,
                 pParam->port,
                 packetSize);

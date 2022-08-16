@@ -42,7 +42,7 @@ void WorkCpuInfo(void* data, SWorkTools* tools)
                     hBody[i].waitTime);
         if (Query(tools->dbWrapper, sql) == -1)
         {
-            sprintf(sql, "ERR: %d: Failed to store in DB: CPU", tools->workerId);
+            sprintf(sql, "ERROR: %d: Failed to store in DB: CPU", tools->workerId);
             Log(tools->logger, sql);
         }
     }
@@ -68,7 +68,7 @@ void WorkMemInfo(void* data, SWorkTools* tools)
         hBody->swapFree);
     if (Query(tools->dbWrapper, sql) == -1)
     {
-        sprintf(sql, "ERR: %d: Failed to store in DB: Memory", tools->workerId);
+        sprintf(sql, "ERROR: %d: Failed to store in DB: Memory", tools->workerId);
         Log(tools->logger, sql);
     }
 }
@@ -82,6 +82,7 @@ void WorkNetInfo(void* data, SWorkTools* tools)
     ts = localtime(&hHeader->collectTime);
 
     char sql[512];
+    printf("process count: %d\n", hHeader->bodyCount);
     for (int i = 0; i < hHeader->bodyCount; i++)
     {
         memcpy(nicName, hBody[i].name, hBody[i].nameLength);
@@ -97,7 +98,7 @@ void WorkNetInfo(void* data, SWorkTools* tools)
             hBody[i].sendPackets);
         if (Query(tools->dbWrapper, sql) == -1)
         {
-            sprintf(sql, "ERR: %d: Failed to store in DB: Network", tools->workerId);
+            sprintf(sql, "ERROR: %d: Failed to store in DB: Network", tools->workerId);
             Log(tools->logger, sql);
         }
     }
@@ -116,45 +117,62 @@ void WorkProcInfo(void* data, SWorkTools* tools)
 
     data += sizeof(SHeader);
     SBodyp* hBody;
-    char cmdline[2048];
+    char cmdlineBuf[2048];
+
+    // Start transaction block
+    if (Query(tools->dbWrapper, "BEGIN") == -1)
+    {
+        sprintf(sql, "ERROR: %d: Failed to BEGIN command: Process", tools->workerId);
+        Log(tools->logger, sql);
+    }
+
+    for (int i = 0; i < hHeader->bodyCount; i++)
+    {
+        hBody = (SBodyp*)data;
+        data += sizeof(SBodyp);
+        if (hBody->cmdlineLen > 0)
+        {
+            strncpy(cmdlineBuf, data, hBody->cmdlineLen);
+            cmdlineBuf[hBody->cmdlineLen] = 0;
+            sprintf(sql, "%s (%s, %d, \'%s\', \'%c\', %d, %d, %d, \'%s\', \'%s\');",
+                procInsertSql,
+                sTimestamp,
+                hBody->pid,
+                hBody->procName,
+                hBody->state,
+                hBody->ppid,
+                hBody->utime,
+                hBody->stime,
+                hBody->userName,
+                cmdlineBuf);
+            data += hBody->cmdlineLen;
+        }
+        else
+        {
+            sprintf(sql, "%s (%s, %d, \'%s\', \'%c\', %d, %d, %d, \'%s\');",
+                procInsertSqlNoCmd,
+                sTimestamp,
+                hBody->pid,
+                hBody->procName,
+                hBody->state,
+                hBody->ppid,
+                hBody->utime,
+                hBody->stime,
+                hBody->userName);
+        }
+
+        if (Query(tools->dbWrapper, sql) == -1)
+        {
+            sprintf(sql, "ERROR: %d: Failed to store in DB: Process", tools->workerId);
+            Log(tools->logger, sql);
+        }
+
+    }
     
-    hBody = (SBodyp*)data;
-    data += sizeof(SBodyp);
-
-    if (hBody->cmdlineLen > 0)
+    // Commit current transaction block
+    if (Query(tools->dbWrapper, "END") == -1)
     {
-        strncpy(cmdline, data, hBody->cmdlineLen);
-        cmdline[hBody->cmdlineLen] = 0;
-        sprintf(sql, "%s (%s, %d, \'%s\', \'%c\', %d, %d, %d, \'%s\', \'%s\');",
-            procInsertSql,
-            sTimestamp,
-            hBody->pid,
-            hBody->procName,
-            hBody->state,
-            hBody->ppid,
-            hBody->utime,
-            hBody->stime,
-            hBody->userName,
-            cmdline);
-        data += hBody->cmdlineLen + 1;
-    }
-    else
-    {
-        sprintf(sql, "%s (%s, %d, \'%s\', \'%c\', %d, %d, %d, \'%s\');",
-            procInsertSqlNoCmd,
-            sTimestamp,
-            hBody->pid,
-            hBody->procName,
-            hBody->state,
-            hBody->ppid,
-            hBody->utime,
-            hBody->stime,
-            hBody->userName);
-    }
-
-    if (Query(tools->dbWrapper, sql) == -1)
-    {
-        sprintf(sql, "ERR: %d: Failed to store in DB: Process", tools->workerId);
+        sprintf(sql, "ERROR: %d: Failed to END command: Process", tools->workerId);
         Log(tools->logger, sql);
     }
 }
@@ -182,7 +200,7 @@ void* WorkerRoutine(void* param)
         {
             pthread_mutex_unlock(&queue->lock);
 
-            sprintf(logMsg, "INFO: %d wait for work", pParam->workerId);
+            sprintf(logMsg, "TRACE: %d wait for work", pParam->workerId);
             Log(logger, logMsg);
             
             pthread_mutex_lock(&queue->lock);
@@ -193,7 +211,7 @@ void* WorkerRoutine(void* param)
                 pthread_mutex_lock(&queue->lock);
             }
 
-            sprintf(logMsg, "INFO: %d start work", pParam->workerId);
+            sprintf(logMsg, "TRACE: %d start work", pParam->workerId);
             Log(logger, logMsg);
         }
         data = Pop(queue);
@@ -224,7 +242,7 @@ void* WorkerRoutine(void* param)
 
         gettimeofday(&timeVal, NULL);
         elapseTime = (timeVal.tv_sec * 1000000 + timeVal.tv_usec) - prevTime;
-        sprintf(logMsg, "INFO: %d work-done in %ld us", pParam->workerId, elapseTime);
+        sprintf(logMsg, "TRACE: %d work-done in %ld us", pParam->workerId, elapseTime);
         Log(logger, logMsg);
     }
 }

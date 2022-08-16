@@ -362,10 +362,10 @@ SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod)
 			procCnt++;
 		}
 	}
-	puts("parse end");
+	//puts("parse end");
 	SCData* result = (SCData*)malloc(sizeof(SCData));
 	result->dataSize = handle - dataBuf + sizeof(SHeader);
-	printf("dataSize == %d\n", result->dataSize);
+	//printf("dataSize == %d\n", result->dataSize);
 	result->data = (uchar*)malloc(sizeof(uchar) * result->dataSize);
 	memcpy(result->data + sizeof(SHeader), dataBuf, result->dataSize - sizeof(SHeader));
 	hHeader = (SHeader*)result->data;

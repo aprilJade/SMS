@@ -13,7 +13,7 @@
 #include "pgWrapper.h"
 
 #define CONNECTION_COUNT 4
-#define WORKER_COUNT 2
+#define WORKER_COUNT 1
 #define DEFAULT_HOST "127.0.0.1"
 #define DEFAULT_PORT 4242
 
