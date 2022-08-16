@@ -27,7 +27,7 @@ make
 sh run-agent.sh
 ```
 # 2022.08.16 Feedback
-- [ ] Process 패킷을 하나로 만들어서 송신
+- [x] ~Process 패킷을 하나로 만들어서 송신~
 - [ ] Log level을 두고 Logging
 - [ ] Agent ID를 추가하여 Agent 식별하기
 

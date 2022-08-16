@@ -82,7 +82,6 @@ void WorkNetInfo(void* data, SWorkTools* tools)
     ts = localtime(&hHeader->collectTime);
 
     char sql[512];
-    printf("process count: %d\n", hHeader->bodyCount);
     for (int i = 0; i < hHeader->bodyCount; i++)
     {
         memcpy(nicName, hBody[i].name, hBody[i].nameLength);
@@ -200,7 +199,7 @@ void* WorkerRoutine(void* param)
         {
             pthread_mutex_unlock(&queue->lock);
 
-            sprintf(logMsg, "TRACE: %d wait for work", pParam->workerId);
+            sprintf(logMsg, "DEBUG: %d wait for work", pParam->workerId);
             Log(logger, logMsg);
             
             pthread_mutex_lock(&queue->lock);
@@ -211,7 +210,7 @@ void* WorkerRoutine(void* param)
                 pthread_mutex_lock(&queue->lock);
             }
 
-            sprintf(logMsg, "TRACE: %d start work", pParam->workerId);
+            sprintf(logMsg, "DEBUG: %d start work", pParam->workerId);
             Log(logger, logMsg);
         }
         data = Pop(queue);
@@ -242,7 +241,7 @@ void* WorkerRoutine(void* param)
 
         gettimeofday(&timeVal, NULL);
         elapseTime = (timeVal.tv_sec * 1000000 + timeVal.tv_usec) - prevTime;
-        sprintf(logMsg, "TRACE: %d work-done in %ld us", pParam->workerId, elapseTime);
+        sprintf(logMsg, "DEBUG: %d work-done in %ld us", pParam->workerId, elapseTime);
         Log(logger, logMsg);
     }
 }
