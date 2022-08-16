@@ -23,6 +23,6 @@ enum eCollectorID
 SCData* CollectEachCpuInfo(ushort cpuCnt, long timeConversion, char* rdBuf, int collectPeriod);
 SCData* CollectMemInfo(char* buf, int collectPeriod);
 SCData* CollectNetInfo(char* buf, int nicCount, int collectPeriod);
-SCData** CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod);
+SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod);
 
 #endif

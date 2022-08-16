@@ -194,7 +194,7 @@ void* NetInfoRoutine(void* param)
         elapseTime = postTime - prevTime;
 
 
-        sprintf(logmsgBuf, "INFO: Collected in %ldus: Network", elapseTime);
+        sprintf(logmsgBuf, "TRACE: Collected in %ldus: Network", elapseTime);
         Log(logger, logmsgBuf);
         usleep(pParam->collectPeriod * 1000 - elapseTime);
     }
@@ -209,51 +209,38 @@ void* ProcInfoRoutine(void* param)
     Queue* queue = pParam->queue;
     Logger* logger = pParam->logger;
     char logmsgBuf[128];
-    int collectedCount;
 
 
     uchar dataBuf[1024 * 1024] = { 0, };
-    SCData** data;
-    SCData** hData;
+    SCData* data;
     while(1)
     {
-        collectedCount = 0;
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
 
         memset(dataBuf, 0, 1024 * 1024);
         data = CollectProcInfo(buf, dataBuf, pParam->collectPeriod);
-        hData = data;
-        while (*hData)
-        {
-            pthread_mutex_lock(&queue->lock);
-            Push(*hData, queue);
-            collectedCount++;
-            pthread_mutex_unlock(&queue->lock);
-            hData++;
-        }
-        free(data);
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 
-        sprintf(logmsgBuf, "INFO: Collected %d process in %ldus", collectedCount, elapseTime);
-        Log(logger, logmsgBuf);
-        usleep(pParam->collectPeriod * 1000 - elapseTime);
+        uchar* pData = data->data;
+        SHeader* hHeader = (SHeader*)pData;
 
-        /*
-        SCData* pd = (SCData*)data;
-        uchar* ppd = pd->data;
-        SHeader* hHeader = (SHeader*)ppd;
-        //ppd += sizeof(SHeader);
+        printf("TRACE: Collected in %ldus: %d Process", elapseTime, hHeader->bodyCount);
+
+        sprintf(logmsgBuf, "TRACE: Collected in %ldus: %d Process", elapseTime, hHeader->bodyCount);
+        Log(logger, logmsgBuf);
+
+        /*  // check collected data
         SBodyp* hBody;
         printf("%x %d %d %d\n", hHeader->signature, hHeader->bodyCount, hHeader->bodySize,
             hHeader->collectPeriod);
-        ppd += sizeof(SHeader);
+        pData += sizeof(SHeader);
         for (int i = 0; i < hHeader->bodyCount; i++)
         {
-            hBody = (SBodyp*)ppd;
+            hBody = (SBodyp*)pData;
             printf("(%d, \'%s\', \'%c\', %d, %d, %d, \'%s\');\n",
                 hBody->pid,
                 hBody->procName,
@@ -263,16 +250,19 @@ void* ProcInfoRoutine(void* param)
                 hBody->stime,
                 hBody->userName);
 
-            ppd += sizeof(SBodyp);
+            pData += sizeof(SBodyp);
             if (hBody->cmdlineLen > 0)
             {
                 char buf[2048];
-                strcpy(buf, ppd);
+                strcpy(buf, pData);
+                buf[hBody->cmdlineLen] = 0;
                 printf("%s\n", buf);
-                ppd += hBody->cmdlineLen + 1;
+                pData += hBody->cmdlineLen;
             }
         }
         */
+
+        usleep(pParam->collectPeriod * 1000 - elapseTime);
     }
 }
 
@@ -299,7 +289,7 @@ void* SendRoutine(void* param)
             if ((sockFd = ConnectToServer(pParam->host, pParam->port)) != -1)
                 break;
             connFailCount++;
-            sprintf(logmsgBuf, "ERR: Failed to connect %s:%d (%d)", pParam->host, pParam->port, connFailCount);
+            sprintf(logmsgBuf, "ERROR: Failed to connect %s:%d (%d)", pParam->host, pParam->port, connFailCount);
             Log(logger, logmsgBuf);
             sleep(RECONNECT_PERIOD);
         }
@@ -325,12 +315,12 @@ void* SendRoutine(void* param)
             if ((sendBytes = write(sockFd, colletecData->data, colletecData->dataSize)) == -1)
             {
                 close(sockFd);
-                sprintf(logmsgBuf, "ERR: FATAL: Disconnected to %s:%d", pParam->host, pParam->port);
+                sprintf(logmsgBuf, "ERROR: FATAL: Disconnected to %s:%d", pParam->host, pParam->port);
                 Log(logger, logmsgBuf);
                 break;
             }
             
-            sprintf(logmsgBuf, "INFO: Send %d bytes to %s:%d ", sendBytes, pParam->host, pParam->port);
+            sprintf(logmsgBuf, "TRACE: Send %d bytes to %s:%d ", sendBytes, pParam->host, pParam->port);
             Log(logger, logmsgBuf);
             free(colletecData->data);
             free(colletecData);
