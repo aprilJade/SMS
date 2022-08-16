@@ -177,21 +177,28 @@ void* WorkerRoutine(void* param)
 
     while (1)
     {
-
-        sprintf(logMsg, "INFO: %d wait for work", pParam->workerId);
-        Log(logger, logMsg);
         pthread_mutex_lock(&queue->lock);
-        while (IsEmpty(queue))
+        if (IsEmpty(queue))
         {
             pthread_mutex_unlock(&queue->lock);
-            usleep(500);
+
+            sprintf(logMsg, "INFO: %d wait for work", pParam->workerId);
+            Log(logger, logMsg);
+            
             pthread_mutex_lock(&queue->lock);
+            while (IsEmpty(queue))
+            {
+                pthread_mutex_unlock(&queue->lock);
+                usleep(500);
+                pthread_mutex_lock(&queue->lock);
+            }
+
+            sprintf(logMsg, "INFO: %d start work", pParam->workerId);
+            Log(logger, logMsg);
         }
         data = Pop(queue);
         pthread_mutex_unlock(&queue->lock);
-
-        sprintf(logMsg, "INFO: %d start work", pParam->workerId);
-        Log(logger, logMsg);
+        
 
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;

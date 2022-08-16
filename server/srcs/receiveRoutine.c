@@ -81,7 +81,7 @@ void* ReceiveRoutine(void* param)
                 pParam->port,
                 packetSize);
             Log(logger, logMsg);
-            
+
             uchar* receivedData = (uchar*)malloc(sizeof(uchar) * packetSize);
             memcpy(receivedData, pb, packetSize);
             readSize -= packetSize;
@@ -89,7 +89,6 @@ void* ReceiveRoutine(void* param)
             pthread_mutex_lock(&queue->lock);
             Push(receivedData, queue);
             pthread_mutex_unlock(&queue->lock);
-
         }
     }
     sprintf(logMsg, "INFO: Close receiver for %s:%d", pParam->host, pParam->port);
