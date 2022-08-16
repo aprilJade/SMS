@@ -58,7 +58,6 @@ void* ReceiveRoutine(void* param)
 
         while (readSize > 0)
         {
-            printf("%d\n", readSize);
             hHeader = (SHeader*)pb;
             if (!IsValidSignature(hHeader->signature))
             {
@@ -74,13 +73,14 @@ void* ReceiveRoutine(void* param)
                 break;
             }
 
+
+            packetSize = (hHeader->bodyCount * hHeader->bodySize + sizeof(SHeader));
+            
             sprintf(logMsg, "INFO: Received packet from %s:%d %d B",
                 pParam->host,
                 pParam->port,
-                readSize);
+                packetSize);
             Log(logger, logMsg);
-
-            packetSize = (hHeader->bodyCount * hHeader->bodySize + sizeof(SHeader));
             
             uchar* receivedData = (uchar*)malloc(sizeof(uchar) * packetSize);
             memcpy(receivedData, pb, packetSize);
@@ -89,6 +89,7 @@ void* ReceiveRoutine(void* param)
             pthread_mutex_lock(&queue->lock);
             Push(receivedData, queue);
             pthread_mutex_unlock(&queue->lock);
+
         }
     }
     sprintf(logMsg, "INFO: Close receiver for %s:%d", pParam->host, pParam->port);

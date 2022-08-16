@@ -238,7 +238,7 @@ void* ProcInfoRoutine(void* param)
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 
-        sprintf(logmsgBuf, "INFO: Collected %d process in %ldus", elapseTime);
+        sprintf(logmsgBuf, "INFO: Collected %d process in %ldus", collectedCount, elapseTime);
         Log(logger, logmsgBuf);
         usleep(pParam->collectPeriod * 1000 - elapseTime);
 
