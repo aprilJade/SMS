@@ -60,19 +60,24 @@ SCData* CollectEachCpuInfo(ushort cpuCnt, long timeConversion, char* rdBuf, int 
 	hh->bodyCount = cpuCnt;
 	hh->bodySize = sizeof(SBodyc);
 	hh->collectTime = time(NULL);
+
 	SBodyc* handle = (SBodyc*)(result->data + sizeof(SHeader));
     while (*rdBuf++ != '\n');
 	for (int i = 0; i < cpuCnt; i++)
 	{
 		while (*rdBuf++ != ' ');
 		handle->usrCpuRunTime = atol(rdBuf) * timeConversion;
+
 		while (*rdBuf++ != ' ');
 		handle->sysCpuRunTime = atol(rdBuf) * timeConversion;
+
 		while (*rdBuf++ != ' ');
 		while (*rdBuf++ != ' ');
 		handle->idleTime = atol(rdBuf) * timeConversion;
+
 		while (*rdBuf++ != ' ');
 		handle->waitTime = atol(rdBuf) * timeConversion;
+		
 		while (*rdBuf++ != '\n');
 		handle++;
 	}

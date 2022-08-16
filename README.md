@@ -26,6 +26,10 @@ make
 ```
 sh run-agent.sh
 ```
+# 2022.08.16 Feedback
+- [ ] Process 패킷을 하나로 만들어서 송신
+- [ ] Log level을 두고 Logging
+- [ ] Agent ID를 추가하여 Agent 식별하기
 
 # 2022.08.09 Feedback
 - [x] ~배열로 구현한 큐를 링크드 리스트로 구현하기(큐의 사이즈가 정적인 것이 큰 문제를 일으킬 수 있음)~
