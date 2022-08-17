@@ -203,6 +203,7 @@ void* WorkerRoutine(void* param)
             Log(logger, LOG_DEBUG, logMsg);
             
             pthread_mutex_lock(&queue->lock);
+            // TODO: remove busy wait
             while (IsEmpty(queue))
             {
                 pthread_mutex_unlock(&queue->lock);

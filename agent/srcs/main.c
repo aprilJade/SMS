@@ -25,8 +25,7 @@ int main(int argc, char** argv)
 	sprintf(logmsgBuf, "./log/agent");
 	Logger* logger = NewLogger(logmsgBuf, LOG_INFO);
 
-	pid_t agentPid = getpid();
-	sprintf(logmsgBuf, "Agent loaded: %d", agentPid);
+	sprintf(logmsgBuf, "Agent loaded: %d", getpid());
 	Log(logger, LOG_INFO, logmsgBuf);
 
 	static struct option longOptions[] =

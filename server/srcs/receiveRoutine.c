@@ -89,6 +89,6 @@ void* ReceiveRoutine(void* param)
             pthread_mutex_unlock(&queue->lock);
         }
     }
-    sprintf(logMsg, "Close receiver for %s:%d", pParam->host, pParam->port);
+    sprintf(logMsg, "End receiver for %s:%d", pParam->host, pParam->port);
     Log(logger, LOG_INFO, logMsg);
 }

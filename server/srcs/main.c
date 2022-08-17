@@ -8,11 +8,13 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <fcntl.h>
+#include <unistd.h>
+
 #include "receiveRoutine.h"
 #include "workerRoutine.h"
 #include "pgWrapper.h"
 
-#define CONNECTION_COUNT 4
+#define CONNECTION_COUNT 1024
 #define WORKER_COUNT 1
 #define DEFAULT_HOST "127.0.0.1"
 #define DEFAULT_PORT 4242
@@ -23,7 +25,7 @@ int OpenSocket(short port)
     int servFd = socket(PF_INET, SOCK_STREAM, 0);
     if (servFd == -1)
     {
-        perror("server");
+        // TODO: handle error
         return -1;
     }
     memset(&servAddr, 0, sizeof(servAddr));
@@ -33,8 +35,7 @@ int OpenSocket(short port)
 
     if (bind(servFd, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1)
     {
-        printf("Fail to bind\n");
-        perror("server");
+        // TODO: handle error
         close(servFd);
         return -1;
     }
@@ -62,34 +63,39 @@ void CreateWorker(Logger* logger, Queue* queue)
 int main(int argc, char** argv)
 {
     short port = (short)atoi(argv[1]);
+    Logger* logger = NewLogger("./log/server", LOG_INFO);
+    char logMsg[128];
+
+    sprintf(logMsg, "Server loaded: %d", getpid());
+    Log(logger, LOG_INFO, logMsg);
+    sprintf(logMsg, "Log level: %d", LOG_INFO);
+    Log(logger, LOG_INFO, logMsg);
 
     int servFd, clientFd;
     struct sockaddr_in clientAddr;
     if ((servFd = OpenSocket(port)) == -1)
     {
-        perror("server");
-        return 1;
+        // TODO: handle error
+        exit(1);
     }
 
     socklen_t len = sizeof(clientAddr);
-    void* (*routine)(void*);
     pthread_t tid;
     SReceiveParam* param;
-    Logger* logger = NewLogger("./log/server", LOG_INFO);
     Queue* queue = NewQueue();
     CreateWorker(logger, queue);
 
-    char logMsg[128];
     while (1)
     {
-        sprintf(logMsg, "Listen at %d", port);
-        Log(logger, LOG_INFO, logMsg);
-
         if (listen(servFd, CONNECTION_COUNT) == -1)
         {
             Log(logger, LOG_FATAL, "Failed listening");
             exit(1);
         }
+
+        sprintf(logMsg, "Wait for connection from client at %d", port);
+        Log(logger, LOG_INFO, logMsg);
+
         clientFd = accept(servFd, (struct sockaddr*)&clientAddr, &len);
         if (clientFd == -1)
         {
@@ -111,7 +117,7 @@ int main(int argc, char** argv)
             continue;
         }
 
-        sprintf(logMsg, "Run receiver for %s:%d", param->host, param->port);
+        sprintf(logMsg, "Start receiver for %s:%d", param->host, param->port);
         Log(logger, LOG_INFO, logMsg);
         pthread_detach(tid);
     }
