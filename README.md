@@ -26,6 +26,10 @@ make
 ```
 sh run-agent.sh
 ```
+
+# Current Issue
+- [ ] 최초에 송신된 Process 패킷을 저장하려할 때 DB Insert명령어가 실패함. 모두 실패하지는 않고 약 300개중 50개 내외로 실패함.
+
 # 2022.08.16 Feedback
 - [x] ~Process 패킷을 하나로 만들어서 송신~
 - [x] ~Process 정보를 한번에 쿼리하기 (auto commit을 안하는 것으로 반복적인 commit을 최소화하는 것으로 해결)~
