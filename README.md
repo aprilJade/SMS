@@ -80,14 +80,6 @@ sh run-agent.sh
   
 - [ ] Server
   - [ ] UDP 통신 스레드 생성
-  - [ ] DB 관련 처리
-    - [x] ~각종 수집 정보 저장~
-      - [x] ~CPU 정보 저장~
-      - [x] ~Memory 정보 저장~
-      - [x] ~Network 정보 저장~
-      - [x] ~Process 정보 저장~
-    - [ ] 서버 프로세스 시작 시 PostgreSQL이 설치되어있지 않다면 안내메시지 출력 후 종료
-    - [x] ~N개의 Worker 스레드에서 하나의 DB 커넥션에 문제없이 Query할 수 있도록 처리 (locking)~
   - [ ] 데이터 수집 시 특정 자료구조에 담아두고 Delta, Average 계산
     - [ ] CPU usage
       - [ ] CPU usage per process
@@ -149,7 +141,7 @@ sh run-agent.sh
     - [x] ~변동없는 데이터는 최초에 한번만 서버에 송신하고, 그 이후에는 송신하지 않기~
   
   
-- [ ] Server
+- [x] ~Server~
   - [x] ~간단한 테스팅을 위한 TCP 서버 구현~
     - [x] ~싱글 스레드~
     - [x] ~연결 클라이언트 1개~
@@ -162,3 +154,10 @@ sh run-agent.sh
   - [x] ~규격과 일치 하지 않은 패킷 받을 시 연결 종료~
     - [x] ~패킷에 적혀있는 정보를 이용하여 패킷 총 사이즈와 receive 사이즈를 비교~
     - [x] ~패킷에 적혀있는 시그니쳐 검사~ 
+  - [x] ~DB 관련 처리~
+    - [x] ~각종 수집 정보 저장~
+      - [x] ~CPU 정보 저장~
+      - [x] ~Memory 정보 저장~
+      - [x] ~Network 정보 저장~
+      - [x] ~Process 정보 저장~
+    - [x] ~N개의 Worker 스레드에서 하나의 DB 커넥션에 문제없이 Query할 수 있도록 처리 (locking)~

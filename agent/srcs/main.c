@@ -76,32 +76,24 @@ int main(int argc, char** argv)
 			param[i] = GenRoutineParam(atoi(optarg), CPU, queue);
 			param[i]->logger = logger;
 			param[i]->queue = queue;
-			sprintf(logmsgBuf, "Collect every %dms: CPU", param[i]->collectPeriod);
-			Log(logger, LOG_INFO, logmsgBuf);
 			break;
 		case 'm':
 			collector[i] = MemInfoRoutine;
 			param[i] = GenRoutineParam(atoi(optarg), MEMORY, queue);
 			param[i]->logger = logger;
 			param[i]->queue = queue;
-			sprintf(logmsgBuf, "Collect every %dms: Memory", param[i]->collectPeriod);
-			Log(logger, LOG_INFO, logmsgBuf);
 			break;
 		case 'n':
 			collector[i] = NetInfoRoutine;
 			param[i] = GenRoutineParam(atoi(optarg), NETWORK, queue);
 			param[i]->logger = logger;
 			param[i]->queue = queue;
-			sprintf(logmsgBuf, "Collect every %dms: Network", param[i]->collectPeriod);
-			Log(logger, LOG_INFO, logmsgBuf);
 			break;
 		case 'p':
 			collector[i] = ProcInfoRoutine;
 			param[i] = GenRoutineParam(atoi(optarg), PROCESS, queue);
 			param[i]->logger = logger;
 			param[i]->queue = queue;
-			sprintf(logmsgBuf, "Collect every %dms: Process", param[i]->collectPeriod);
-			Log(logger, LOG_INFO, logmsgBuf);
 			break;
 		case 'H':
 			if (ParseHost(optarg, senderParam.host, &senderParam.port))
@@ -117,6 +109,9 @@ int main(int argc, char** argv)
 	}
 	
 	signal(SIGPIPE, SIG_IGN);
+	sprintf(logmsgBuf, "Ignore SIGPIPE", param[i]->collectPeriod);
+	Log(logger, LOG_INFO, logmsgBuf);
+
 	for (i = 0; collector[i]; i++)
 	{
 		if (pthread_create(&collectorTids[i], NULL, collector[i], param[i]) == -1)

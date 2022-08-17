@@ -101,7 +101,7 @@ int main(int argc, char** argv)
         param->clientSock = clientFd;
         param->logger = logger;
         param->host = inet_ntoa(clientAddr.sin_addr);
-        param->port = ntohs(clientAddr.sin_port);
+        param->port = clientAddr.sin_port;
         param->queue = queue;
 
         if (pthread_create(&tid, NULL, ReceiveRoutine, param) == -1)

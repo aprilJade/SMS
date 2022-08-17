@@ -41,35 +41,32 @@ void* CpuInfoRoutine(void* param)
     Queue* queue = pParam->queue;
     Logger* logger = pParam->logger;
     char logmsgBuf[128];
+    ulong collectPeriodUs = pParam->collectPeriod * 1000;
 
-    void* data;
+    sprintf(logmsgBuf, "Start CPU information collection routine in %d ms cycle", pParam->collectPeriod);
+    Log(logger, LOG_INFO, logmsgBuf);
+
+    SCData* collectedData;
 
     while (1)
     {
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
-        data = CollectEachCpuInfo(cpuCnt, toMs, buf, pParam->collectPeriod);
-#if PRINT_CPU
-        printf("<CPU information as OS resources>\n");
-        printf("CPU running time (user mode): %ld ms\n", packet.usrCpuRunTime);
-        printf("CPU running time (system mode): %ld ms\n", packet.sysCpuRunTime);
-        printf("CPU idle time: %ld ms\n", packet.idleTime);
-        printf("CPU I/O wait time: %ld ms\n", packet.waitTime);
-        printf("Collect starting time: %ld ms\n", packet.collectTime);
-        printf("Send cpu info packet.\n");
-#endif       
-
+        collectedData = CollectEachCpuInfo(cpuCnt, toMs, buf, pParam->collectPeriod);
+        
         pthread_mutex_lock(&queue->lock);
-        Push(data, queue);
+        Push(collectedData, queue);
         pthread_mutex_unlock(&queue->lock);
+
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
+
         sprintf(logmsgBuf, "Collected in %ldus: CPU", elapseTime);
         Log(logger, LOG_DEBUG, logmsgBuf);
 
-        usleep(pParam->collectPeriod * 1000 - elapseTime);
+        usleep(collectPeriodUs - elapseTime);
     }
 }
 
@@ -82,26 +79,21 @@ void* MemInfoRoutine(void* param)
     Queue* queue = pParam->queue;
     Logger* logger = pParam->logger;
     char logmsgBuf[128]; 
-    void* data;
+    SCData* collectedData;
+    ulong collectPeriodUs = pParam->collectPeriod * 1000;
+
+    sprintf(logmsgBuf, "Start memory information collection routine in %d ms cycle", pParam->collectPeriod);
+    Log(logger, LOG_INFO, logmsgBuf);
 
     while(1)
     {
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
-        data = CollectMemInfo(buf, pParam->collectPeriod);
-
-#if PRINT_MEM
-        printf("<Memory information>\n");
-        printf("Free memory: %ld kB\n", packet.memFree);
-        printf("Used memory: %ld kB\n", packet.memUsed);
-        printf("Available memory: %ld kB\n", packet.memAvail);
-        printf("Free swap: %ld kB\n", packet.swapFree);
-        printf("Collecting start time: %ld\n\n", packet.collectTime);
-#endif
+        collectedData = CollectMemInfo(buf, pParam->collectPeriod);
 
         pthread_mutex_lock(&queue->lock);
-        Push(data, queue);
+        Push(collectedData, queue);
         pthread_mutex_unlock(&queue->lock);
 
         gettimeofday(&timeVal, NULL);
@@ -111,7 +103,7 @@ void* MemInfoRoutine(void* param)
         sprintf(logmsgBuf, "Collected in %ldus: Memory", elapseTime);
         Log(logger, LOG_DEBUG, logmsgBuf);
 
-        usleep(pParam->collectPeriod * 1000 - elapseTime);
+        usleep(collectPeriodUs - elapseTime);
     }
 }
 
@@ -155,48 +147,31 @@ void* NetInfoRoutine(void* param)
     Logger* logger = pParam->logger;
     char logmsgBuf[128];
     int nicCount = GetNicCount();
+    ulong collectPeriodUs = pParam->collectPeriod * 1000;
 
-    void* data;
+    sprintf(logmsgBuf, "Start network information collection routine in %d ms cycle", pParam->collectPeriod);
+    Log(logger, LOG_INFO, logmsgBuf);
+
+    SCData* collectedData;
 
     while(1)
     {
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
-        data = CollectNetInfo(buf, nicCount, pParam->collectPeriod);
-
-#if PRINT_NET
-        SCData* pd = (SCData*)data;
-        SHeader* hHeader = (SHeader*)(pd->data);
-        SBodyn* hBody = (SBodyn*)(pd->data + sizeof(SHeader));
-
-        printf("signature: %x, body count: %d, body size: %d, collect period: %d\n",
-            hHeader->signature,
-            hHeader->bodyCount,
-            hHeader->bodySize,
-            hHeader->collectPeriod);
-        for (int i = 0; i < hHeader->bodyCount; i++)
-            printf("%d: %ld B %ld %ld B %ld %d\n",
-                i,
-                hBody[i].recvBytes,
-                hBody[i].recvPackets,
-                hBody[i].sendBytes,
-                hBody[i].sendPackets,
-                hBody[i].nameLength);
-#endif
+        collectedData = CollectNetInfo(buf, nicCount, pParam->collectPeriod);
 
         pthread_mutex_lock(&queue->lock);
-        Push(data, queue);
+        Push(collectedData, queue);
         pthread_mutex_unlock(&queue->lock);
 
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 
-
         sprintf(logmsgBuf, "Collected in %ldus: Network", elapseTime);
         Log(logger, LOG_DEBUG, logmsgBuf);
-        usleep(pParam->collectPeriod * 1000 - elapseTime);
+        usleep(collectPeriodUs - elapseTime);
     }
 }
 
@@ -209,64 +184,37 @@ void* ProcInfoRoutine(void* param)
     Queue* queue = pParam->queue;
     Logger* logger = pParam->logger;
     char logmsgBuf[128];
+    ulong collectPeriodUs = pParam->collectPeriod * 1000;
 
+    sprintf(logmsgBuf, "Start process information collection routine in %d ms cycle", pParam->collectPeriod);
+    Log(logger, LOG_INFO, logmsgBuf);
 
+    // TODO: change dynamic dataBuf size
     uchar dataBuf[1024 * 1024] = { 0, };
-    SCData* data;
+    SCData* collectedData;
     while(1)
     {
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
         memset(dataBuf, 0, 1024 * 1024);
-        data = CollectProcInfo(buf, dataBuf, pParam->collectPeriod);
+        collectedData = CollectProcInfo(buf, dataBuf, pParam->collectPeriod);
 
         pthread_mutex_lock(&queue->lock);
-        Push(data, queue);
+        Push(collectedData, queue);
         pthread_mutex_unlock(&queue->lock);
 
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 
-        uchar* pData = data->data;
+        uchar* pData = collectedData->data;
         SHeader* hHeader = (SHeader*)pData;
-
-        //printf("TRACE: Collected in %ldus: %d Process", elapseTime, hHeader->bodyCount);
 
         sprintf(logmsgBuf, "Collected in %ldus: %d Process", elapseTime, hHeader->bodyCount);
         Log(logger, LOG_DEBUG, logmsgBuf);
 
-        /*  // check collected data
-        SBodyp* hBody;
-        printf("%x %d %d %d\n", hHeader->signature, hHeader->bodyCount, hHeader->bodySize,
-            hHeader->collectPeriod);
-        pData += sizeof(SHeader);
-        for (int i = 0; i < hHeader->bodyCount; i++)
-        {
-            hBody = (SBodyp*)pData;
-            printf("(%d, \'%s\', \'%c\', %d, %d, %d, \'%s\');\n",
-                hBody->pid,
-                hBody->procName,
-                hBody->state,
-                hBody->ppid,
-                hBody->utime,
-                hBody->stime,
-                hBody->userName);
-
-            pData += sizeof(SBodyp);
-            if (hBody->cmdlineLen > 0)
-            {
-                char buf[2048];
-                strcpy(buf, pData);
-                buf[hBody->cmdlineLen] = 0;
-                printf("%s\n", buf);
-                pData += hBody->cmdlineLen;
-            }
-        }
-        */
-
-        usleep(pParam->collectPeriod * 1000 - elapseTime);
+        usleep(collectPeriodUs - elapseTime);
     }
 }
 
@@ -281,7 +229,7 @@ void* SendRoutine(void* param)
     int sendBytes;
     char logmsgBuf[128];
 
-    Log(logger, LOG_INFO, "Run sender");
+    Log(logger, LOG_INFO, "Start sender routine");
 
     int i = 0;
     while(1)
@@ -301,11 +249,13 @@ void* SendRoutine(void* param)
         sprintf(logmsgBuf, "Connected to %s:%d", pParam->host, pParam->port);
         Log(logger, LOG_INFO, logmsgBuf);
         connFailCount = 0;
+
         while (1)
         {
             if (colletecData == NULL)
             {
                 pthread_mutex_lock(&queue->lock);
+                // TODO: remove busy wait
                 while (IsEmpty(queue))
                 {
                     pthread_mutex_unlock(&queue->lock);
@@ -320,7 +270,7 @@ void* SendRoutine(void* param)
             {
                 close(sockFd);
                 sprintf(logmsgBuf, "Disconnected to %s:%d", pParam->host, pParam->port);
-                Log(logger, LOG_ERROR, logmsgBuf);
+                Log(logger, LOG_INFO, logmsgBuf);
                 break;
             }
             
