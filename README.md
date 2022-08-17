@@ -29,7 +29,7 @@ sh run-agent.sh
 # 2022.08.16 Feedback
 - [x] ~Process 패킷을 하나로 만들어서 송신~
 - [x] ~Process 정보를 한번에 쿼리하기 (auto commit을 안하는 것으로 반복적인 commit을 최소화하는 것으로 해결)~
-- [ ] Log level을 두고 Logging
+- [x] ~Log level을 두고 Logging~
 - [ ] Agent ID를 추가하여 Agent 식별하기
 
 # 2022.08.09 Feedback
