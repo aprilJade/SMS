@@ -9,11 +9,21 @@
 typedef struct Logger
 {
     pthread_mutex_t fdLock;
+    int loggingLevel;
     int logFd;
 } Logger;
 
-Logger* NewLogger(char* logPath);
-int Log(Logger* handle, char* logMsg);
-void DeleteLogger(Logger* logger);
+Logger* NewLogger(char* logPath, int logLevel);
+int Log(Logger* handle, int logLevel, char* logMsg);
+
+enum eLoggingLevel
+{
+    // lower
+    LOG_FATAL,
+    LOG_ERROR,
+    LOG_INFO,
+    LOG_DEBUG
+    // higher
+};  
 
 #endif

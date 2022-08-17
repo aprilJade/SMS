@@ -39,8 +39,8 @@ void* ReceiveRoutine(void* param)
     {
         if ((readSize = read(pParam->clientSock, buf, 1024 * 1024)) == -1)
         {
-            sprintf(logMsg, "ERROR: FATAL: Failed to receive packet from %s:%d", pParam->host, pParam->port);
-            Log(logger, logMsg);
+            sprintf(logMsg, "Failed to receive packet from %s:%d", pParam->host, pParam->port);
+            Log(logger, LOG_ERROR, logMsg);
             close(pParam->clientSock);
             break;
         }
@@ -48,8 +48,8 @@ void* ReceiveRoutine(void* param)
 
         if (readSize == 0)
         {
-            sprintf(logMsg, "ERROR: Disconnected from %s:%d", pParam->host, pParam->port);
-            Log(logger, logMsg);
+            sprintf(logMsg, "Disconnected from %s:%d", pParam->host, pParam->port);
+            Log(logger, LOG_INFO, logMsg);
             close(pParam->clientSock);
             break;
         }
@@ -61,10 +61,10 @@ void* ReceiveRoutine(void* param)
             hHeader = (SHeader*)pb;
             if (!IsValidSignature(hHeader->signature))
             {
-                sprintf(logMsg, "ERROR: FATAL: Invalid packet signature from %s:%d",
+                sprintf(logMsg, "Invalid packet signature from %s:%d",
                     pParam->host,
                     pParam->port);
-                Log(logger, logMsg);
+                Log(logger, LOG_FATAL, logMsg);
                 close(pParam->clientSock);
                 break;
             }
@@ -74,11 +74,11 @@ void* ReceiveRoutine(void* param)
             else
                 packetSize = (hHeader->bodyCount * hHeader->bodySize + sizeof(SHeader));
             
-            sprintf(logMsg, "TRACE: Received packet from %s:%d %d B",
+            sprintf(logMsg, "Received packet from %s:%d %d B",
                 pParam->host,
                 pParam->port,
                 packetSize);
-            Log(logger, logMsg);
+            Log(logger, LOG_DEBUG, logMsg);
 
             uchar* receivedData = (uchar*)malloc(sizeof(uchar) * packetSize);
             memcpy(receivedData, pb, packetSize);
@@ -89,6 +89,6 @@ void* ReceiveRoutine(void* param)
             pthread_mutex_unlock(&queue->lock);
         }
     }
-    sprintf(logMsg, "INFO: Close receiver for %s:%d", pParam->host, pParam->port);
-    Log(logger, logMsg);
+    sprintf(logMsg, "Close receiver for %s:%d", pParam->host, pParam->port);
+    Log(logger, LOG_INFO, logMsg);
 }

@@ -66,8 +66,8 @@ void* CpuInfoRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
-        sprintf(logmsgBuf, "INFO: Collected in %ldus: CPU", elapseTime);
-        Log(logger, logmsgBuf);
+        sprintf(logmsgBuf, "Collected in %ldus: CPU", elapseTime);
+        Log(logger, LOG_DEBUG, logmsgBuf);
 
         usleep(pParam->collectPeriod * 1000 - elapseTime);
     }
@@ -108,8 +108,8 @@ void* MemInfoRoutine(void* param)
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 
-        sprintf(logmsgBuf, "INFO: Collected in %ldus: Memory", elapseTime);
-        Log(logger, logmsgBuf);
+        sprintf(logmsgBuf, "Collected in %ldus: Memory", elapseTime);
+        Log(logger, LOG_DEBUG, logmsgBuf);
 
         usleep(pParam->collectPeriod * 1000 - elapseTime);
     }
@@ -194,8 +194,8 @@ void* NetInfoRoutine(void* param)
         elapseTime = postTime - prevTime;
 
 
-        sprintf(logmsgBuf, "TRACE: Collected in %ldus: Network", elapseTime);
-        Log(logger, logmsgBuf);
+        sprintf(logmsgBuf, "Collected in %ldus: Network", elapseTime);
+        Log(logger, LOG_DEBUG, logmsgBuf);
         usleep(pParam->collectPeriod * 1000 - elapseTime);
     }
 }
@@ -234,8 +234,8 @@ void* ProcInfoRoutine(void* param)
 
         //printf("TRACE: Collected in %ldus: %d Process", elapseTime, hHeader->bodyCount);
 
-        sprintf(logmsgBuf, "TRACE: Collected in %ldus: %d Process", elapseTime, hHeader->bodyCount);
-        Log(logger, logmsgBuf);
+        sprintf(logmsgBuf, "Collected in %ldus: %d Process", elapseTime, hHeader->bodyCount);
+        Log(logger, LOG_DEBUG, logmsgBuf);
 
         /*  // check collected data
         SBodyp* hBody;
@@ -281,25 +281,25 @@ void* SendRoutine(void* param)
     int sendBytes;
     char logmsgBuf[128];
 
-    Log(logger, "INFO: Run sender");
+    Log(logger, LOG_INFO, "Run sender");
 
     int i = 0;
     while(1)
     {
         while (1)
         {
-            sprintf(logmsgBuf, "INFO: Try to connect: %s:%d", pParam->host, pParam->port);
-            Log(logger, logmsgBuf);
+            sprintf(logmsgBuf, "Try to connect: %s:%d", pParam->host, pParam->port);
+            Log(logger, LOG_DEBUG, logmsgBuf);
             if ((sockFd = ConnectToServer(pParam->host, pParam->port)) != -1)
                 break;
             connFailCount++;
-            sprintf(logmsgBuf, "ERROR: Failed to connect %s:%d (%d)", pParam->host, pParam->port, connFailCount);
-            Log(logger, logmsgBuf);
+            sprintf(logmsgBuf, "Failed to connect %s:%d (%d)", pParam->host, pParam->port, connFailCount);
+            Log(logger, LOG_ERROR, logmsgBuf);
             sleep(RECONNECT_PERIOD);
         }
 
-        sprintf(logmsgBuf, "INFO: Connected to %s:%d", pParam->host, pParam->port);
-        Log(logger, logmsgBuf);
+        sprintf(logmsgBuf, "Connected to %s:%d", pParam->host, pParam->port);
+        Log(logger, LOG_INFO, logmsgBuf);
         connFailCount = 0;
         while (1)
         {
@@ -319,13 +319,13 @@ void* SendRoutine(void* param)
             if ((sendBytes = write(sockFd, colletecData->data, colletecData->dataSize)) == -1)
             {
                 close(sockFd);
-                sprintf(logmsgBuf, "ERROR: FATAL: Disconnected to %s:%d", pParam->host, pParam->port);
-                Log(logger, logmsgBuf);
+                sprintf(logmsgBuf, "Disconnected to %s:%d", pParam->host, pParam->port);
+                Log(logger, LOG_ERROR, logmsgBuf);
                 break;
             }
             
-            sprintf(logmsgBuf, "TRACE: Send %d bytes to %s:%d ", sendBytes, pParam->host, pParam->port);
-            Log(logger, logmsgBuf);
+            sprintf(logmsgBuf, "Send %d bytes to %s:%d ", sendBytes, pParam->host, pParam->port);
+            Log(logger, LOG_DEBUG, logmsgBuf);
             free(colletecData->data);
             free(colletecData);
             colletecData = NULL;

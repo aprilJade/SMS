@@ -75,25 +75,25 @@ int main(int argc, char** argv)
     void* (*routine)(void*);
     pthread_t tid;
     SReceiveParam* param;
-    Logger* logger = NewLogger("./log/server");
+    Logger* logger = NewLogger("./log/server", LOG_INFO);
     Queue* queue = NewQueue();
     CreateWorker(logger, queue);
 
     char logMsg[128];
     while (1)
     {
-        sprintf(logMsg, "INFO: Listen at %d", port);
-        Log(logger, logMsg);
+        sprintf(logMsg, "Listen at %d", port);
+        Log(logger, LOG_INFO, logMsg);
 
         if (listen(servFd, CONNECTION_COUNT) == -1)
         {
-            Log(logger, "ERR: FATAL: Failed listening");
+            Log(logger, LOG_FATAL, "Failed listening");
             exit(1);
         }
         clientFd = accept(servFd, (struct sockaddr*)&clientAddr, &len);
         if (clientFd == -1)
         {
-            Log(logger, "ERR: FATAL: Failed to accept connection");
+            Log(logger, LOG_FATAL, "Failed to accept connection");
             exit(1);
         }
 
@@ -106,13 +106,13 @@ int main(int argc, char** argv)
 
         if (pthread_create(&tid, NULL, ReceiveRoutine, param) == -1)
         {
-            Log(logger, "ERR: FATAL: Failed to create receiver");
+            Log(logger, LOG_FATAL, "Failed to create receiver");
             close(clientFd);
             continue;
         }
 
-        sprintf(logMsg, "INFO: Run receiver for %s:%d", param->host, param->port);
-        Log(logger, logMsg);
+        sprintf(logMsg, "Run receiver for %s:%d", param->host, param->port);
+        Log(logger, LOG_INFO, logMsg);
         pthread_detach(tid);
     }
 }   

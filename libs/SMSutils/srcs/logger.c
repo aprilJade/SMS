@@ -11,6 +11,13 @@
 #define LOGGER_DEBUG 0
 #define TIME_FORMAT "[%02d:%02d:%02d+0900]"
 
+static const char* strLogMsg[4] = {
+    "ERROR: FATAL:",
+    "ERROR:",
+    "INFO:",
+    "DEBUG:"
+};
+
 static int CreateDir(char* logPath)
 {
 #if LOGGER_DEBUG
@@ -73,7 +80,7 @@ static int OpenLogFile(char* logPath)
     return open(buf, O_CREAT | O_APPEND | O_RDWR, 0777);
 }
 
-Logger* NewLogger(char* logPath)
+Logger* NewLogger(char* logPath, int logLevel)
 {
     Logger* logger = (Logger*)malloc(sizeof(Logger));
     if (logger == NULL)
@@ -88,26 +95,28 @@ Logger* NewLogger(char* logPath)
         free(logger);
         return NULL;
     }
+    logger->loggingLevel = logLevel;
     return logger;
 }
 
-void DeleteLogger(Logger* logger)
-{
-    // not implemented yet
-}
 
-int Log(Logger* handle, char* logMsg)
+int Log(Logger* handle, int logLevel, char* logMsg)
 {
     assert(handle != NULL && logMsg != NULL);
+
+    if (handle->loggingLevel < logLevel)
+        return 0;
+
     time_t localTime;
     struct tm* timeStruct;
     localTime = time(NULL);
     timeStruct = localtime(&localTime);
     char msgBuf[128] = { 0, };
-    sprintf(msgBuf, "[%02d:%02d:%02d+0900] %s\n", 
+    sprintf(msgBuf, "[%02d:%02d:%02d+0900] %s %s\n", 
         timeStruct->tm_hour,
         timeStruct->tm_min,
         timeStruct->tm_sec,
+        strLogMsg[logLevel],
         logMsg);
 #if LOGGER_DEBUG
     printf("Call Log()\n");

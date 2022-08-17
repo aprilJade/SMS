@@ -23,11 +23,11 @@ int main(int argc, char** argv)
 {
 	char logmsgBuf[128] = { 0, };
 	sprintf(logmsgBuf, "./log/agent");
-	Logger* logger = NewLogger(logmsgBuf);
+	Logger* logger = NewLogger(logmsgBuf, LOG_INFO);
 
 	pid_t agentPid = getpid();
-	sprintf(logmsgBuf, "agent loaded: %d", agentPid);
-	Log(logger, logmsgBuf);
+	sprintf(logmsgBuf, "Agent loaded: %d", agentPid);
+	Log(logger, LOG_INFO, logmsgBuf);
 
 	static struct option longOptions[] =
 	{
@@ -76,32 +76,32 @@ int main(int argc, char** argv)
 			param[i] = GenRoutineParam(atoi(optarg), CPU, queue);
 			param[i]->logger = logger;
 			param[i]->queue = queue;
-			sprintf(logmsgBuf, "INFO: Collect every %dms: CPU", param[i]->collectPeriod);
-			Log(logger, logmsgBuf);
+			sprintf(logmsgBuf, "Collect every %dms: CPU", param[i]->collectPeriod);
+			Log(logger, LOG_INFO, logmsgBuf);
 			break;
 		case 'm':
 			collector[i] = MemInfoRoutine;
 			param[i] = GenRoutineParam(atoi(optarg), MEMORY, queue);
 			param[i]->logger = logger;
 			param[i]->queue = queue;
-			sprintf(logmsgBuf, "INFO: Collect every %dms: Memory", param[i]->collectPeriod);
-			Log(logger, logmsgBuf);
+			sprintf(logmsgBuf, "Collect every %dms: Memory", param[i]->collectPeriod);
+			Log(logger, LOG_INFO, logmsgBuf);
 			break;
 		case 'n':
 			collector[i] = NetInfoRoutine;
 			param[i] = GenRoutineParam(atoi(optarg), NETWORK, queue);
 			param[i]->logger = logger;
 			param[i]->queue = queue;
-			sprintf(logmsgBuf, "INFO: Collect every %dms: Network", param[i]->collectPeriod);
-			Log(logger, logmsgBuf);
+			sprintf(logmsgBuf, "Collect every %dms: Network", param[i]->collectPeriod);
+			Log(logger, LOG_INFO, logmsgBuf);
 			break;
 		case 'p':
 			collector[i] = ProcInfoRoutine;
 			param[i] = GenRoutineParam(atoi(optarg), PROCESS, queue);
 			param[i]->logger = logger;
 			param[i]->queue = queue;
-			sprintf(logmsgBuf, "INFO: Collect every %dms: Process", param[i]->collectPeriod);
-			Log(logger, logmsgBuf);
+			sprintf(logmsgBuf, "Collect every %dms: Process", param[i]->collectPeriod);
+			Log(logger, LOG_INFO, logmsgBuf);
 			break;
 		case 'H':
 			if (ParseHost(optarg, senderParam.host, &senderParam.port))
@@ -121,8 +121,8 @@ int main(int argc, char** argv)
 	{
 		if (pthread_create(&collectorTids[i], NULL, collector[i], param[i]) == -1)
 		{
-			sprintf(logmsgBuf, "ERR: FATAL: Failed to start collector");
-			Log(logger, logmsgBuf);
+			sprintf(logmsgBuf, "Failed to start collector");
+			Log(logger, LOG_FATAL,logmsgBuf);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -131,14 +131,14 @@ int main(int argc, char** argv)
 	{
 		strcpy(senderParam.host, DEFAULT_HOST);
 		senderParam.port = DEFAULT_PORT;
-		sprintf(logmsgBuf, "INFO: Set server host by default %s:%d", DEFAULT_HOST, DEFAULT_PORT);
-		Log(logger, logmsgBuf);
+		sprintf(logmsgBuf, "Set server host by default %s:%d", DEFAULT_HOST, DEFAULT_PORT);
+		Log(logger, LOG_INFO, logmsgBuf);
 	}
 
 	if (pthread_create(&senderTid, NULL, SendRoutine, &senderParam) == -1)
 	{
-		sprintf(logmsgBuf, "ERR: FATAL: Fail to start sender");
-		Log(logger, logmsgBuf);
+		sprintf(logmsgBuf, "Fail to start sender");
+		Log(logger, LOG_FATAL, logmsgBuf);
 		exit(EXIT_FAILURE);
 	}
 

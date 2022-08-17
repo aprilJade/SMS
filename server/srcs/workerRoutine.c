@@ -42,8 +42,8 @@ void WorkCpuInfo(void* data, SWorkTools* tools)
                     hBody[i].waitTime);
         if (Query(tools->dbWrapper, sql) == -1)
         {
-            sprintf(sql, "ERROR: %d: Failed to store in DB: CPU", tools->workerId);
-            Log(tools->logger, sql);
+            sprintf(sql, "%d: Failed to store in DB: CPU", tools->workerId);
+            Log(tools->logger, LOG_ERROR, sql);
         }
     }
 }
@@ -68,8 +68,8 @@ void WorkMemInfo(void* data, SWorkTools* tools)
         hBody->swapFree);
     if (Query(tools->dbWrapper, sql) == -1)
     {
-        sprintf(sql, "ERROR: %d: Failed to store in DB: Memory", tools->workerId);
-        Log(tools->logger, sql);
+        sprintf(sql, "%d: Failed to store in DB: Memory", tools->workerId);
+        Log(tools->logger, LOG_ERROR, sql);
     }
 }
 
@@ -97,8 +97,8 @@ void WorkNetInfo(void* data, SWorkTools* tools)
             hBody[i].sendPackets);
         if (Query(tools->dbWrapper, sql) == -1)
         {
-            sprintf(sql, "ERROR: %d: Failed to store in DB: Network", tools->workerId);
-            Log(tools->logger, sql);
+            sprintf(sql, "%d: Failed to store in DB: Network", tools->workerId);
+            Log(tools->logger, LOG_ERROR, sql);
         }
     }
 }
@@ -121,8 +121,8 @@ void WorkProcInfo(void* data, SWorkTools* tools)
     // Start transaction block
     if (Query(tools->dbWrapper, "BEGIN") == -1)
     {
-        sprintf(sql, "ERROR: %d: Failed to BEGIN command: Process", tools->workerId);
-        Log(tools->logger, sql);
+        sprintf(sql, "%d: Failed to BEGIN command: Process", tools->workerId);
+        Log(tools->logger, LOG_ERROR, sql);
     }
 
     for (int i = 0; i < hHeader->bodyCount; i++)
@@ -162,8 +162,8 @@ void WorkProcInfo(void* data, SWorkTools* tools)
 
         if (Query(tools->dbWrapper, sql) == -1)
         {
-            sprintf(sql, "ERROR: %d: Failed to store in DB: Process", tools->workerId);
-            Log(tools->logger, sql);
+            sprintf(sql, "%d: Failed to store in DB: Process", tools->workerId);
+            Log(tools->logger, LOG_ERROR, sql);
         }
 
     }
@@ -171,8 +171,8 @@ void WorkProcInfo(void* data, SWorkTools* tools)
     // Commit current transaction block
     if (Query(tools->dbWrapper, "END") == -1)
     {
-        sprintf(sql, "ERROR: %d: Failed to END command: Process", tools->workerId);
-        Log(tools->logger, sql);
+        sprintf(sql, "%d: Failed to END command: Process", tools->workerId);
+        Log(tools->logger, LOG_ERROR, sql);
     }
 }
 
@@ -199,8 +199,8 @@ void* WorkerRoutine(void* param)
         {
             pthread_mutex_unlock(&queue->lock);
 
-            sprintf(logMsg, "DEBUG: %d wait for work", pParam->workerId);
-            Log(logger, logMsg);
+            sprintf(logMsg, "%d wait for work", pParam->workerId);
+            Log(logger, LOG_DEBUG, logMsg);
             
             pthread_mutex_lock(&queue->lock);
             while (IsEmpty(queue))
@@ -210,8 +210,8 @@ void* WorkerRoutine(void* param)
                 pthread_mutex_lock(&queue->lock);
             }
 
-            sprintf(logMsg, "DEBUG: %d start work", pParam->workerId);
-            Log(logger, logMsg);
+            sprintf(logMsg, "%d start work", pParam->workerId);
+            Log(logger, LOG_DEBUG, logMsg);
         }
         data = Pop(queue);
         pthread_mutex_unlock(&queue->lock);
@@ -241,7 +241,7 @@ void* WorkerRoutine(void* param)
 
         gettimeofday(&timeVal, NULL);
         elapseTime = (timeVal.tv_sec * 1000000 + timeVal.tv_usec) - prevTime;
-        sprintf(logMsg, "DEBUG: %d work-done in %ld us", pParam->workerId, elapseTime);
-        Log(logger, logMsg);
+        sprintf(logMsg, "%d work-done in %ld us", pParam->workerId, elapseTime);
+        Log(logger, LOG_DEBUG, logMsg);
     }
 }
