@@ -9,6 +9,23 @@
 #include "routines.h"
 #include "collector.h"
 
+void HandleSignal(int signo)
+{
+	switch (signo)
+	{
+	case SIGINT:
+		printf("killed by SIGINT\n");
+		break;
+	case SIGABRT:
+		printf("killed by SIGIABRT\n");
+		break;
+	case SIGSEGV:
+		printf("killed by SIGSEGV\n");
+		break;
+	}
+	exit(signo);
+}
+
 void PrintHelp()
 {
 	printf("PrintHelp(): Not implemented Yet\n");
@@ -111,11 +128,13 @@ int main(int argc, char** argv)
 	sprintf(logmsgBuf, "Ignored SIGPIPE");
 	Log(logger, LOG_INFO, logmsgBuf);
 	
-	signal(SIGBUS, SIG_IGN);
-	signal(SIGABRT, SIG_IGN);
-	signal(SIGHUP, SIG_IGN);
-	signal(SIGFPE, SIG_IGN);
-	signal(SIGQUIT, SIG_IGN);
+	signal(SIGHUP, SIG_IGN);	// deamon...
+	// handle below signal
+	//signal(SIGBUS, SIG_IGN);	// bus error
+	//signal(SIGABRT, SIG_IGN);	// abort signal
+	//signal(SIGFPE, SIG_IGN);	// floating point error
+	//signal(SIGQUIT, SIG_IGN);	// quit signal
+	signal(SIGINT, HandleSignal);
 
 	for (i = 0; collector[i]; i++)
 	{

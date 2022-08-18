@@ -8,10 +8,6 @@ SRCS		=	$(notdir $(wildcard $(SRC_DIR)/*.c))
 OBJS		=	$(SRCS:.c=.o)
 OBJECTS		=	$(patsubst %.o, $(OBJ_DIR)/%.o, $(OBJS))
 
-ifdef DEBUG
-	CFLAG += -g -fsanitize=address
-endif
-
 ifeq (, $(wildcard $(OBJ_DIR)))
 $(shell mkdir $(OBJ_DIR))
 endif
@@ -34,8 +30,4 @@ re:
 	make fclean
 	make all
 
-d:
-	make fclean
-	make DEBUG=1 all
-
-.PHONY: all clean fclean re d
+.PHONY: all clean fclean re

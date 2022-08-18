@@ -5,6 +5,7 @@
 #define SIGNATURE_MEM     0x534E536D   // SMSm
 #define SIGNATURE_NET     0x534E536E   // SMSn
 #define SIGNATURE_PROC    0x534E5370   // SMSp
+#define SIGNATURE_DISK    0x543E5364   // SMSd
 #define EXTRACT_SIGNATURE 0x000000FF
 
 typedef unsigned long ulong;
@@ -63,6 +64,20 @@ typedef struct SBodyp
     uchar state;
     ushort cmdlineLen;
 } SBodyp;
+
+typedef struct SBodyd
+{
+    uchar name[16];
+    ulong readSuccessCount;
+    ulong readSectorCount;
+    ulong readTime;
+    ulong writeSuccessCount;
+    ulong writeSectorCount;
+    ulong writeTime;
+    uint currentIoCount;
+    ulong doingIoTime;
+    ulong weightedDoingIoTime;
+} SBodyd;
 #pragma pack(pop)
 // Normal packet end
 

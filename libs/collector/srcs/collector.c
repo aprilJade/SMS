@@ -376,3 +376,114 @@ SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod)
 
 	return result;
 }
+
+int GetDiskDeviceCount(char* diskStatData)
+{
+	int result = 0;
+	while (*diskStatData)
+	{
+		while (*diskStatData++ != ' ');
+		while (*diskStatData++ != ' ');
+		while (*diskStatData++ != ' ');
+		if (strncmp(diskStatData, "loop", 4) == 0)
+		{
+			while(*diskStatData++ != '\n');
+			continue;
+		}
+		result++;
+		while(*diskStatData++ != '\n');
+	}
+	return result;
+}
+
+SCData* CollectDiskInfo(char *buf, int collectPeriod)
+{
+	int	fd;
+	int readSize = 0;
+
+	fd = open("/proc/diskstats", O_RDONLY);
+	if (fd == -1)
+	{
+		// TODO: Handling open error
+		perror("agent");
+		return NULL;
+	}
+	readSize = read(fd, buf, BUFFER_SIZE);
+	if (readSize == -1)
+	{
+		// TODO: Handling read error
+		perror("agent");
+		return NULL;
+	}
+	buf[readSize] = 0;
+	close(fd);
+
+	int diskDeviceCnt = GetDiskDeviceCount(buf);
+	SCData* result = (SCData*)malloc(sizeof(SCData));
+	result->dataSize = diskDeviceCnt * sizeof(SBodyd) + sizeof(SHeader);
+	result->data = (uchar*)malloc(result->dataSize);
+	if (result == NULL)
+	{
+		// TODO: Handling malloc error
+		return NULL;
+	}
+
+	SHeader* hh = (SHeader*)result->data;
+	hh->signature = SIGNATURE_DISK;
+	hh->collectPeriod = collectPeriod;
+	hh->bodyCount = diskDeviceCnt;
+	hh->bodySize = sizeof(SBodyd);
+	hh->collectTime = time(NULL);
+	SBodyd* hBody;
+	hBody = (SBodyd*)(result->data + sizeof(SHeader));
+
+	while (*buf)
+	{
+		while (*buf++ != ' ');
+		while (*buf++ != ' ');
+		while (*buf++ != ' ');
+		if (strncmp(buf, "loop", 4) == 0)
+		{
+			while(*buf++ != '\n');
+			continue;
+		}
+
+		memset(hBody->name, 0, 16);
+		for (int i = 0; *buf != ' ' && i < 15; i++)
+			hBody->name[i] = *buf++;
+
+		buf++;
+		hBody->readSuccessCount = atol(buf);
+		while (*buf++ != ' ');
+		while (*buf++ != ' ');
+
+		hBody->readSectorCount = atol(buf);
+		while (*buf++ != ' ');
+
+		hBody->readTime = atol(buf);
+		while (*buf++ != ' ');
+
+		hBody->writeSuccessCount = atol(buf);
+		while (*buf++ != ' ');
+		while (*buf++ != ' ');
+
+		hBody->writeSectorCount = atol(buf);
+		while (*buf++ != ' ');
+		
+		hBody->writeTime = atol(buf);
+		while (*buf++ != ' ');
+
+		hBody->currentIoCount = atoi(buf);
+		while (*buf++ != ' ');
+
+		hBody->doingIoTime = atol(buf);
+		while (*buf++ != ' ');
+
+		hBody->weightedDoingIoTime = atol(buf);
+		while(*buf++ != '\n');
+
+		hBody++;
+	}
+	
+	return result;
+}
