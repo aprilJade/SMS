@@ -1,5 +1,4 @@
 NAME		=	server
-CFLAG		=	-g -fsanitize=address
 INCLUDES	=	-I./includes/ -I../libs/SMSutils/includes \
 				-I../libs/collector/includes -I/usr/include/postgresql/
 LIB			=	-lpthread -lSMSutils -lpq
@@ -19,10 +18,10 @@ $(shell mkdir $(OBJ_DIR))
 endif
 
 $(OBJ_DIR)/%.o	: $(SRC_DIR)/%.c
-	cc $(CFLAG) $(LIB_DIR) $(LIB) -c $< -o $@ $(INCLUDES) 
+	cc -c $< -o $@ $(INCLUDES) $(LIB_DIR) $(LIB) 
 
 $(NAME): $(OBJECTS)
-	cc $(CFLAG) $(LIB_DIR) $(LIB)  $(INCLUDES) -o $(NAME) $(OBJECTS)
+	cc $(INCLUDES) -o $(NAME) $(OBJECTS) $(LIB_DIR) $(LIB)
 
 all: $(NAME)
 
