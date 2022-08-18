@@ -1,5 +1,5 @@
 NAME		=	agent
-CFLAG		=	-g -fsanitize=address
+CFLAG		=	
 INCLUDES	=	-I./includes/ -I../libs/SMSutils/includes -I../libs/collector/includes
 LIB			=	-lpthread -lSMSutils -lcollector
 LIB_DIR		=	-L../libs/SMSutils -L../libs/collector
@@ -18,10 +18,10 @@ $(shell mkdir $(OBJ_DIR))
 endif
 
 $(OBJ_DIR)/%.o	: $(SRC_DIR)/%.c
-	cc $(CFLAG) $(LIB_DIR) $(LIB) -c $< -o $@ $(INCLUDES) 
+	cc $(CFLAG) -c $< -o $@ $(INCLUDES) $(LIB_DIR) $(LIB)
 
 $(NAME): $(OBJECTS)
-	cc $(CFLAG) $(LIB_DIR) $(LIB)  $(INCLUDES) -o $(NAME) $(OBJECTS)
+	cc $(CFLAG) $(INCLUDES) -o $(NAME) $(OBJECTS) $(LIB_DIR) $(LIB)
 
 all: $(NAME)
 

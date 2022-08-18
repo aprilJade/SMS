@@ -108,8 +108,14 @@ int main(int argc, char** argv)
 	}
 	
 	signal(SIGPIPE, SIG_IGN);
-	sprintf(logmsgBuf, "Ignore SIGPIPE", param[i]->collectPeriod);
+	sprintf(logmsgBuf, "Ignored SIGPIPE");
 	Log(logger, LOG_INFO, logmsgBuf);
+	
+	signal(SIGBUS, SIG_IGN);
+	signal(SIGABRT, SIG_IGN);
+	signal(SIGHUP, SIG_IGN);
+	signal(SIGFPE, SIG_IGN);
+	signal(SIGQUIT, SIG_IGN);
 
 	for (i = 0; collector[i]; i++)
 	{
