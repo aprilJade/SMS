@@ -17,12 +17,9 @@ git clone https://github.com/aprilJade/SMS.git
 ```
 cd SMS
 make
-./server/server
+sh run-server.sh
 ```
 3. 이후 새로운 터미널을 켜고 agent를 실행해주세요. 스크립트를 직접 수정하여 원하는 옵션을 입력해보세요.
-
-`현재 소스코드 기준으로 6초간격으로 최대 100회 서버와 연결을 시도합니다. 그전에 서버를 실행해주세요.`
-
 ```
 sh run-agent.sh
 ```
@@ -46,6 +43,13 @@ sh run-agent.sh
 
 # Todo List
 - [ ] 공통
+  - [ ] 고도화
+    - [ ] agent와 server간의 handshake 구현 (TCP handshake가 아니라 application level의 handshake를 뜻함)
+      - [ ] 1. 상수 값 송신(메모리 총량, 디스크 총량, 네트워크 인터페이스 종류, CPU개수 등 시스템 기본 정보)
+      - [ ] 2. 가능하다면 인증 기능 추가 => server는 agent 회원 목록을 들고있고 연결 시도하는 agent가 목록에 해당하는 agent인지 검증
+    - [ ] delta값과 average값 계산
+      - [ ] delta값은 cpu 사용율, 메모리 사용율, 디스크 사용율, 네트워크 송수신 패킷수, 네트워크 송수신 바이트수를 계산 (모든 값은 초당 값으로 계산)
+      - [ ] average값은 1시간 단위의 delta값을 측정 (1시간 평균 cpu사용율 등)
   - [ ] 코드 정리 (수시로 반복할 것)
   - [x] ~signature검증법 개선 (strncmp()말고 좀더 좋게...)~
   - [ ] Logger 고도화
