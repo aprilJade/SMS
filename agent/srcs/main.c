@@ -51,6 +51,7 @@ int main(int argc, char** argv)
 		{"memory", required_argument, 0, 'm'},
 		{"network", required_argument, 0, 'n'},
 		{"process", required_argument, 0, 'p'},
+		{"disk", required_argument, 0, 'd'},
 		{"host", required_argument, 0, 'H'},
 		{"help", no_argument, 0, 'h'},
 		{0, 0, 0, 0} 
@@ -73,7 +74,7 @@ int main(int argc, char** argv)
 	senderParam.logger = logger;
 	senderParam.queue = queue;
 	senderParam.port = 0;
-	while ((c = getopt_long(argc, argv, "c:m:n:p:H:h", longOptions, 0)) > 0)
+	while ((c = getopt_long(argc, argv, "c:m:n:p:d:H:h", longOptions, 0)) > 0)
 	{
 		if (c == '?')
 		{
@@ -108,6 +109,12 @@ int main(int argc, char** argv)
 		case 'p':
 			collector[i] = ProcInfoRoutine;
 			param[i] = GenRoutineParam(atoi(optarg), PROCESS, queue);
+			param[i]->logger = logger;
+			param[i]->queue = queue;
+			break;
+		case 'd':
+			collector[i] = DiskInfoRoutine;
+			param[i] = GenRoutineParam(atoi(optarg), DISK, queue);
 			param[i]->logger = logger;
 			param[i]->queue = queue;
 			break;

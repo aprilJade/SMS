@@ -17,7 +17,8 @@ enum eCollectorID
     CPU = 'c',
     MEMORY = 'm',
     NETWORK = 'n',
-    PROCESS = 'p'
+    PROCESS = 'p',
+    DISK = 'd'
 };
 
 SCData* CollectEachCpuInfo(ushort cpuCnt, long timeConversion, char* rdBuf, int collectPeriod);

@@ -230,9 +230,16 @@ int GetDiskDeviceCount(char* buf)
 	int result = 0;
 	while (*buf)
 	{
-		while (*buf++ != ' ');
-		while (*buf++ != ' ');
-		while (*buf++ != ' ');
+		while (*buf == ' ')
+			buf++;
+		while (*buf != ' ')
+			buf++;
+		while (*buf == ' ')
+			buf++;
+		while (*buf != ' ')
+			buf++;
+		
+		buf++;
 		if (strncmp(buf, "loop", 4) == 0)
 		{
 			while(*buf++ != '\n');
@@ -255,7 +262,7 @@ void* DiskInfoRoutine(void* param)
     char logmsgBuf[128];
     int diskDevCnt = GetDiskDeviceCount(buf);
     ulong collectPeriodUs = pParam->collectPeriod * 1000;
-
+    
     sprintf(logmsgBuf, "Start disk information collection routine in %d ms cycle",
         pParam->collectPeriod);
     Log(logger, LOG_INFO, logmsgBuf);
@@ -277,7 +284,7 @@ void* DiskInfoRoutine(void* param)
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 
-        sprintf(logmsgBuf, "Collected in %ldus: Network", elapseTime);
+        sprintf(logmsgBuf, "Collected in %ldus: Disk", elapseTime);
         Log(logger, LOG_DEBUG, logmsgBuf);
         usleep(collectPeriodUs - elapseTime);
     }

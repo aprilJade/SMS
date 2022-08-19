@@ -420,9 +420,16 @@ SCData* CollectDiskInfo(char *buf, int diskDevCnt, int collectPeriod)
 
 	while (*buf)
 	{
-		while (*buf++ != ' ');
-		while (*buf++ != ' ');
-		while (*buf++ != ' ');
+		while (*buf == ' ')
+			buf++;
+		while (*buf != ' ')
+			buf++;
+		while (*buf == ' ')
+			buf++;
+		while (*buf != ' ')
+			buf++;
+		
+		buf++;
 		if (strncmp(buf, "loop", 4) == 0)
 		{
 			while(*buf++ != '\n');
