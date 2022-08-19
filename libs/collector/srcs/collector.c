@@ -377,26 +377,8 @@ SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod)
 	return result;
 }
 
-int GetDiskDeviceCount(char* diskStatData)
-{
-	int result = 0;
-	while (*diskStatData)
-	{
-		while (*diskStatData++ != ' ');
-		while (*diskStatData++ != ' ');
-		while (*diskStatData++ != ' ');
-		if (strncmp(diskStatData, "loop", 4) == 0)
-		{
-			while(*diskStatData++ != '\n');
-			continue;
-		}
-		result++;
-		while(*diskStatData++ != '\n');
-	}
-	return result;
-}
 
-SCData* CollectDiskInfo(char *buf, int collectPeriod)
+SCData* CollectDiskInfo(char *buf, int diskDevCnt, int collectPeriod)
 {
 	int	fd;
 	int readSize = 0;
@@ -418,9 +400,8 @@ SCData* CollectDiskInfo(char *buf, int collectPeriod)
 	buf[readSize] = 0;
 	close(fd);
 
-	int diskDeviceCnt = GetDiskDeviceCount(buf);
 	SCData* result = (SCData*)malloc(sizeof(SCData));
-	result->dataSize = diskDeviceCnt * sizeof(SBodyd) + sizeof(SHeader);
+	result->dataSize = diskDevCnt * sizeof(SBodyd) + sizeof(SHeader);
 	result->data = (uchar*)malloc(result->dataSize);
 	if (result == NULL)
 	{
@@ -431,7 +412,7 @@ SCData* CollectDiskInfo(char *buf, int collectPeriod)
 	SHeader* hh = (SHeader*)result->data;
 	hh->signature = SIGNATURE_DISK;
 	hh->collectPeriod = collectPeriod;
-	hh->bodyCount = diskDeviceCnt;
+	hh->bodyCount = diskDevCnt;
 	hh->bodySize = sizeof(SBodyd);
 	hh->collectTime = time(NULL);
 	SBodyd* hBody;

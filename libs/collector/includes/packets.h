@@ -19,6 +19,7 @@ typedef unsigned char uchar;
 typedef struct SHeader
 {
     uint signature;
+    uchar agent_id[16];
     ulong collectTime;
     uint collectPeriod;
     ushort bodyCount;

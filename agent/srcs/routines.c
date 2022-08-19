@@ -218,6 +218,71 @@ void* ProcInfoRoutine(void* param)
     }
 }
 
+int GetDiskDeviceCount(char* buf)
+{
+    int fd = open("/proc/diskstats", O_RDONLY);
+    if (fd == -1)
+        return -1;
+    int readSize = read(fd, buf, BUFFER_SIZE);
+    if (readSize == -1)
+        return -1;
+    close(fd);
+	int result = 0;
+	while (*buf)
+	{
+		while (*buf++ != ' ');
+		while (*buf++ != ' ');
+		while (*buf++ != ' ');
+		if (strncmp(buf, "loop", 4) == 0)
+		{
+			while(*buf++ != '\n');
+			continue;
+		}
+		result++;
+		while(*buf++ != '\n');
+	}
+	return result;
+}
+
+void* DiskInfoRoutine(void* param)
+{
+    ulong prevTime, postTime, elapseTime;
+    char buf[BUFFER_SIZE + 1] = { 0, };
+    struct timeval timeVal;
+    SRoutineParam* pParam = (SRoutineParam*)param;
+    Queue* queue = pParam->queue;
+    Logger* logger = pParam->logger;
+    char logmsgBuf[128];
+    int diskDevCnt = GetDiskDeviceCount(buf);
+    ulong collectPeriodUs = pParam->collectPeriod * 1000;
+
+    sprintf(logmsgBuf, "Start disk information collection routine in %d ms cycle",
+        pParam->collectPeriod);
+    Log(logger, LOG_INFO, logmsgBuf);
+
+    SCData* collectedData;
+
+    while(1)
+    {
+        gettimeofday(&timeVal, NULL);
+        prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
+
+        collectedData = CollectDiskInfo(buf, diskDevCnt, pParam->collectPeriod);
+
+        pthread_mutex_lock(&queue->lock);
+        Push(collectedData, queue);
+        pthread_mutex_unlock(&queue->lock);
+
+        gettimeofday(&timeVal, NULL);
+        postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
+        elapseTime = postTime - prevTime;
+
+        sprintf(logmsgBuf, "Collected in %ldus: Network", elapseTime);
+        Log(logger, LOG_DEBUG, logmsgBuf);
+        usleep(collectPeriodUs - elapseTime);
+    }
+}
+
 void* SendRoutine(void* param)
 {
     SSenderParam* pParam = (SSenderParam*)param;
