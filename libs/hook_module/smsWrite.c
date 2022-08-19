@@ -5,6 +5,24 @@
 #include <arpa/inet.h>
 #include <sys/stat.h>
 
+struct SBeforePkt
+{
+    char agentId[16];
+    char processName[32];
+    int pid;
+    unsigned int hostIp;
+    unsigned short hostPort;
+};
+
+struct SAfterPkt
+{
+    char agentId[16];
+    char processName[32];
+    unsigned int pid;
+    unsigned int sendBytes;
+    unsigned long elapseTime; 
+};
+
 ssize_t write(int fd, const void* buf, size_t count)
 {
     static ssize_t (*orgWrite)(int, const void*, size_t) = 0;

@@ -1,3 +1,3 @@
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/libs/SMSutils
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/bin
 
-./server/server 4242
+./bin/server 4242
