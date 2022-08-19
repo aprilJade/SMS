@@ -14,11 +14,13 @@ int IsValidSignature(int signature)
 {
     if (signature == SIGNATURE_CPU)
         return 1;
-    if (signature == SIGNATURE_MEM)
+    else if (signature == SIGNATURE_MEM)
         return 1;
-    if (signature == SIGNATURE_NET)
+    else if (signature == SIGNATURE_NET)
         return 1;
-    if (signature == SIGNATURE_PROC)
+    else if (signature == SIGNATURE_PROC)
+        return 1;
+    else if (signature == SIGNATURE_DISK)
         return 1;
     return 0;
 }

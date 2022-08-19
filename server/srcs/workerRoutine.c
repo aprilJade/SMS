@@ -176,6 +176,27 @@ void WorkProcInfo(void* data, SWorkTools* tools)
     }
 }
 
+void WorkDiskInfo(void* data, SWorkTools* tools)
+{
+    SHeader* hHeader = (SHeader*)data;
+    SBodyd* hBody = (SBodyd*)(data + sizeof(SHeader));
+    struct tm* ts;
+    ts = localtime(&hHeader->collectTime);
+
+    printf("WorkDiskInfo: Not implemented yet. just print disk info instead of DB storing\n");
+    printf("%x: %d * %d  %d\n", 
+        hHeader->signature, hHeader->bodyCount, hHeader->bodySize, hHeader->collectPeriod);
+    for (int i = 0; i < hHeader->bodyCount; i++)
+    {
+        printf("%s: %ld %ld %ld, %ld %ld %ld, %d %ld %ld\n",
+            hBody->name,
+            hBody->readSectorCount, hBody->readSuccessCount, hBody->readTime,
+            hBody->writeSectorCount, hBody->writeSuccessCount, hBody->writeTime,
+            hBody->currentIoCount, hBody->doingIoTime, hBody->weightedDoingIoTime);
+        hBody++;
+    }
+}
+
 void* WorkerRoutine(void* param)
 {
     SWorkerParam* pParam = (SWorkerParam*)param;
@@ -236,6 +257,9 @@ void* WorkerRoutine(void* param)
             break;
         case 'p':
             WorkProcInfo(data, &workTools);
+            break;
+        case 'd':
+            WorkDiskInfo(data, &workTools);
             break;
         }
         free(data);
