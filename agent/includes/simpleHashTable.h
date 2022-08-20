@@ -16,10 +16,14 @@ typedef struct SHashTable
 } SHashTable;
 
 SHashTable* NewHashTable();
-int AddKeyValue(const char* key, const char* value, SHashTable* hashTable);
-char* GetValueByKey(const char* key, SHashTable* hashTable);
-void ReleaseHashTable(SHashTable* hashTable);
 
-int SetKeyValue(const char* key, const char* newValue, SHashTable* hashTable);
+// Add new key with new value
+int AddKeyValue(const char* key, const char* value, SHashTable* hashTable);
+// Lookup table and get value. if there is no value, return NULL
+char* GetValueByKey(const char* key, SHashTable* hashTable);
+// Free safely
+void ReleaseHashTable(SHashTable* hashTable);
+// Update 
+int UpdateValue(const char* key, const char* newValue, SHashTable* hashTable);
 
 #endif

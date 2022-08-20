@@ -3,6 +3,32 @@
 
 #include "simpleHashTable.h"
 
+#define CONF_OPTION_COUNT 14
+
+#define CONF_DEFAULT_ID "debug"
+#define CONF_DEFAULT_IP "127.0.0.1"
+#define CONF_DEFAULT_PORT 4242
+#define CONF_DEAFULT_CPU_PERIOD 3000
+#define CONF_DEFAULT_MEM_PREIOD 3000
+#define CONF_DEFAULT_NET_PREIOD 3000
+#define CONF_DEFAULT_PROC_PREIOD 3000
+#define CONF_DEFAULT_DISK_PREIOD 3000
+#define CONF_DEFAULT_RUN_DAEMON false
+
+#define CONF_KEY_ID                     "ID"
+#define CONF_KEY_HOST_ADDRESS           "HOST_ADDRESS"
+#define CONF_KEY_HOST_PORT              "HOST_PORT"
+#define CONF_KEY_RUN_AS_DAEMON          "RUN_AS_DAEMON"
+#define CONF_KEY_RUN_CPU_COLLECTOR      "RUN_CPU_COLLECTOR"
+#define CONF_KEY_CPU_COLLECTION_PERIOD  "CPU_COLLECTION_PERIOD"
+#define CONF_KEY_RUN_MEM_COLLECTOR      "RUN_MEM_COLLECTOR"
+#define CONF_KEY_MEM_COLLECTION_PERIOD  "MEM_COLLECTION_PERIOD"
+#define CONF_KEY_RUN_NET_COLLECTOR      "RUN_NET_COLLECTOR"
+#define CONF_KEY_NET_COLLECTION_PERIOD  "NET_COLLECTION_PERIOD"
+#define CONF_KEY_RUN_PROC_COLLECTOR     "RUN_PROC_COLLECTOR"
+#define CONF_KEY_PROC_COLLECTION_PERIOD "PROC_COLLECTION_PERIOD"
+#define CONF_KEY_RUN_DISK_COLLECTOR     "RUN_DISK_COLLECTOR"
+#define CONF_KEY_DISK_COLLECTION_PERIOD "DISK_COLLECTION_PERIOD"
 enum eConfError // If you want see specific error message, use functions handling errno variable such as "perror"
 {
     CONF_NO_ERROR = 0,
@@ -12,29 +38,6 @@ enum eConfError // If you want see specific error message, use functions handlin
     CONF_ERROR_MAKE_PAIR
 };
 
-typedef struct SConf
-{
-    char agentId[32];
-    char hostIp[16];
-    unsigned short hostPort;
-    bool bRunCpuCollector;
-    int cpuCollectPeriod;
-    bool bRunMemCollector;
-    int memCollectPeriod;
-    bool bRunNetCollector;
-    int netCollectPeriod;
-    bool bRunProcCollector;
-    int procCollectPeriod;
-    bool bRunDiskCollector;
-    int diskCollectPeriod;
-    bool bRunAsDaemon;
-} SConf;
-
-typedef struct SConfPair
-{
-    char* key;
-    char* value;
-} SConfPair;
-
+int ParseConf(const char* confPath, SHashTable* table);
 
 #endif
