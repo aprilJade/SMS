@@ -141,6 +141,7 @@ int main(int argc, char** argv)
 	//signal(SIGABRT, SIG_IGN);	// abort signal
 	//signal(SIGFPE, SIG_IGN);	// floating point error
 	//signal(SIGQUIT, SIG_IGN);	// quit signal
+	//signal(SIGSEGV, SIG_IGN); // segmentation fault
 	signal(SIGINT, HandleSignal);
 
 	for (i = 0; collector[i]; i++)

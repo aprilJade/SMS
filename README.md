@@ -24,16 +24,13 @@ sh run-server.sh
 sh run-agent.sh
 ```
 
-# Current Issue
-- [ ] 최초에 송신된 Process 패킷을 저장하려할 때 DB Insert명령어가 실패함. 모두 실패하지는 않고 약 300개중 50개 내외로 실패함.
-
-# 2022.08.16 Feedback
+# 2022.08.16 2주차 Feedback
 - [x] ~Process 패킷을 하나로 만들어서 송신~
 - [x] ~Process 정보를 한번에 쿼리하기 (auto commit을 안하는 것으로 반복적인 commit을 최소화하는 것으로 해결)~
 - [x] ~Log level을 두고 Logging~
 - [ ] Agent ID를 추가하여 Agent 식별하기
 
-# 2022.08.09 Feedback
+# 2022.08.09 1주차 Feedback
 - [x] ~배열로 구현한 큐를 링크드 리스트로 구현하기(큐의 사이즈가 정적인 것이 큰 문제를 일으킬 수 있음)~
 - [x] ~서버 스레드 구조 개편~
   - [x] ~수신스레드를 하나로 만들고 Queuing (비즈니스 로직과 수신을 분리)~
