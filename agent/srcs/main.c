@@ -135,7 +135,7 @@ int main(int argc, char** argv)
 	sprintf(logmsgBuf, "Ignored SIGPIPE");
 	Log(logger, LOG_INFO, logmsgBuf);
 	
-	signal(SIGHUP, SIG_IGN);	// deamon...
+	signal(SIGHUP, SIG_IGN);	// for deamon...
 	// handle below signal
 	//signal(SIGBUS, SIG_IGN);	// bus error
 	//signal(SIGABRT, SIG_IGN);	// abort signal
