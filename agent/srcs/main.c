@@ -48,8 +48,25 @@ int main(int argc, char** argv)
 	}
 
 	printf("parsed\n");
-	char* ret = GetValueByKey(CONF_KEY_CPU_COLLECTION_PERIOD, options);
-	printf("%s\n", ret);
+	printf("ID: %s\n", GetValueByKey(CONF_KEY_ID, options));
+	printf("HOST_ADDRESS: %s\n", GetValueByKey(CONF_KEY_HOST_ADDRESS, options));
+	printf("HOST_PORT: %s\n", GetValueByKey(CONF_KEY_HOST_PORT, options));
+	printf("RUN_AS_DAEMON: %s\n", GetValueByKey(CONF_KEY_RUN_AS_DAEMON, options));
+
+	printf("RUN_CPU_COLLECTOR: %s\n", GetValueByKey(CONF_KEY_RUN_CPU_COLLECTOR, options));
+	printf("CPU_COLLECTION_PERIOD: %s\n", GetValueByKey(CONF_KEY_CPU_COLLECTION_PERIOD, options));
+
+	printf("RUN_MEM_COLLECTOR: %s\n", GetValueByKey(CONF_KEY_RUN_MEM_COLLECTOR, options));
+	printf("MEM_COLLECTION_PERIOD: %s\n", GetValueByKey(CONF_KEY_MEM_COLLECTION_PERIOD, options));
+
+	printf("RUN_NET_COLLECTOR: %s\n", GetValueByKey(CONF_KEY_RUN_NET_COLLECTOR, options));
+	printf("NET_COLLECTION_PERIOD: %s\n", GetValueByKey(CONF_KEY_NET_COLLECTION_PERIOD, options));
+
+	printf("RUN_PROC_COLLECTOR: %s\n", GetValueByKey(CONF_KEY_RUN_PROC_COLLECTOR, options));
+	printf("PROC_COLLECTION_PERIOD: %s\n", GetValueByKey(CONF_KEY_PROC_COLLECTION_PERIOD, options));
+
+	printf("RUN_DISK_COLLECTOR: %s\n", GetValueByKey(CONF_KEY_RUN_DISK_COLLECTOR, options));
+	printf("DISK_COLLECTION_PERIOD: %s\n", GetValueByKey(CONF_KEY_DISK_COLLECTION_PERIOD, options));
 	exit(0);
 
 	char logmsgBuf[128] = { 0, };
