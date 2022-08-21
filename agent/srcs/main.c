@@ -39,7 +39,7 @@ void PrintUsage()
 
 int main(int argc, char** argv)
 {
-	char* confPath = "/home/apriljade/Documents/repository/SMS/agent.conf";
+	char* confPath = "/home/apriljade/repo/SMS/agent.conf";
 	SHashTable* options = NewHashTable();
 	if (ParseConf(confPath, options) != CONF_NO_ERROR)
 	{
