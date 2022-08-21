@@ -4,23 +4,32 @@
 #include <stdbool.h>
 #include <fcntl.h>
 #include <ctype.h>
+#include <stdio.h>
 
 #include "confParser.h"
 
 static int RemoveSpace(char* s)
 {
+    puts("call RemoveSpace");
     int len = strlen(s);
     int i = 0;
     int j = 0; 
     while (s[i])
     {
+        while (!isspace(s[i]))
+        {
+            if (s[i] == 0)
+                break;
+            i++;
+        }
         j = i;
-        while (isspace(s[j]))
+        while (isspace(s[j]) && s[j] != 0)
             j++;
         if (j != i)
-            memmove(&s[i], &s[j], len - j);
-        i = j + 1;
+            memmove(&s[i], &s[j], len - j + 1);
+        i = j;
     }
+    return 0;
 }
 
 int ParseConf(const char* confPath, SHashTable* table)
@@ -29,7 +38,6 @@ int ParseConf(const char* confPath, SHashTable* table)
     int fd = open(confPath, O_RDONLY);
     if (fd == -1)
         return CONF_ERROR_INVALID_PATH;
-
     int readSize = read(fd, readBuf, 1024);
     if (readSize == -1)
     {
@@ -37,6 +45,7 @@ int ParseConf(const char* confPath, SHashTable* table)
         return CONF_ERROR_FAIL_READ;
     }   
     readBuf[readSize] = 0;
+    close(fd);
 
     if (readBuf[readSize - 1] != '\n')
         return CONF_ERROR_INVALID_FORMAT;
@@ -53,7 +62,7 @@ int ParseConf(const char* confPath, SHashTable* table)
     {
         // #00. Extract 1 line
         lineLen = 0;
-        while (confData[lineLen] != '\n');
+        while (confData[lineLen] != '\n')
             lineLen++;
         if (lineLen == 0)
         {
@@ -61,11 +70,14 @@ int ParseConf(const char* confPath, SHashTable* table)
             continue;
         }
         memcpy(line, confData, lineLen);
+        printf("line len: %d\n", lineLen);
         line[lineLen] = 0;
+        printf("line: %s\n", line);
         confData += lineLen + 1;
-
         RemoveSpace(line);
         lineLen = strlen(line);
+        printf("line len: %d\n", lineLen);
+        printf("line: %s\n", line);
 
         // #01. Parse key
         keyLen = 0;

@@ -29,6 +29,7 @@
 #define CONF_KEY_PROC_COLLECTION_PERIOD "PROC_COLLECTION_PERIOD"
 #define CONF_KEY_RUN_DISK_COLLECTOR     "RUN_DISK_COLLECTOR"
 #define CONF_KEY_DISK_COLLECTION_PERIOD "DISK_COLLECTION_PERIOD"
+
 enum eConfError // If you want see specific error message, use functions handling errno variable such as "perror"
 {
     CONF_NO_ERROR = 0,

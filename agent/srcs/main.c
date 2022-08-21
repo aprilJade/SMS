@@ -8,6 +8,7 @@
 #include <string.h>
 #include "routines.h"
 #include "collector.h"
+#include "confParser.h"
 
 void HandleSignal(int signo)
 {
@@ -38,6 +39,19 @@ void PrintUsage()
 
 int main(int argc, char** argv)
 {
+	char* confPath = "/home/apriljade/Documents/repository/SMS/agent.conf";
+	SHashTable options;
+	if (ParseConf(confPath, &options) != CONF_NO_ERROR)
+	{
+		printf("error\n");
+		exit(1);
+	}
+
+	printf("parsed\n");
+	char* ret = GetValueByKey(CONF_KEY_CPU_COLLECTION_PERIOD, &options);
+	printf("%s\n", ret);
+	exit(0);
+
 	char logmsgBuf[128] = { 0, };
 	sprintf(logmsgBuf, "./log/agent");
 	Logger* logger = NewLogger(logmsgBuf, LOG_INFO);
