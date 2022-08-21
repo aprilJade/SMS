@@ -3,16 +3,16 @@
 #include <stdlib.h>
 #include <assert.h>
 
-static int hash(const char* key)
+static unsigned int hash65599(const char* key)
 {
-    int result = 0;
+    unsigned int result = 0;
     int len = strlen(key);
 
-    unsigned int poly = 0xEDB88320;
+    // unsigned int poly = 0xEDB88320;
     for (int i = 0; i < len; i++)
     {
-        poly = (poly << 1) | (poly >> 31);
-        result = poly * result + key[i];
+        // poly = (poly << 1) | (poly >> 31);
+        result = 65599 * result + key[i];
     }
     return result;
 }
@@ -30,13 +30,13 @@ int AddKeyValue(const char* key, const char* value, SHashTable* hashTable)
 {
     assert(key && value && hashTable);
     
-    int hashedKey = hash(key);
-    SHashNode* list = hashTable->table[hashedKey % HASH_TABLE_SIZE];
+    unsigned int hashedKey = hash65599(key);
+    SHashNode* list = hashTable->table[hashedKey % 128];
     while (list->next != NULL)
     {
-        list = list->next;
         if (list->key == hashedKey) // there is key already
             return 1;
+        list = list->next;
     }
     SHashNode* node = (SHashNode*)malloc(sizeof(SHashNode));
     node->key = hashedKey;
@@ -51,8 +51,8 @@ int AddKeyValue(const char* key, const char* value, SHashTable* hashTable)
 char* GetValueByKey(const char* key, SHashTable* hashTable)
 {
     assert(key && hashTable);
-    int hashedKey = hash(key);
-    SHashNode* list = hashTable->table[hashedKey % HASH_TABLE_SIZE]->next;
+    unsigned int hashedKey = hash65599(key);
+    SHashNode* list = hashTable->table[hashedKey % 128]->next;
 
     while (list != NULL)
     {

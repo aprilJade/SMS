@@ -10,7 +10,6 @@
 
 static int RemoveSpace(char* s)
 {
-    puts("call RemoveSpace");
     int len = strlen(s);
     int i = 0;
     int j = 0; 
@@ -70,14 +69,10 @@ int ParseConf(const char* confPath, SHashTable* table)
             continue;
         }
         memcpy(line, confData, lineLen);
-        printf("line len: %d\n", lineLen);
         line[lineLen] = 0;
-        printf("line: %s\n", line);
         confData += lineLen + 1;
         RemoveSpace(line);
         lineLen = strlen(line);
-        printf("line len: %d\n", lineLen);
-        printf("line: %s\n", line);
 
         // #01. Parse key
         keyLen = 0;
@@ -88,7 +83,6 @@ int ParseConf(const char* confPath, SHashTable* table)
             return 1;
         strncpy(key, line, keyLen);
         key[keyLen] = 0;
-        
         if (keyLen == lineLen) // this means there is no value...
         {
             AddKeyValue(key, NULL, table);
@@ -103,7 +97,6 @@ int ParseConf(const char* confPath, SHashTable* table)
             return 1;
         strncpy(value, line + keyLen + 1, valueLen);
         value[valueLen] = 0;
-
         AddKeyValue(key, value, table);
         free(key);
         free(value);

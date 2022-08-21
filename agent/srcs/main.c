@@ -40,15 +40,15 @@ void PrintUsage()
 int main(int argc, char** argv)
 {
 	char* confPath = "/home/apriljade/Documents/repository/SMS/agent.conf";
-	SHashTable options;
-	if (ParseConf(confPath, &options) != CONF_NO_ERROR)
+	SHashTable* options = NewHashTable();
+	if (ParseConf(confPath, options) != CONF_NO_ERROR)
 	{
 		printf("error\n");
 		exit(1);
 	}
 
 	printf("parsed\n");
-	char* ret = GetValueByKey(CONF_KEY_CPU_COLLECTION_PERIOD, &options);
+	char* ret = GetValueByKey(CONF_KEY_CPU_COLLECTION_PERIOD, options);
 	printf("%s\n", ret);
 	exit(0);
 
