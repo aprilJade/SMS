@@ -31,7 +31,7 @@ int AddKeyValue(const char* key, const char* value, SHashTable* hashTable)
     assert(key && value && hashTable);
     
     unsigned int hashedKey = hash65599(key);
-    SHashNode* list = hashTable->table[hashedKey % 128];
+    SHashNode* list = hashTable->table[hashedKey % HASH_TABLE_SIZE];
     while (list->next != NULL)
     {
         if (list->key == hashedKey) // there is key already
@@ -52,7 +52,7 @@ char* GetValueByKey(const char* key, SHashTable* hashTable)
 {
     assert(key && hashTable);
     unsigned int hashedKey = hash65599(key);
-    SHashNode* list = hashTable->table[hashedKey % 128]->next;
+    SHashNode* list = hashTable->table[hashedKey % HASH_TABLE_SIZE]->next;
 
     while (list != NULL)
     {

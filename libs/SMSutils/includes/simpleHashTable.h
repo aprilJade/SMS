@@ -1,6 +1,6 @@
 #ifndef SIMPLE_HASH_TABLE_H
 #define SIMPLE_HASH_TABLE_H
-#define HASH_TABLE_SIZE 128
+#define HASH_TABLE_SIZE 119
 
 typedef struct SHashNode
 {   
