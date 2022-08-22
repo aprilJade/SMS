@@ -8,29 +8,62 @@ System Monitoring System의 약자입니다. 대상 OS를 모니터링하여 분
 ```
 
 1. 해당 레포지토리를 클론해주세요.
- 
 ```
 git clone https://github.com/aprilJade/SMS.git
 ```
-
 2. 빌드 후 서버를 실행해주세요.
 ```
 cd SMS
 make
 sh run-server.sh
 ```
-3. 이후 새로운 터미널을 켜고 agent를 실행해주세요. 스크립트를 직접 수정하여 원하는 옵션을 입력해보세요.
+3. 이후 새로운 터미널을 켜고 agent를 실행해주세요. 
 ```
 sh run-agent.sh
 ```
 
-# 2022.08.16 2주차 Feedback
+# Options
+- .conf파일에 어플리케이션의 옵션을 작성합니다. 각 옵션은 다음과 같은 의미입니다.
+- 각 옵션은 SMS/include/confParser.h에 정의되어있습니다.
+
+## agent options
+|옵션|설명|예시|
+|---|---|---|
+|ID|Agent의 ID|agent001|
+|HOST_ADDRESS|연결할 서버의 IP주소|127.0.0.1|
+|HOST_PORT|연결할 서버의 Port번호|4242|
+|RUN_AS_DAEMON|Daemon으로 실행할지 여부|true / false|
+|LOG_LEVEL|로깅 레벨 설정|default / debug|
+|LOG_PATH|로그 저장 경로|/path/to/log|
+|RUN_CPU_COLLECTOR|CPU 정보 수집 여부|true / false|
+|CPU_COLLECTION_PERIOD|CPU 정보 수집 주기 (ms)|1000 (minimum 500)|
+|RUN_MEM_COLLECTOR|Memory 정보 수집 여부|true / false|
+|MEM_COLLECTION_PERIOD|Memory 정보 수집 주기 (ms)|1000 (minimum 500)|
+|RUN_NET_COLLECTOR|Network 정보 수집 여부|true / false|
+|NET_COLLECTION_PERIOD|Network 정보 수집 주기 (ms)|1000 (minimum 500)|
+|RUN_PROC_COLLECTOR|Process 정보 수집 여부|true / false|
+|PROC_COLLECTION_PERIOD|Process 정보 수집 주기 (ms)|1000 (minimum 500)|
+|RUN_DISK_COLLECTOR|Disk 정보 수집 여부|true / false|
+|DISK_COLLECTIONS_PERIOD|Disk 정보 수집 주기 (ms)|1000 (minimum 500)|
+
+## server options
+|옵션|설명|예시|
+|---|---|---|
+|LISTEN_PORT|수신할 Port번호|4242|
+|MAX_CONN|연결가능한 agent 최대 개수|128|
+|WORKER_COUNT|패킷을 처리할 Worker 스레드 개수|4 (maximum 16)|
+|RUN_AS_DAEMON|Daemon으로 실행할지 여부|true / false|
+|LOG_LEVEL|로깅 레벨 설정|default / debug|
+|LOG_PATH|로그 저장 경로|/path/to/log|
+
+# Feedback log
+## 2022.08.16 2주차 Feedback
 - [x] ~Process 패킷을 하나로 만들어서 송신~
 - [x] ~Process 정보를 한번에 쿼리하기 (auto commit을 안하는 것으로 반복적인 commit을 최소화하는 것으로 해결)~
 - [x] ~Log level을 두고 Logging~
 - [ ] Agent ID를 추가하여 Agent 식별하기
 
-# 2022.08.09 1주차 Feedback
+## 2022.08.09 1주차 Feedback
 - [x] ~배열로 구현한 큐를 링크드 리스트로 구현하기(큐의 사이즈가 정적인 것이 큰 문제를 일으킬 수 있음)~
 - [x] ~서버 스레드 구조 개편~
   - [x] ~수신스레드를 하나로 만들고 Queuing (비즈니스 로직과 수신을 분리)~
