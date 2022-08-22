@@ -11,7 +11,7 @@
 #include "confParser.h"
 
 void HandleSignal(int );
-pthread_t RunCollector(SCData* (*)(void*), const char*, const char*, Logger*, Queue*, SHashTable*);
+pthread_t RunCollector(void* (*)(void*), const char*, const char*, Logger*, Queue*, SHashTable*);
 Logger* GenLogger(SHashTable*);
 
 /****************************** Start Main ******************************/
@@ -97,7 +97,7 @@ void HandleSignal(int signo)
 	exit(signo);
 }
 
-pthread_t RunCollector(SCData* (*collect)(void*), const char* keyRunOrNot,
+pthread_t RunCollector(void* (*collectRoutine)(void*), const char* keyRunOrNot,
 						const char* keyPeriod, Logger* logger , Queue* queue,
 						SHashTable* options)
 {
@@ -119,7 +119,7 @@ pthread_t RunCollector(SCData* (*collect)(void*), const char* keyRunOrNot,
 					
 			if (param->collectPeriod < MIN_SLEEP_MS)
 				param->collectPeriod = MIN_SLEEP_MS;
-			if (pthread_create(&tid, NULL, collect, param) == -1)
+			if (pthread_create(&tid, NULL, collectRoutine, param) == -1)
 			{
 				sprintf(logmsgBuf, "Failed to start collector");
 				Log(param->logger, LOG_FATAL, logmsgBuf);

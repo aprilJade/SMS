@@ -11,7 +11,7 @@ typedef struct SReceiveParam
     Logger* logger;
     Queue* queue;
     char* host;
-    short port;
+    unsigned short port;
 } SReceiveParam;
 
 void* ReceiveRoutine(void* param);

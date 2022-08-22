@@ -38,6 +38,10 @@
 #define CONF_KEY_RUN_DISK_COLLECTOR     "RUN_DISK_COLLECTOR"
 #define CONF_KEY_DISK_COLLECTION_PERIOD "DISK_COLLECTION_PERIOD"
 
+#define CONF_KEY_LISTEN_PORT            "LISTEN_PORT"
+#define CONF_KEY_MAX_CONNECTION         "MAX_CONN"
+#define CONF_KEY_WORKER_COUNT           "WORKER_COUNT"
+
 enum eConfError // If you want see specific error message, use functions handling errno variable such as "perror"
 {
     CONF_NO_ERROR = 0,

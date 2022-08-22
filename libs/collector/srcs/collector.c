@@ -231,7 +231,7 @@ SCData* CollectNetInfo(char* buf, int nicCount, int collectPeriod)
 
 SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod)
 {
-	char filePath[260] = { 0, };
+	char filePath[272] = { 0, };
 	int fd = 0;
 	int readSize = 0;
 	char *pbuf;
@@ -239,7 +239,7 @@ SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod)
 
 	DIR* dir;
     struct dirent* entry;
-    char path[260];
+    char path[264];
 
 	uchar* handle = dataBuf;
 	int procCnt = 0;
@@ -259,13 +259,13 @@ SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod)
 		{
 			if (atoi(entry->d_name) < 1)
 				continue;
-			snprintf(path, 262, "/proc/%s", entry->d_name);
+			snprintf(path, 264, "/proc/%s", entry->d_name);
 			if (access(path, F_OK) != 0)
 				continue;
 			hBody = (SBodyp*)handle;
 
 			// 2. parse /proc/[pid]/stat
-			sprintf(filePath, "%s/stat", path);
+			snprintf(filePath, 272, "%s/stat", path);
 			fd = open(filePath, O_RDONLY);
 			if (fd == -1)
 			{
@@ -336,7 +336,7 @@ SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod)
 			handle += sizeof(SBodyp);
 
 			// Parse cmdline information
-			sprintf(filePath, "%s/cmdline", path);
+			snprintf(filePath, 272, "%s/cmdline", path);
 			if ((fd = open(filePath, O_RDONLY)) == -1)
 			{
 				// TODO: handling open error
