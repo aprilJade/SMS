@@ -88,10 +88,11 @@ int main(int argc, char** argv)
 		return EXIT_FAILURE;
 	}
 	SHashTable* options = NewHashTable();
-	if (ParseConf(argv[1], options) != CONF_NO_ERROR)
+    int ret;
+	if ((ret = ParseConf(argv[1], options)) != CONF_NO_ERROR)
 	{
 		// TODO: handle error
-		fprintf(stderr, "conf error\n");
+		fprintf(stderr, "conf error: %d\n", ret);
 		exit(1);
 	}
     char* tmp = GetValueByKey(CONF_KEY_LISTEN_PORT, options);
