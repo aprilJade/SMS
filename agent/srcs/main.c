@@ -10,6 +10,72 @@
 #include "collector.h"
 #include "confParser.h"
 
+void HandleSignal(int );
+pthread_t RunCollector(SCData* (*)(void*), const char*, const char*, Logger*, Queue*, SHashTable*);
+Logger* GenLogger(SHashTable*);
+
+/****************************** Start Main ******************************/
+int main(int argc, char** argv)
+{
+	char* confPath = "/home/apriljade/repo/SMS/agent.conf";
+	SHashTable* options = NewHashTable();
+	if (ParseConf(confPath, options) != CONF_NO_ERROR)
+	{
+		// TODO: handle error
+		fprintf(stderr, "conf error\n");
+		exit(1);
+	}
+	
+	char logmsgBuf[128] = { 0, };
+	Logger* logger = GenLogger(options);
+	Queue* queue = NewQueue();
+
+	pthread_t cpuTid = RunCollector(CpuInfoRoutine, CONF_KEY_RUN_CPU_COLLECTOR, CONF_KEY_CPU_COLLECTION_PERIOD, logger, queue, options);
+	pthread_t memTid = RunCollector(MemInfoRoutine, CONF_KEY_RUN_MEM_COLLECTOR, CONF_KEY_MEM_COLLECTION_PERIOD, logger, queue, options);
+	pthread_t netTid = RunCollector(NetInfoRoutine, CONF_KEY_RUN_NET_COLLECTOR, CONF_KEY_NET_COLLECTION_PERIOD, logger, queue, options);
+	pthread_t procTid = RunCollector(ProcInfoRoutine, CONF_KEY_RUN_PROC_COLLECTOR, CONF_KEY_PROC_COLLECTION_PERIOD, logger, queue, options);
+	pthread_t diskTid = RunCollector(DiskInfoRoutine, CONF_KEY_RUN_DISK_COLLECTOR, CONF_KEY_DISK_COLLECTION_PERIOD, logger, queue, options);
+	
+	signal(SIGPIPE, SIG_IGN);
+	sprintf(logmsgBuf, "Ignored SIGPIPE");
+	Log(logger, LOG_INFO, logmsgBuf);
+	
+	signal(SIGHUP, SIG_IGN);	// for deamon...
+	// handle below signal
+	//signal(SIGBUS, SIG_IGN);	// bus error
+	//signal(SIGABRT, SIG_IGN);	// abort signal
+	//signal(SIGFPE, SIG_IGN);	// floating point error
+	//signal(SIGQUIT, SIG_IGN);	// quit signal
+	//signal(SIGSEGV, SIG_IGN); // segmentation fault
+	signal(SIGINT, HandleSignal);
+
+
+	char* value;
+	pthread_t senderTid;
+	SSenderParam senderParam;
+	senderParam.logger = logger;
+	senderParam.queue = queue;
+
+	if ((value = GetValueByKey(CONF_KEY_HOST_ADDRESS, options)) != NULL)
+		strcpy(senderParam.host, value);
+	else
+		strcpy(senderParam.host, "127.0.0.1");
+	value = GetValueByKey(CONF_KEY_HOST_PORT, options);
+	senderParam.port = value != NULL ? atoi(value) : 4242;
+
+	if (pthread_create(&senderTid, NULL, SendRoutine, &senderParam) == -1)
+	{
+		sprintf(logmsgBuf, "Fail to start sender");
+		Log(logger, LOG_FATAL, logmsgBuf);
+		exit(EXIT_FAILURE);
+	}
+
+	pthread_join(senderTid, NULL);
+		
+	exit(EXIT_SUCCESS);
+}
+/****************************** End Main ******************************/
+
 void HandleSignal(int signo)
 {
 	switch (signo)
@@ -27,182 +93,54 @@ void HandleSignal(int signo)
 	exit(signo);
 }
 
-void PrintHelp()
+pthread_t RunCollector(SCData* (*collect)(void*), const char* keyRunOrNot,
+						const char* keyPeriod, Logger* logger , Queue* queue,
+						SHashTable* options)
 {
-	printf("PrintHelp(): Not implemented Yet\n");
-}
+	char* tmp;
+	char logmsgBuf[128];
+	pthread_t tid = -1;
+	SRoutineParam* param = (SRoutineParam*)malloc(sizeof(SRoutineParam));
+	param->logger = logger;
+	param->queue = queue;
 
-void PrintUsage()
-{
-	fprintf(stderr, "Try \"./agent -h\" or \"./agent --help\" for more information.\n");
-}
-
-int main(int argc, char** argv)
-{
-	char* confPath = "/home/apriljade/repo/SMS/agent.conf";
-	SHashTable* options = NewHashTable();
-	if (ParseConf(confPath, options) != CONF_NO_ERROR)
+	if ((tmp = GetValueByKey(keyRunOrNot, options)) != NULL)
 	{
-		printf("error\n");
-		exit(1);
-	}
-
-	printf("parsed\n");
-	printf("ID: %s\n", GetValueByKey(CONF_KEY_ID, options));
-	printf("HOST_ADDRESS: %s\n", GetValueByKey(CONF_KEY_HOST_ADDRESS, options));
-	printf("HOST_PORT: %s\n", GetValueByKey(CONF_KEY_HOST_PORT, options));
-	printf("RUN_AS_DAEMON: %s\n", GetValueByKey(CONF_KEY_RUN_AS_DAEMON, options));
-
-	printf("RUN_CPU_COLLECTOR: %s\n", GetValueByKey(CONF_KEY_RUN_CPU_COLLECTOR, options));
-	printf("CPU_COLLECTION_PERIOD: %s\n", GetValueByKey(CONF_KEY_CPU_COLLECTION_PERIOD, options));
-
-	printf("RUN_MEM_COLLECTOR: %s\n", GetValueByKey(CONF_KEY_RUN_MEM_COLLECTOR, options));
-	printf("MEM_COLLECTION_PERIOD: %s\n", GetValueByKey(CONF_KEY_MEM_COLLECTION_PERIOD, options));
-
-	printf("RUN_NET_COLLECTOR: %s\n", GetValueByKey(CONF_KEY_RUN_NET_COLLECTOR, options));
-	printf("NET_COLLECTION_PERIOD: %s\n", GetValueByKey(CONF_KEY_NET_COLLECTION_PERIOD, options));
-
-	printf("RUN_PROC_COLLECTOR: %s\n", GetValueByKey(CONF_KEY_RUN_PROC_COLLECTOR, options));
-	printf("PROC_COLLECTION_PERIOD: %s\n", GetValueByKey(CONF_KEY_PROC_COLLECTION_PERIOD, options));
-
-	printf("RUN_DISK_COLLECTOR: %s\n", GetValueByKey(CONF_KEY_RUN_DISK_COLLECTOR, options));
-	printf("DISK_COLLECTION_PERIOD: %s\n", GetValueByKey(CONF_KEY_DISK_COLLECTION_PERIOD, options));
-	exit(0);
-
-	char logmsgBuf[128] = { 0, };
-	sprintf(logmsgBuf, "./log/agent");
-	Logger* logger = NewLogger(logmsgBuf, LOG_INFO);
-
-	sprintf(logmsgBuf, "Agent loaded: %d", getpid());
-	Log(logger, LOG_INFO, logmsgBuf);
-
-	static struct option longOptions[] =
-	{
-		{"CPU", required_argument, 0, 'c'},
-		{"memory", required_argument, 0, 'm'},
-		{"network", required_argument, 0, 'n'},
-		{"process", required_argument, 0, 'p'},
-		{"disk", required_argument, 0, 'd'},
-		{"host", required_argument, 0, 'H'},
-		{"help", no_argument, 0, 'h'},
-		{0, 0, 0, 0} 
-	};
-
-	if (argc == 1)
-	{
-		PrintUsage();
-		return EXIT_SUCCESS;
-	}
-
-	char c;
-	int i = 0;
-	pthread_t collectorTids[ROUTINE_COUNT] = { 0, };
-	pthread_t senderTid;
-	SRoutineParam* param[ROUTINE_COUNT] = { 0, };
-	SSenderParam senderParam;
-	void* (*collector[ROUTINE_COUNT + 1])(void*) = { 0, };
-	Queue* queue = NewQueue();
-	senderParam.logger = logger;
-	senderParam.queue = queue;
-	senderParam.port = 0;
-	while ((c = getopt_long(argc, argv, "c:m:n:p:d:H:h", longOptions, 0)) > 0)
-	{
-		if (c == '?')
+		if (strcmp(tmp, "true") == 0)
 		{
-			PrintUsage();
-			exit(EXIT_FAILURE);
-		}
-		if (optarg == NULL)
-		{
-			PrintHelp();
-			exit(EXIT_FAILURE);
-		}
-		switch (c)
-		{
-		case 'c':
-			collector[i] = CpuInfoRoutine;
-			param[i] = GenRoutineParam(atoi(optarg), CPU, queue);
-			param[i]->logger = logger;
-			param[i]->queue = queue;
-			break;
-		case 'm':
-			collector[i] = MemInfoRoutine;
-			param[i] = GenRoutineParam(atoi(optarg), MEMORY, queue);
-			param[i]->logger = logger;
-			param[i]->queue = queue;
-			break;
-		case 'n':
-			collector[i] = NetInfoRoutine;
-			param[i] = GenRoutineParam(atoi(optarg), NETWORK, queue);
-			param[i]->logger = logger;
-			param[i]->queue = queue;
-			break;
-		case 'p':
-			collector[i] = ProcInfoRoutine;
-			param[i] = GenRoutineParam(atoi(optarg), PROCESS, queue);
-			param[i]->logger = logger;
-			param[i]->queue = queue;
-			break;
-		case 'd':
-			collector[i] = DiskInfoRoutine;
-			param[i] = GenRoutineParam(atoi(optarg), DISK, queue);
-			param[i]->logger = logger;
-			param[i]->queue = queue;
-			break;
-		case 'H':
-			if (ParseHost(optarg, senderParam.host, &senderParam.port))
+			if ((tmp = GetValueByKey(keyPeriod, options)) != NULL)
+				param->collectPeriod = atoi(tmp);
+			else
+				param->collectPeriod = 1000;
+					
+			if (param->collectPeriod < MIN_SLEEP_MS)
+				param->collectPeriod = MIN_SLEEP_MS;
+			if (pthread_create(&tid, NULL, collect, param) == -1)
+			{
+				sprintf(logmsgBuf, "Failed to start collector");
+				Log(param->logger, LOG_FATAL, logmsgBuf);
 				exit(EXIT_FAILURE);
-			break;
-		case 'h':
-			PrintHelp();
-			exit(EXIT_SUCCESS);
-		default:
-			abort();
-		}
-		i++;
-	}
-	
-	signal(SIGPIPE, SIG_IGN);
-	sprintf(logmsgBuf, "Ignored SIGPIPE");
-	Log(logger, LOG_INFO, logmsgBuf);
-	
-	signal(SIGHUP, SIG_IGN);	// for deamon...
-	// handle below signal
-	//signal(SIGBUS, SIG_IGN);	// bus error
-	//signal(SIGABRT, SIG_IGN);	// abort signal
-	//signal(SIGFPE, SIG_IGN);	// floating point error
-	//signal(SIGQUIT, SIG_IGN);	// quit signal
-	//signal(SIGSEGV, SIG_IGN); // segmentation fault
-	signal(SIGINT, HandleSignal);
-
-	for (i = 0; collector[i]; i++)
-	{
-		if (pthread_create(&collectorTids[i], NULL, collector[i], param[i]) == -1)
-		{
-			sprintf(logmsgBuf, "Failed to start collector");
-			Log(logger, LOG_FATAL,logmsgBuf);
-			exit(EXIT_FAILURE);
+			}
 		}
 	}
+	return tid;
+}
 
-	if (senderParam.port == 0)
+Logger* GenLogger(SHashTable* options)
+{
+	char* logPath;
+	char* logLevel;
+	Logger* logger;
+	if ((logPath = GetValueByKey(CONF_KEY_LOG_PATH, options)) == NULL)
+		logPath = "./agent";
+	if ((logLevel = GetValueByKey(CONF_KEY_LOG_LEVEL, options)) != NULL)
 	{
-		strcpy(senderParam.host, DEFAULT_HOST);
-		senderParam.port = DEFAULT_PORT;
-		sprintf(logmsgBuf, "Set server host by default %s:%d", DEFAULT_HOST, DEFAULT_PORT);
-		Log(logger, LOG_INFO, logmsgBuf);
+		if (strcmp(logLevel, "default") == 0)
+			logger = NewLogger(logPath, LOG_INFO);
+		else if (strcmp(logLevel, "debug") == 0)	// doesn't necessary..
+			logger = NewLogger(logPath, LOG_DEBUG);
+		return logger;
 	}
-
-	if (pthread_create(&senderTid, NULL, SendRoutine, &senderParam) == -1)
-	{
-		sprintf(logmsgBuf, "Fail to start sender");
-		Log(logger, LOG_FATAL, logmsgBuf);
-		exit(EXIT_FAILURE);
-	}
-
-	for (i = 0; collector[i]; i++)
-		pthread_join(collectorTids[i], NULL);
-	pthread_join(senderTid, NULL);
-		
-	exit(EXIT_SUCCESS);
+	logger = NewLogger(logPath, LOG_DEBUG);
+	return logger;
 }

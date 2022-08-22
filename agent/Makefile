@@ -18,10 +18,10 @@ $(shell mkdir $(BIN_PATH))
 endif
 
 $(OBJ_DIR)/%.o	: $(SRC_DIR)/%.c
-	cc -c $< -o $@ $(INCLUDES) $(LIB_DIR) $(LIB)
+	cc -g -c $< -o $@ $(INCLUDES) $(LIB_DIR) $(LIB)
 
 $(NAME): $(OBJECTS)
-	cc $(INCLUDES) -o ../bin/$(NAME) $(OBJECTS) $(LIB_DIR) $(LIB)
+	cc -g $(INCLUDES) -o ../bin/$(NAME) $(OBJECTS) $(LIB_DIR) $(LIB)
 
 all: $(NAME)
 
