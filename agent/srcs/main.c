@@ -17,9 +17,13 @@ Logger* GenLogger(SHashTable*);
 /****************************** Start Main ******************************/
 int main(int argc, char** argv)
 {
-	char* confPath = "/home/apriljade/repo/SMS/agent.conf";
+	if (argc != 2)
+	{
+		fprintf(stderr, "ERROR: you must input conf file path\n");
+		return EXIT_FAILURE;
+	}
 	SHashTable* options = NewHashTable();
-	if (ParseConf(confPath, options) != CONF_NO_ERROR)
+	if (ParseConf(argv[1], options) != CONF_NO_ERROR)
 	{
 		// TODO: handle error
 		fprintf(stderr, "conf error\n");
