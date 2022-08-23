@@ -10,7 +10,7 @@
 #include "collector.h"
 #include "confParser.h"
 
-void HandleSignal(int );
+void HandleSignal(int);
 pthread_t RunCollector(void* (*)(void*), const char*, const char*, Logger*, Queue*, SHashTable*);
 Logger* GenLogger(SHashTable*);
 
