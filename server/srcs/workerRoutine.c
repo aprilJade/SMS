@@ -208,10 +208,15 @@ void* WorkerRoutine(void* param)
     SWorkTools workTools;
     struct timeval timeVal;
     ulong prevTime, postTime, elapseTime, totalElapsed;
-
+    int pktId;
     workTools.dbWrapper = pParam->db;
     workTools.workerId = pParam->workerId;
     workTools.logger = logger;
+    
+    sprintf(logMsg, "%d worker-created", pParam->workerId);
+    Log(logger, LOG_INFO, logMsg);
+    sprintf(logMsg, "%d work-wait", pParam->workerId);
+    Log(logger, LOG_DEBUG, logMsg);
 
     while (1)
     {
@@ -230,12 +235,16 @@ void* WorkerRoutine(void* param)
         }
         data = Pop(queue);
         pthread_mutex_unlock(&queue->lock);
+
+        sprintf(logMsg, "%d work-start", pParam->workerId);
+        Log(logger, LOG_DEBUG, logMsg);
         
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
         hHeader = (SHeader*)data;
-        switch(hHeader->signature & EXTRACT_SIGNATURE)
+        pktId = hHeader->signature & EXTRACT_SIGNATURE;
+        switch(pktId)
         {
         case 'c':
             WorkCpuInfo(data, &workTools);
@@ -258,6 +267,9 @@ void* WorkerRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         elapseTime = (timeVal.tv_sec * 1000000 + timeVal.tv_usec) - prevTime;
         sprintf(logMsg, "%d work-done in %ld us", pParam->workerId, elapseTime);
+        Log(logger, LOG_DEBUG, logMsg);
+
+        sprintf(logMsg, "%d work-wait", pParam->workerId);
         Log(logger, LOG_DEBUG, logMsg);
     }
 }
