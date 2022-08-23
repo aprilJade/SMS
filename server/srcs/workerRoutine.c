@@ -215,36 +215,27 @@ void* WorkerRoutine(void* param)
 
     while (1)
     {
+        if (IsEmpty(queue))
+        {
+            // TODO: Remove busy wait or change to the optimized set sleep time 
+            usleep(500);
+            continue;
+        }
+        
         pthread_mutex_lock(&queue->lock);
         if (IsEmpty(queue))
         {
             pthread_mutex_unlock(&queue->lock);
-
-            sprintf(logMsg, "%d wait for work", pParam->workerId);
-            Log(logger, LOG_DEBUG, logMsg);
-            
-            pthread_mutex_lock(&queue->lock);
-            // TODO: remove busy wait
-            while (IsEmpty(queue))
-            {
-                pthread_mutex_unlock(&queue->lock);
-                usleep(500);
-                pthread_mutex_lock(&queue->lock);
-            }
-
-            sprintf(logMsg, "%d start work", pParam->workerId);
-            Log(logger, LOG_DEBUG, logMsg);
+            continue;
         }
         data = Pop(queue);
         pthread_mutex_unlock(&queue->lock);
         
-
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
         hHeader = (SHeader*)data;
-        char pktId = hHeader->signature & EXTRACT_SIGNATURE;
-        switch(pktId)
+        switch(hHeader->signature & EXTRACT_SIGNATURE)
         {
         case 'c':
             WorkCpuInfo(data, &workTools);
