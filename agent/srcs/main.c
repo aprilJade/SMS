@@ -41,8 +41,7 @@ int main(int argc, char** argv)
 	pthread_t diskTid = RunCollector(DiskInfoRoutine, CONF_KEY_RUN_DISK_COLLECTOR, CONF_KEY_DISK_COLLECTION_PERIOD, logger, queue, options);
 	
 	signal(SIGPIPE, SIG_IGN);
-	sprintf(logmsgBuf, "Ignored SIGPIPE");
-	Log(logger, LOG_INFO, logmsgBuf);
+	Log(logger, LOG_INFO, "Ignored SIGPIPE");
 	
 	signal(SIGHUP, SIG_IGN);	// for deamon...
 	// handle below signal

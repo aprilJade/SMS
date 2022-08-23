@@ -57,6 +57,9 @@ sh run-agent.sh
 |LOG_PATH|로그 저장 경로|/path/to/log|
 
 # Feedback log
+## 2022.08.23 3주차 Feedback
+- [ ] Queuing을 위한 Queue접근 시 Lock 사용 비율을 줄이는 방향으로 개선
+
 ## 2022.08.16 2주차 Feedback
 - [x] ~Process 패킷을 하나로 만들어서 송신~
 - [x] ~Process 정보를 한번에 쿼리하기 (auto commit을 안하는 것으로 반복적인 commit을 최소화하는 것으로 해결)~
