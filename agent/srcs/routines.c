@@ -326,13 +326,18 @@ void* SendRoutine(void* param)
         {
             if (colletecData == NULL)
             {
+                if (IsEmpty(queue))
+                {
+                    // TODO: Remove busy wait or change to the optimized set sleep time 
+                    usleep(500);
+                    continue;
+                }
+                
                 pthread_mutex_lock(&queue->lock);
-                // TODO: remove busy wait
-                while (IsEmpty(queue))
+                if (IsEmpty(queue))
                 {
                     pthread_mutex_unlock(&queue->lock);
-                    usleep(500);
-                    pthread_mutex_lock(&queue->lock);
+                    continue;
                 }
                 colletecData = Pop(queue);
                 pthread_mutex_unlock(&queue->lock);
