@@ -6,6 +6,7 @@
 #include <signal.h>
 #include <sys/time.h>
 #include <string.h>
+#include <errno.h>
 #include "routines.h"
 #include "collector.h"
 #include "confParser.h"
@@ -29,9 +30,36 @@ int main(int argc, char** argv)
 		fprintf(stderr, "conf error\n");
 		exit(1);
 	}
-	
+	char* value;
 	char logmsgBuf[128] = { 0, };
 	Logger* logger = GenLogger(options);
+	
+	if ((value = GetValueByKey(CONF_KEY_RUN_AS_DAEMON, options)) != NULL)
+	{
+		if (strcmp(value, "true") == 0)
+		{
+			pid_t pid = fork();
+
+			if (pid == -1)
+			{
+				// TODO: handle error
+				fprintf(stderr, "ERROR: failed to fork: %s\n", strerror(errno));
+				exit(EXIT_FAILURE);
+			}
+
+			if (pid == 0)
+				exit(EXIT_SUCCESS);
+			
+			signal(SIGHUP, SIG_IGN);
+			close(STDIN_FILENO);
+			close(STDOUT_FILENO);
+			close(STDERR_FILENO);
+			chdir("/");
+			setsid();
+		}
+	}
+
+	
 	Queue* queue = NewQueue();
 
 	pthread_t cpuTid = RunCollector(CpuInfoRoutine, CONF_KEY_RUN_CPU_COLLECTOR, CONF_KEY_CPU_COLLECTION_PERIOD, logger, queue, options);
@@ -43,7 +71,6 @@ int main(int argc, char** argv)
 	signal(SIGPIPE, SIG_IGN);
 	Log(logger, LOG_INFO, "Ignored SIGPIPE");
 	
-	signal(SIGHUP, SIG_IGN);	// for deamon...
 	// handle below signal
 	//signal(SIGBUS, SIG_IGN);	// bus error
 	//signal(SIGABRT, SIG_IGN);	// abort signal
@@ -53,7 +80,6 @@ int main(int argc, char** argv)
 	signal(SIGINT, HandleSignal);
 
 
-	char* value;
 	pthread_t senderTid;
 	SSenderParam senderParam;
 	senderParam.logger = logger;

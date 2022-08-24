@@ -1,6 +1,9 @@
 #define _GNU_SOURCE
 #include <dlfcn.h>
 #include <unistd.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <sys/stat.h>
@@ -28,12 +31,14 @@ ssize_t write(int fd, const void* buf, size_t count)
     static ssize_t (*orgWrite)(int, const void*, size_t) = 0;
     static int sockFd = 0;
     static struct sockaddr_in sockaddr;
-
+    static struct stat statBuf;
+    static struct SBeforePkt beforePkt;
+    static struct SAfterPkt afterPkt;
+    
     if (orgWrite == NULL)
+    {
         orgWrite = (ssize_t (*)(int, const void*, size_t))dlsym(RTLD_NEXT, "write");
 
-    if (sockFd == 0)
-    {
         sockFd = socket(PF_INET, SOCK_DGRAM, 0);
         if (sockFd == -1)
         {
@@ -44,11 +49,42 @@ ssize_t write(int fd, const void* buf, size_t count)
         sockaddr.sin_family = AF_INET;
         sockaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
         sockaddr.sin_port = htons(4848);
+
+        // initialize before packet
+        beforePkt.pid = getpid();
+        char buf[128];
+        sprintf(buf, "/proc/%d/stat", beforePkt.pid);
+        int fd = open(buf, O_RDONLY);
+        if (fd == -1)
+            strcpy(beforePkt.processName, "unknown");
+        else
+        {
+            int readSize = read(fd, buf, 128);
+            if (readSize < 1)
+                strcpy(beforePkt.processName, "unknown");
+            else
+            {
+                buf[readSize] = 0; 
+                int i = 0, j = 0;
+                while (buf[i++] != ' ');
+                i++;
+                for (; buf[i] != ')'; i++)
+                    beforePkt.processName[j++] = buf[i];            
+            }
+        }
+
+        // beforePkt.processName = 
     }
-    struct stat statBuf;
+        
+
     fstat(fd, &statBuf);
     if (S_ISSOCK(statBuf.st_mode))
+    {
+        // send before packet
+        if (count > 65536)
+            count = 65536;
         sendto(sockFd, buf, count, 0, (struct sockaddr*)&sockaddr, sizeof(sockaddr));
-
+        // send after packet
+    }
     return orgWrite(fd, buf, count);
 }
