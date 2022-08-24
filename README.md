@@ -58,7 +58,7 @@ sh run-agent.sh
 
 # Feedback log
 ## 2022.08.23 3주차 Feedback
-- [ ] Queuing을 위한 Queue접근 시 Lock 사용 비율을 줄이는 방향으로 개선
+- [x] ~Queuing을 위한 Queue접근 시 Lock 사용 비율을 줄이는 방향으로 개선~
 
 ## 2022.08.16 2주차 Feedback
 - [x] ~Process 패킷을 하나로 만들어서 송신~
