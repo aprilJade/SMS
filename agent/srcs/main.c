@@ -27,8 +27,8 @@ int main(int argc, char** argv)
 	if (ParseConf(argv[1], options) != CONF_NO_ERROR)
 	{
 		// TODO: handle error
-		fprintf(stderr, "conf error\n");
-		exit(1);
+		fprintf(stderr, "ERROR: conf error\n");
+		exit(EXIT_FAILURE);
 	}
 	char* value;
 	char logmsgBuf[128] = { 0, };
@@ -72,11 +72,11 @@ int main(int argc, char** argv)
 	Log(logger, LOG_INFO, "Ignored SIGPIPE");
 	
 	// handle below signal
-	//signal(SIGBUS, SIG_IGN);	// bus error
-	//signal(SIGABRT, SIG_IGN);	// abort signal
-	//signal(SIGFPE, SIG_IGN);	// floating point error
-	//signal(SIGQUIT, SIG_IGN);	// quit signal
-	//signal(SIGSEGV, SIG_IGN); // segmentation fault
+	signal(SIGBUS, HandleSignal);	// bus error
+	signal(SIGABRT, HandleSignal);	// abort signal
+	signal(SIGFPE, HandleSignal);	// floating point error
+	signal(SIGQUIT, HandleSignal);	// quit signal
+	signal(SIGSEGV, HandleSignal); // segmentation fault
 	signal(SIGINT, HandleSignal);
 
 
@@ -172,11 +172,7 @@ Logger* GenLogger(SHashTable* options)
 	if ((logLevel = GetValueByKey(CONF_KEY_LOG_LEVEL, options)) != NULL)
 	{
 		if (strcmp(logLevel, "default") == 0)
-			logger = NewLogger(logPath, LOG_INFO);
-		else if (strcmp(logLevel, "debug") == 0)	// doesn't necessary..
-			logger = NewLogger(logPath, LOG_DEBUG);
-		return logger;
+			return NewLogger(logPath, LOG_INFO);
 	}
-	logger = NewLogger(logPath, LOG_DEBUG);
-	return logger;
+	return NewLogger(logPath, LOG_DEBUG);
 }

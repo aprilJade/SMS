@@ -333,11 +333,6 @@ void* SendRoutine(void* param)
                 }
                 
                 pthread_mutex_lock(&queue->lock);
-                if (IsEmpty(queue))
-                {
-                    pthread_mutex_unlock(&queue->lock);
-                    continue;
-                }
                 colletecData = Pop(queue);
                 pthread_mutex_unlock(&queue->lock);
             }
