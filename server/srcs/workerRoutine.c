@@ -31,8 +31,9 @@ void WorkCpuInfo(void* data, SWorkTools* tools)
     char sql[512];
     for (int i = 0; i < hHeader->bodyCount; i++)
     {
-        sprintf(sql, "%s (\'%04d-%02d-%02d %02d:%02d:%02d\', %d, %ld, %ld, %ld, %ld);",
+        sprintf(sql, "%s (%s, \'%04d-%02d-%02d %02d:%02d:%02d\', %d, %ld, %ld, %ld, %ld);",
                     cpuInsertSql,
+                    hHeader->agentId,
                     ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
                     ts->tm_hour, ts->tm_min, ts->tm_sec,
                     i,
@@ -56,8 +57,9 @@ void WorkMemInfo(void* data, SWorkTools* tools)
 
     char sql[512];
     ts = localtime(&hHeader->collectTime);
-    sprintf(sql, "%s (\'%04d-%02d-%02d %02d:%02d:%02d\', %d, %d, %d, %d, %d, %d);",
+    sprintf(sql, "%s (%s, \'%04d-%02d-%02d %02d:%02d:%02d\', %d, %d, %d, %d, %d, %d);",
         memInsertSql,
+        hHeader->agentId,
         ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
         ts->tm_hour, ts->tm_min, ts->tm_sec,
         hBody->memTotal,
@@ -86,8 +88,9 @@ void WorkNetInfo(void* data, SWorkTools* tools)
     {
         memcpy(nicName, hBody[i].name, hBody[i].nameLength);
         nicName[hBody[i].nameLength] = 0;
-        sprintf(sql, "%s (\'%04d-%02d-%02d %02d:%02d:%02d\', \'%s\', %ld, %ld, %ld, %ld);",
+        sprintf(sql, "%s (%s, \'%04d-%02d-%02d %02d:%02d:%02d\', \'%s\', %ld, %ld, %ld, %ld);",
             netInsertSql,
+            hHeader->agentId,
             ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
             ts->tm_hour, ts->tm_min, ts->tm_sec,
             nicName,
@@ -133,8 +136,9 @@ void WorkProcInfo(void* data, SWorkTools* tools)
         {
             strncpy(cmdlineBuf, data, hBody->cmdlineLen);
             cmdlineBuf[hBody->cmdlineLen] = 0;
-            sprintf(sql, "%s (%s, %d, \'%s\', \'%c\', %d, %d, %d, \'%s\', \'%s\');",
+            sprintf(sql, "%s (%s, %s, %d, \'%s\', \'%c\', %d, %d, %d, \'%s\', \'%s\');",
                 procInsertSql,
+                hHeader->agentId,
                 sTimestamp,
                 hBody->pid,
                 hBody->procName,
@@ -184,8 +188,8 @@ void WorkDiskInfo(void* data, SWorkTools* tools)
     ts = localtime(&hHeader->collectTime);
 
     printf("WorkDiskInfo: Not implemented yet. just print disk info instead of DB storing\n");
-    printf("%x: %d * %d  %d\n", 
-        hHeader->signature, hHeader->bodyCount, hHeader->bodySize, hHeader->collectPeriod);
+    printf("%s: %d * %d  %d\n", 
+        hHeader->agentId, hHeader->bodyCount, hHeader->bodySize, hHeader->collectPeriod);
     for (int i = 0; i < hHeader->bodyCount; i++)
     {
         printf("%s: %ld %ld %ld, %ld %ld %ld, %d %ld %ld\n",
