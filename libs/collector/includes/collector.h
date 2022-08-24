@@ -21,10 +21,10 @@ enum eCollectorID
     DISK = 'd'
 };
 
-SCData* CollectEachCpuInfo(ushort cpuCnt, long timeConversion, char* rdBuf, int collectPeriod);
-SCData* CollectMemInfo(char* buf, int collectPeriod);
-SCData* CollectNetInfo(char* buf, int nicCount, int collectPeriod);
-SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod);
-SCData* CollectDiskInfo(char *buf, int diskDevCnt, int collectPeriod);
+SCData* CollectEachCpuInfo(ushort cpuCnt, long timeConversion, char* rdBuf, int collectPeriod, char* agent_id);
+SCData* CollectMemInfo(char* buf, int collectPeriod, char* agent_id);
+SCData* CollectNetInfo(char* buf, int nicCount, int collectPeriod, char* agent_id);
+SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod, char* agent_id);
+SCData* CollectDiskInfo(char *buf, int diskDevCnt, int collectPeriod, char* agent_id);
 
 #endif

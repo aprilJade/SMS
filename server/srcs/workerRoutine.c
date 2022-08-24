@@ -10,15 +10,15 @@
 // Calc delta value, average value
 // And save to DB
 const char* cpuInsertSql = 
-    "INSERT INTO cpu_informations(collect_time, core_id, usr_run_time, sys_run_time, idle_time, wait_time) VALUES";
+    "INSERT INTO cpu_informations(agent_id, collect_time, core_id, usr_run_time, sys_run_time, idle_time, wait_time) VALUES";
 const char* memInsertSql = 
-    "INSERT INTO memory_informations(collect_time, total, free, avail, used, swap_total, swap_free) VALUES";
+    "INSERT INTO memory_informations(agent_id, collect_time, total, free, avail, used, swap_total, swap_free) VALUES";
 const char* netInsertSql = 
-    "INSERT INTO network_informations(collect_time, interface_name, receive_bytes, receive_packets, send_bytes, send_packets) VALUES";
+    "INSERT INTO network_informations(agent_id, collect_time, interface_name, receive_bytes, receive_packets, send_bytes, send_packets) VALUES";
 const char* procInsertSql =
-    "INSERT INTO process_informations(collect_time, pid, process_name, process_state, ppid, usr_run_time, sys_run_time, uname, cmdline) VALUES";
+    "INSERT INTO process_informations(agent_id, collect_time, pid, process_name, process_state, ppid, usr_run_time, sys_run_time, uname, cmdline) VALUES";
 const char* procInsertSqlNoCmd =
-    "INSERT INTO process_informations(collect_time, pid, process_name, process_state, ppid, usr_run_time, sys_run_time, uname) VALUES";
+    "INSERT INTO process_informations(agent_id, collect_time, pid, process_name, process_state, ppid, usr_run_time, sys_run_time, uname) VALUES";
 
 void WorkCpuInfo(void* data, SWorkTools* tools)
 {

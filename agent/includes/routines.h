@@ -12,8 +12,7 @@
 
 typedef struct SRoutineParam
 {
-    ulong collectorCreateTime;  // unnecessary field
-    uint collectorID;           // unnecessary field
+    char agentId[16];
     uint collectPeriod;
     Queue* queue;
     Logger* logger;

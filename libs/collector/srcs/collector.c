@@ -23,7 +23,7 @@
 // Logical CPU: get using sysconf()
 // Wall time: get using gettimeofday()
 
-SCData* CollectEachCpuInfo(ushort cpuCnt, long timeConversion, char* rdBuf, int collectPeriod)
+SCData* CollectEachCpuInfo(ushort cpuCnt, long timeConversion, char* rdBuf, int collectPeriod, char* agentId)
 {
 	int	fd;
 	int readSize = 0;
@@ -60,6 +60,9 @@ SCData* CollectEachCpuInfo(ushort cpuCnt, long timeConversion, char* rdBuf, int 
 	hh->bodyCount = cpuCnt;
 	hh->bodySize = sizeof(SBodyc);
 	hh->collectTime = time(NULL);
+	memset(hh->agentId, 0, 16);
+	strncpy(hh->agentId, agentId, 15);
+	hh->agentId[15] = 0;
 
 	SBodyc* handle = (SBodyc*)(result->data + sizeof(SHeader));
     while (*rdBuf++ != '\n');
@@ -85,7 +88,7 @@ SCData* CollectEachCpuInfo(ushort cpuCnt, long timeConversion, char* rdBuf, int 
 	return result;
 }
 
-SCData* CollectMemInfo(char* buf, int collectPeriod)
+SCData* CollectMemInfo(char* buf, int collectPeriod, char* agentId)
 {
 	int fd = open("/proc/meminfo", O_RDONLY);
 	int readSize;
@@ -120,6 +123,9 @@ SCData* CollectMemInfo(char* buf, int collectPeriod)
 	hh->bodySize = sizeof(SBodym);
 	hh->collectPeriod = collectPeriod;
 	hh->collectTime = time(NULL);
+	memset(hh->agentId, 0, 16);
+	strncpy(hh->agentId, agentId, 15);
+	hh->agentId[15] = 0;
 
 	SBodym* handle = (SBodym*)(result->data + sizeof(SHeader));
 
@@ -156,7 +162,7 @@ SCData* CollectMemInfo(char* buf, int collectPeriod)
 	return result;
 }
 
-SCData* CollectNetInfo(char* buf, int nicCount, int collectPeriod)
+SCData* CollectNetInfo(char* buf, int nicCount, int collectPeriod, char* agentId)
 {
 	int fd = open("/proc/net/dev", O_RDONLY);
 	if (fd == -1)
@@ -188,6 +194,9 @@ SCData* CollectNetInfo(char* buf, int nicCount, int collectPeriod)
 	hh->bodySize = sizeof(SBodyn);
 	hh->collectPeriod = collectPeriod;
 	hh->collectTime = time(NULL);
+	memset(hh->agentId, 0, 16);
+	strncpy(hh->agentId, agentId, 15);
+	hh->agentId[15] = 0;
 	SBodyn* handle = (SBodyn*)(result->data + sizeof(SHeader));
 
 	while (*buf++ != '\n');
@@ -229,7 +238,7 @@ SCData* CollectNetInfo(char* buf, int nicCount, int collectPeriod)
 	return result;
 }
 
-SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod)
+SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod, char* agentId)
 {
 	char filePath[272] = { 0, };
 	int fd = 0;
@@ -373,12 +382,15 @@ SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod)
 	hHeader->collectPeriod = collectPeriod;
 	hHeader->signature = SIGNATURE_PROC;
 	hHeader->collectTime = collectBeginTime;
+	memset(hHeader->agentId, 0, 16);
+	strncpy(hHeader->agentId, agentId, 15);
+	hHeader->agentId[15] = 0;
 
 	return result;
 }
 
 
-SCData* CollectDiskInfo(char *buf, int diskDevCnt, int collectPeriod)
+SCData* CollectDiskInfo(char *buf, int diskDevCnt, int collectPeriod, char* agentId)
 {
 	int	fd;
 	int readSize = 0;
@@ -415,6 +427,10 @@ SCData* CollectDiskInfo(char *buf, int diskDevCnt, int collectPeriod)
 	hh->bodyCount = diskDevCnt;
 	hh->bodySize = sizeof(SBodyd);
 	hh->collectTime = time(NULL);
+	memset(hh->agentId, 0, 16);
+	strncpy(hh->agentId, agentId, 15);
+	hh->agentId[15] = 0;
+
 	SBodyd* hBody;
 	hBody = (SBodyd*)(result->data + sizeof(SHeader));
 

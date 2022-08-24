@@ -118,6 +118,13 @@ pthread_t RunCollector(void* (*collectRoutine)(void*), const char* keyRunOrNot,
 					
 			if (param->collectPeriod < MIN_SLEEP_MS)
 				param->collectPeriod = MIN_SLEEP_MS;
+
+			memset(param->agentId, 0, 16);
+			if ((tmp = GetValueByKey(CONF_KEY_ID, options)) == NULL)
+				strcpy(param->agentId, "debug");
+			else
+				strncpy(param->agentId, tmp, 15);
+			
 			if (pthread_create(&tid, NULL, collectRoutine, param) == -1)
 			{
 				sprintf(logmsgBuf, "Failed to start collector");

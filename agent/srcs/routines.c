@@ -26,7 +26,6 @@ SRoutineParam* GenRoutineParam(int collectPeriod, int collectorID, Queue* queue)
     else
         ret->collectPeriod = collectPeriod;
     ret->queue = queue;
-    ret->collectorID = collectorID;
     return ret;
 }
 
@@ -47,13 +46,13 @@ void* CpuInfoRoutine(void* param)
     Log(logger, LOG_INFO, logmsgBuf);
 
     SCData* collectedData;
-
+    
     while (1)
     {
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
-        collectedData = CollectEachCpuInfo(cpuCnt, toMs, buf, pParam->collectPeriod);
+        collectedData = CollectEachCpuInfo(cpuCnt, toMs, buf, pParam->collectPeriod, pParam->agentId);
         
         pthread_mutex_lock(&queue->lock);
         Push(collectedData, queue);
@@ -78,7 +77,7 @@ void* MemInfoRoutine(void* param)
     SRoutineParam* pParam = (SRoutineParam*)param;
     Queue* queue = pParam->queue;
     Logger* logger = pParam->logger;
-    char logmsgBuf[128]; 
+    char logmsgBuf[128];
     SCData* collectedData;
     ulong collectPeriodUs = pParam->collectPeriod * 1000;
 
@@ -90,7 +89,7 @@ void* MemInfoRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
-        collectedData = CollectMemInfo(buf, pParam->collectPeriod);
+        collectedData = CollectMemInfo(buf, pParam->collectPeriod, pParam->agentId);
 
         pthread_mutex_lock(&queue->lock);
         Push(collectedData, queue);
@@ -159,7 +158,7 @@ void* NetInfoRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
-        collectedData = CollectNetInfo(buf, nicCount, pParam->collectPeriod);
+        collectedData = CollectNetInfo(buf, nicCount, pParam->collectPeriod, pParam->agentId);
 
         pthread_mutex_lock(&queue->lock);
         Push(collectedData, queue);
@@ -185,7 +184,7 @@ void* ProcInfoRoutine(void* param)
     Logger* logger = pParam->logger;
     char logmsgBuf[128];
     ulong collectPeriodUs = pParam->collectPeriod * 1000;
-
+    
     sprintf(logmsgBuf, "Start process information collection routine in %d ms cycle", pParam->collectPeriod);
     Log(logger, LOG_INFO, logmsgBuf);
 
@@ -198,7 +197,7 @@ void* ProcInfoRoutine(void* param)
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
         memset(dataBuf, 0, 1024 * 1024);
-        collectedData = CollectProcInfo(buf, dataBuf, pParam->collectPeriod);
+        collectedData = CollectProcInfo(buf, dataBuf, pParam->collectPeriod, pParam->agentId);
 
         pthread_mutex_lock(&queue->lock);
         Push(collectedData, queue);
@@ -274,7 +273,7 @@ void* DiskInfoRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
-        collectedData = CollectDiskInfo(buf, diskDevCnt, pParam->collectPeriod);
+        collectedData = CollectDiskInfo(buf, diskDevCnt, pParam->collectPeriod, pParam->agentId);
 
         pthread_mutex_lock(&queue->lock);
         Push(collectedData, queue);
