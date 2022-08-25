@@ -11,6 +11,8 @@
 #include "collector.h"
 #include "confParser.h"
 
+const Logger* g_logger;
+
 void HandleSignal(int);
 pthread_t RunCollector(void* (*)(void*), const char*, const char*, Logger*, Queue*, SHashTable*);
 Logger* GenLogger(SHashTable*);
@@ -32,7 +34,7 @@ int main(int argc, char** argv)
 	}
 	char* value;
 	char logmsgBuf[128] = { 0, };
-	Logger* logger = GenLogger(options);
+	g_logger = GenLogger(options);
 	
 	if ((value = GetValueByKey(CONF_KEY_RUN_AS_DAEMON, options)) != NULL)
 	{
@@ -62,14 +64,14 @@ int main(int argc, char** argv)
 	
 	Queue* queue = NewQueue();
 
-	pthread_t cpuTid = RunCollector(CpuInfoRoutine, CONF_KEY_RUN_CPU_COLLECTOR, CONF_KEY_CPU_COLLECTION_PERIOD, logger, queue, options);
-	pthread_t memTid = RunCollector(MemInfoRoutine, CONF_KEY_RUN_MEM_COLLECTOR, CONF_KEY_MEM_COLLECTION_PERIOD, logger, queue, options);
-	pthread_t netTid = RunCollector(NetInfoRoutine, CONF_KEY_RUN_NET_COLLECTOR, CONF_KEY_NET_COLLECTION_PERIOD, logger, queue, options);
-	pthread_t procTid = RunCollector(ProcInfoRoutine, CONF_KEY_RUN_PROC_COLLECTOR, CONF_KEY_PROC_COLLECTION_PERIOD, logger, queue, options);
-	pthread_t diskTid = RunCollector(DiskInfoRoutine, CONF_KEY_RUN_DISK_COLLECTOR, CONF_KEY_DISK_COLLECTION_PERIOD, logger, queue, options);
+	pthread_t cpuTid = RunCollector(CpuInfoRoutine, CONF_KEY_RUN_CPU_COLLECTOR, CONF_KEY_CPU_COLLECTION_PERIOD, g_logger, queue, options);
+	pthread_t memTid = RunCollector(MemInfoRoutine, CONF_KEY_RUN_MEM_COLLECTOR, CONF_KEY_MEM_COLLECTION_PERIOD, g_logger, queue, options);
+	pthread_t netTid = RunCollector(NetInfoRoutine, CONF_KEY_RUN_NET_COLLECTOR, CONF_KEY_NET_COLLECTION_PERIOD, g_logger, queue, options);
+	pthread_t procTid = RunCollector(ProcInfoRoutine, CONF_KEY_RUN_PROC_COLLECTOR, CONF_KEY_PROC_COLLECTION_PERIOD, g_logger, queue, options);
+	pthread_t diskTid = RunCollector(DiskInfoRoutine, CONF_KEY_RUN_DISK_COLLECTOR, CONF_KEY_DISK_COLLECTION_PERIOD, g_logger, queue, options);
 	
 	signal(SIGPIPE, SIG_IGN);
-	Log(logger, LOG_INFO, "Ignored SIGPIPE");
+	Log(g_logger, LOG_INFO, "Ignored SIGPIPE");
 	
 	// handle below signal
 	signal(SIGBUS, HandleSignal);	// bus error
@@ -82,7 +84,7 @@ int main(int argc, char** argv)
 
 	pthread_t senderTid;
 	SSenderParam senderParam;
-	senderParam.logger = logger;
+	senderParam.logger = g_logger;
 	senderParam.queue = queue;
 
 	if ((value = GetValueByKey(CONF_KEY_HOST_ADDRESS, options)) != NULL)
@@ -92,10 +94,11 @@ int main(int argc, char** argv)
 	value = GetValueByKey(CONF_KEY_HOST_PORT, options);
 	senderParam.port = value != NULL ? atoi(value) : 4242;
 
+	// why did you make sender thread...?
 	if (pthread_create(&senderTid, NULL, SendRoutine, &senderParam) == -1)
 	{
 		sprintf(logmsgBuf, "Fail to start sender");
-		Log(logger, LOG_FATAL, logmsgBuf);
+		Log(g_logger, LOG_FATAL, logmsgBuf);
 		exit(EXIT_FAILURE);
 	}
 
@@ -107,16 +110,32 @@ int main(int argc, char** argv)
 
 void HandleSignal(int signo)
 {
+	char logMsg[128];
 	switch (signo)
 	{
 	case SIGINT:
-		printf("killed by SIGINT\n");
+		sprintf(logMsg, "Killed by SIGINT");
+		Log(g_logger, LOG_ERROR, logMsg);
 		break;
 	case SIGABRT:
-		printf("killed by SIGIABRT\n");
+		sprintf(logMsg, "Killed by SIGIABRT");
+		Log(g_logger, LOG_FATAL, logMsg);
 		break;
 	case SIGSEGV:
-		printf("killed by SIGSEGV\n");
+		sprintf(logMsg, "Killed by SIGSEGV");
+		Log(g_logger, LOG_FATAL, logMsg);
+		break;
+	case SIGBUS:
+		sprintf(logMsg, "Killed by SIGBUS");
+		Log(g_logger, LOG_FATAL, logMsg);
+		break;
+	case SIGFPE:
+		sprintf(logMsg, "Killed by SIGFPE");
+		Log(g_logger, LOG_FATAL, logMsg);
+		break;
+	case SIGQUIT:
+		sprintf(logMsg, "Killed by SIGQUIT");
+		Log(g_logger, LOG_INFO, logMsg);
 		break;
 	}
 	exit(signo);
