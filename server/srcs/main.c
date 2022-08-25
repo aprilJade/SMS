@@ -9,7 +9,7 @@
 #include <pthread.h>
 #include <fcntl.h>
 #include <unistd.h>
-
+#include <errno.h>
 #include "receiveRoutine.h"
 #include "workerRoutine.h"
 #include "pgWrapper.h"
@@ -95,7 +95,34 @@ int main(int argc, char** argv)
 		fprintf(stderr, "conf error: %d\n", ret);
 		exit(1);
 	}
-    char* tmp = GetValueByKey(CONF_KEY_LISTEN_PORT, options);
+
+    char* tmp;
+    if ((tmp = GetValueByKey(CONF_KEY_RUN_AS_DAEMON, options)) != NULL)
+	{
+		if (strcmp(tmp, "true") == 0)
+		{
+			pid_t pid = fork();
+
+			if (pid == -1)
+			{
+				// TODO: handle error
+				fprintf(stderr, "ERROR: failed to fork: %s\n", strerror(errno));
+				exit(EXIT_FAILURE);
+			}
+
+			if (pid == 0)
+				exit(EXIT_SUCCESS);
+			
+			signal(SIGHUP, SIG_IGN);
+			close(STDIN_FILENO);
+			close(STDOUT_FILENO);
+			close(STDERR_FILENO);
+			chdir("/");
+			setsid();
+		}
+	}
+
+    tmp = GetValueByKey(CONF_KEY_LISTEN_PORT, options);
     unsigned short port = 4242;
     if (tmp != NULL)
         port = (unsigned short)atoi(tmp);
