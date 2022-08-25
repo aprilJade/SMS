@@ -446,7 +446,7 @@ SCData* CollectDiskInfo(char *buf, int diskDevCnt, int collectPeriod, char* agen
 			buf++;
 		
 		buf++;
-		if (strncmp(buf, "loop", 4) == 0)
+		if (strncmp(buf, "loop", 4) == 0 || strncmp(buf, "ram", 3) == 0)
 		{
 			while(*buf++ != '\n');
 			continue;

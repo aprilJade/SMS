@@ -239,7 +239,7 @@ int GetDiskDeviceCount(char* buf)
 			buf++;
 		
 		buf++;
-		if (strncmp(buf, "loop", 4) == 0)
+		if (strncmp(buf, "loop", 4) == 0 || strncmp(buf, "ram", 3) == 0)
 		{
 			while(*buf++ != '\n');
 			continue;
