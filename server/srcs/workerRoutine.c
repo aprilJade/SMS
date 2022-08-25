@@ -19,7 +19,8 @@ const char* procInsertSql =
     "INSERT INTO process_informations(agent_id, collect_time, pid, process_name, process_state, ppid, usr_run_time, sys_run_time, uname, cmdline) VALUES";
 const char* procInsertSqlNoCmd =
     "INSERT INTO process_informations(agent_id, collect_time, pid, process_name, process_state, ppid, usr_run_time, sys_run_time, uname) VALUES";
-
+const char* diskInsertSql =
+    "INSERT INTO disk_informations(agnet_id, collect_time, device_name, read_success_count, read_sector_count, read_time, write_success_count, write_sector_count, write_time, current_io_count, doing_io_time, weighted_doing_io_time) VALUES";
 void WorkCpuInfo(void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
@@ -186,17 +187,27 @@ void WorkDiskInfo(void* data, SWorkTools* tools)
     SBodyd* hBody = (SBodyd*)(data + sizeof(SHeader));
     struct tm* ts;
     ts = localtime(&hHeader->collectTime);
+    char sql[512];
 
     printf("WorkDiskInfo: Not implemented yet. just print disk info instead of DB storing\n");
     printf("%s: %d * %d  %d\n", 
         hHeader->agentId, hHeader->bodyCount, hHeader->bodySize, hHeader->collectPeriod);
     for (int i = 0; i < hHeader->bodyCount; i++)
     {
-        printf("%s: %ld %ld %ld, %ld %ld %ld, %d %ld %ld\n",
+        sprintf(sql, "%s (%s, \'%04d-%02d-%02d %02d:%02d:%02d\', \'%s\', %ld, %ld, %ld, %ld, %ld, %ld, %d, %ld, %ld);",
+            diskInsertSql,
+            hHeader->agentId,
+            ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
+            ts->tm_hour, ts->tm_min, ts->tm_sec,
             hBody->name,
-            hBody->readSectorCount, hBody->readSuccessCount, hBody->readTime,
-            hBody->writeSectorCount, hBody->writeSuccessCount, hBody->writeTime,
+            hBody->readSuccessCount, hBody->readSectorCount, hBody->readTime,
+            hBody->writeSuccessCount, hBody->writeSectorCount, hBody->writeTime,
             hBody->currentIoCount, hBody->doingIoTime, hBody->weightedDoingIoTime);
+        if (Query(tools->dbWrapper, sql) == -1)
+        {
+            sprintf(sql, "%d: Failed to store in DB: Disk", tools->workerId);
+            Log(tools->logger, LOG_ERROR, sql);
+        }
         hBody++;
     }
 }
