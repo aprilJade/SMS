@@ -1,5 +1,14 @@
 # SMS
-System Monitoring System의 약자입니다. 대상 OS를 모니터링하여 분석하는 시스템입니다.
+System Monitoring System의 약자입니다. 대상 OS를 모니터링하여 분석하는 어플리케이션입니다.
+
+## Agent
+클라이언트입니다. OS의 자원 정보를 수집하여 서버에 전송합니다.
+CPU 정보, Network 정보, Memory 정보, Process 정보, Disk 정보를 수집합니다.
+옵션 파일을 수정하여 수집할 정보를 취사선택하거나 수집 주기를 설정하여 수집할 수 있습니다.
+
+## Server
+Agent가 보내온 수집정보를 DB에 저장합니다. 
+DB는 PostgreSQL을 사용하였습니다.
 
 # 실행방법
 
@@ -23,8 +32,8 @@ sh run-agent.sh
 ```
 
 # Options
+- 각 옵션은 SMS/include/confParser.h를 참고해주세요.
 - .conf파일에 어플리케이션의 옵션을 작성합니다. 각 옵션은 다음과 같은 의미입니다.
-- 각 옵션은 SMS/include/confParser.h에 정의되어있습니다.
 
 ## agent options
 |옵션|설명|예시|
@@ -100,7 +109,6 @@ sh run-agent.sh
           - [ ] 종료 시간(종료 관련 시그널 받은 시간), 실행 유저 정보, PID, PPID, 간략한 메모리 정보, 간략한 CPU 정보 등
 - [ ] Agent
   - [ ] 고도화
-    - [x] ~Disk 정보 수집 및 전송~
 - [ ] Server
   - [ ] UDP 통신 스레드 생성
   - [ ] 데이터 수집 시 특정 자료구조에 담아두고 Delta, Average 계산
@@ -156,7 +164,8 @@ sh run-agent.sh
       - [x] ~설정한 횟수만큼 재연결 시도를 했음에도 재연결이 되지 않으면 프로세스 종료~
     - [x] ~표준 출력이나 에러 출력으로 출력하면 안되고 Log를 남긴다.~
         - [x] ~자체제작 Log라이브러리를 통해 Logging~
-  - [ ] 고도화
+  - [x] ~고도화~
+    - [x] ~Disk 정보 수집 및 전송~
     - [x] ~변동없는 데이터는 최초에 한번만 서버에 송신하고, 그 이후에는 송신하지 않기~
     - [x] ~실행 옵션 고도화~
       - [x] ~각 옵션마다 수집 주기 미입력 시 기본값 세팅 후 수집~
