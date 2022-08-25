@@ -99,10 +99,8 @@ sh run-agent.sh
           - [ ] Bus Error
           - [ ] 종료 시간(종료 관련 시그널 받은 시간), 실행 유저 정보, PID, PPID, 간략한 메모리 정보, 간략한 CPU 정보 등
 - [ ] Agent
-  - [ ] Deamon으로 전환
   - [ ] 고도화
     - [x] ~Disk 정보 수집 및 전송~
-  
 - [ ] Server
   - [ ] UDP 통신 스레드 생성
   - [ ] 데이터 수집 시 특정 자료구조에 담아두고 Delta, Average 계산
@@ -114,17 +112,14 @@ sh run-agent.sh
     - [ ] Network throughput per seconds
       - [ ] number of packet
       - [ ] I/O bytes per seconds
-  - [ ] Daemon 전환 준비
-    - [x] ~서버가 동작 중일 때 agent는 언제든 다시 연결 가능하게 한다.~
-    - [x] ~표준 출력이나 에러 출력으로 출력하면 안되고 Log를 남긴다.~
-      - [x] ~자체제작 Log라이브러리를 통해 Logging~
 - [ ] LD-PRELOAD
   - [x] ~학습 및 이해하기~
   - [ ] 구현하기
     - [x] ~송신하는 패킷 후킹하여 송신하기~
     - [ ] 서버에서 수신하여 별도의 테이블에 저장하기
+
 # Checked todo list 
-- [ ] 공통
+- [x] ~공통~
   - [x] ~패킷 데이터 자료형 다시 생각해보기 (man 5 proc 참조(각 자료에 대한 자료형 명시되어있음))~
   - [x] ~동적 라이브러리로 분할하기~
     - [x] ~SMSutils - Logger, Queue, ...~
@@ -142,6 +137,7 @@ sh run-agent.sh
       - [x] ~Process Routine~
 
 - [x] ~Agent~
+  - [x] ~Deamon으로 전환~
   - [x] ~데이터 수집하여 패킷으로 만들고 송신하기 (각 정보별로 스레드 동작)~
     - [x] ~CPU 정보~
     - [x] ~메모리 정보~
@@ -191,3 +187,7 @@ sh run-agent.sh
     - [x] ~N개의 Worker 스레드에서 하나의 DB 커넥션에 문제없이 Query할 수 있도록 처리 (locking)~
   - [x] ~시스템 로깅 하기~
     - [x] ~server 시작 혹은 종료 혹은 에러 등~
+  - [x] ~Daemon 전환~
+    - [x] ~서버가 동작 중일 때 agent는 언제든 다시 연결 가능하게 한다.~
+    - [x] ~표준 출력이나 에러 출력으로 출력하면 안되고 Log를 남긴다.~
+      - [x] ~자체제작 Log라이브러리를 통해 Logging~
