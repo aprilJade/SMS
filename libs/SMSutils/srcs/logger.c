@@ -118,7 +118,7 @@ int Log(Logger* handle, int logLevel, char* logMsg)
     struct tm* timeStruct;
     localTime = time(NULL);
     timeStruct = localtime(&localTime);
-    char msgBuf[128] = { 0, };
+    char msgBuf[LOG_BUFFER_SIZE] = { 0, };
     sprintf(msgBuf, "[%02d:%02d:%02d+0900] %s %s\n", 
         timeStruct->tm_hour,
         timeStruct->tm_min,

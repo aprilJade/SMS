@@ -82,7 +82,7 @@ int main(int argc, char** argv)
 	signal(SIGABRT, HandleSignal);	// abort signal
 	signal(SIGFPE, HandleSignal);	// floating point error
 	signal(SIGQUIT, HandleSignal);	// quit signal
-	signal(SIGSEGV, HandleSignal); // segmentation fault
+	signal(SIGSEGV, HandleSignal);  // segmentation fault
 	signal(SIGINT, HandleSignal);	// interrupted
 	signal(SIGILL, HandleSignal);	// illegal instruction
 	signal(SIGSYS, HandleSignal);	// system call error
@@ -139,6 +139,18 @@ void HandleSignal(int signo)
 		break;
 	case SIGFPE:
 		sprintf(logMsg, "Killed by SIGFPE");
+		Log(g_logger, LOG_FATAL, logMsg);
+		break;
+	case SIGTERM:
+		sprintf(logMsg, "Killed by SIGTERM");
+		Log(g_logger, LOG_FATAL, logMsg);
+		break;
+	case SIGSYS:
+		sprintf(logMsg, "Killed by SIGSYS");
+		Log(g_logger, LOG_FATAL, logMsg);
+		break;
+	case SIGILL:
+		sprintf(logMsg, "Killed by SIGILL");
 		Log(g_logger, LOG_FATAL, logMsg);
 		break;
 	case SIGQUIT:
