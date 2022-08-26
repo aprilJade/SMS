@@ -101,11 +101,11 @@ sh run-agent.sh
     - [ ] System Log 추가
       - [ ] agent 실행 시 로깅
         - [ ] 실행 시간, 실행 유저 정보, PID, PPID 등
-      - [ ] agent 종료 시 로깅
-        - [ ] Daemon이면 종료시킬 때 시그널을 보내서 할텐데, 종료 때 시그널이 무엇인지 조사하여 처리
-          - [ ] Abort
-          - [ ] Segfault
-          - [ ] Bus Error
+      - [x] ~agent 종료 시 로깅~
+        - [x] ~Daemon이면 종료시킬 때 시그널을 보내서 할텐데, 종료 때 시그널이 무엇인지 조사하여 처리~
+          - [x] ~Abort~
+          - [x] ~Segfault~
+          - [x] ~Bus Error~
           - [ ] 종료 시간(종료 관련 시그널 받은 시간), 실행 유저 정보, PID, PPID, 간략한 메모리 정보, 간략한 CPU 정보 등
 - [ ] Agent
   - [ ] 고도화
