@@ -29,6 +29,16 @@ SRoutineParam* GenRoutineParam(int collectPeriod, int collectorID, Queue* queue)
     return ret;
 }
 
+ulong CalcTotalCpuIdleTime(SCData* collectedData)
+{
+    SHeader* hHeader = (SHeader*)collectedData->data;
+    SBodyc* hBody = (SBodyc*)(collectedData->data + sizeof(SHeader));
+    ulong totalIdle = 0;
+    for (int i = 0; i < hHeader->bodyCount; i++)
+        totalIdle += hBody[i].idleTime;
+    return totalIdle;
+}
+
 void* CpuInfoRoutine(void* param)
 {
     ulong prevTime, postTime, elapseTime;
@@ -46,14 +56,22 @@ void* CpuInfoRoutine(void* param)
     Log(logger, LOG_INFO, logmsgBuf);
 
     SCData* collectedData;
-    
+    ulong curIdle;
+    double deltaIdle;
+    ulong prevIdle;
+
     while (1)
     {
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
-
-        collectedData = CollectEachCpuInfo(cpuCnt, toMs, buf, pParam->collectPeriod, pParam->agentId);
         
+        collectedData = CollectEachCpuInfo(cpuCnt, toMs, buf, pParam->collectPeriod, pParam->agentId);
+
+        curIdle = CalcTotalCpuIdleTime(collectedData);
+        deltaIdle = (curIdle - prevIdle) / 4.0 * 5.0;
+        prevIdle = curIdle;
+        printf("CPU Usage: %lf\n", ((double)pParam->collectPeriod - deltaIdle) / (double)pParam->collectPeriod * 100.0);
+
         pthread_mutex_lock(&queue->lock);
         Push(collectedData, queue);
         pthread_mutex_unlock(&queue->lock);
