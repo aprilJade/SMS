@@ -7,11 +7,13 @@
 #include <sys/time.h>
 #include <string.h>
 #include <errno.h>
+#include <limits.h>
 #include "routines.h"
 #include "collector.h"
 #include "confParser.h"
 
 const Logger* g_logger;
+int g_stderrFd;
 
 void HandleSignal(int);
 pthread_t RunCollector(void* (*)(void*), const char*, const char*, Logger*, Queue*, SHashTable*);
@@ -55,10 +57,12 @@ int main(int argc, char** argv)
 			signal(SIGHUP, SIG_IGN);
 			close(STDIN_FILENO);
 			close(STDOUT_FILENO);
+			g_stderrFd = dup(STDERR_FILENO);
 			close(STDERR_FILENO);
 			chdir("/");
 			setsid();
 		}
+		
 	}
 
 	
@@ -79,7 +83,11 @@ int main(int argc, char** argv)
 	signal(SIGFPE, HandleSignal);	// floating point error
 	signal(SIGQUIT, HandleSignal);	// quit signal
 	signal(SIGSEGV, HandleSignal); // segmentation fault
-	signal(SIGINT, HandleSignal);
+	signal(SIGINT, HandleSignal);	// interrupted
+	signal(SIGILL, HandleSignal);	// illegal instruction
+	signal(SIGSYS, HandleSignal);	// system call error
+	signal(SIGTERM, HandleSignal);	// terminate signalr
+	signal(SIGKILL, HandleSignal);	// terminate signal
 
 
 	pthread_t senderTid;
@@ -110,7 +118,7 @@ int main(int argc, char** argv)
 
 void HandleSignal(int signo)
 {
-	char logMsg[128];
+	char logMsg[512];
 	switch (signo)
 	{
 	case SIGINT:
@@ -137,6 +145,25 @@ void HandleSignal(int signo)
 		sprintf(logMsg, "Killed by SIGQUIT");
 		Log(g_logger, LOG_INFO, logMsg);
 		break;
+	case SIGKILL:
+		sprintf(logMsg, "Killed by user");
+		Log(g_logger, LOG_INFO, logMsg);
+		break;
+	}
+
+	if (signo != SIGQUIT && signo != SIGKILL)
+	{
+		// TODO: handle log path in agent.conf is absolute path...
+		char buf[128];
+		getcwd(buf, 128);
+		char logPathBuf[128];
+		GenLogFileFullPath(g_logger->logPath, logPathBuf);
+		int len = strlen(logPathBuf);
+		memmove(logPathBuf, logPathBuf + 1, len - 1);
+		logPathBuf[len - 1] = 0;
+
+		sprintf(logMsg, "SMS: Agent is aborted. Check below log.\n%s%s\n", buf, logPathBuf);
+		write(g_stderrFd, logMsg, strlen(logMsg));
 	}
 	exit(signo);
 }

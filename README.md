@@ -93,7 +93,6 @@ sh run-agent.sh
       - [ ] delta값은 cpu 사용율, 메모리 사용율, 디스크 사용율, 네트워크 송수신 패킷수, 네트워크 송수신 바이트수를 계산 (모든 값은 초당 값으로 계산)
       - [ ] average값은 1시간 단위의 delta값을 측정 (1시간 평균 cpu사용율 등)
   - [ ] 코드 정리 (수시로 반복할 것)
-  - [x] ~signature검증법 개선 (strncmp()말고 좀더 좋게...)~
   - [ ] Logger 고도화
     - [ ] Logger 옵션 설정
       - [ ] 시간대 설정
@@ -101,12 +100,6 @@ sh run-agent.sh
     - [ ] System Log 추가
       - [ ] agent 실행 시 로깅
         - [ ] 실행 시간, 실행 유저 정보, PID, PPID 등
-      - [x] ~agent 종료 시 로깅~
-        - [x] ~Daemon이면 종료시킬 때 시그널을 보내서 할텐데, 종료 때 시그널이 무엇인지 조사하여 처리~
-          - [x] ~Abort~
-          - [x] ~Segfault~
-          - [x] ~Bus Error~
-          - [ ] 종료 시간(종료 관련 시그널 받은 시간), 실행 유저 정보, PID, PPID, 간략한 메모리 정보, 간략한 CPU 정보 등
 - [ ] Agent
   - [ ] 고도화
 - [ ] Server
@@ -143,6 +136,7 @@ sh run-agent.sh
       - [x] ~Memory Routine~
       - [x] ~Network Routine~
       - [x] ~Process Routine~
+  - [x] ~signature검증법 개선 (strncmp()말고 좀더 좋게...)~
 
 - [x] ~Agent~
   - [x] ~Deamon으로 전환~
@@ -171,6 +165,11 @@ sh run-agent.sh
       - [x] ~각 옵션마다 수집 주기 미입력 시 기본값 세팅 후 수집~
       - [x] ~옵션의 수집 주기가 기본값보다 낮을 시 기본값으로 세팅 후 수집~
       - [x] ~Log 저장 경로 옵션으로 입력. 미입력시 기본값~ 
+      - [x] ~agent 종료 시 로깅~
+        - [x] ~Daemon이면 종료시킬 때 시그널을 보내서 할텐데, 종료 때 시그널이 무엇인지 조사하여 처리~
+          - [x] ~Abort~
+          - [x] ~Segfault~
+          - [x] ~Bus Error~
   
   
 - [x] ~Server~

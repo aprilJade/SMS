@@ -11,7 +11,7 @@ SPgWrapper* NewPgWrapper(const char* conninfo)
     if (PQstatus(newWrapper->conn) != CONNECTION_OK)
     {
         // TODO: handle connection error
-        printf("DB: connection fail\n");
+        fprintf(stderr, "DB: connection fail\n");
         free(newWrapper);
         return NULL;
     }

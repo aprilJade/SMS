@@ -61,22 +61,28 @@ static int CreateDir(char* logPath)
     }
 }
 
-static int OpenLogFile(char* logPath)
+int GenLogFileFullPath(char* logPath, char* buf)
 {
-    char buf[260];
     time_t localTime;
     struct tm* timeStruct;
 
     localTime = time(NULL);
     timeStruct = localtime(&localTime);
-    if (access(logPath, F_OK) != 0)
-        CreateDir(logPath);
         
     sprintf(buf, "%s/%04d-%02d-%02d.log",
         logPath,
         timeStruct->tm_year + 1900,
         timeStruct->tm_mon + 1,
         timeStruct->tm_mday);
+    return 0;
+}
+
+static int OpenLogFile(char* logPath)
+{
+    char buf[260];
+    if (access(logPath, F_OK) != 0)
+        CreateDir(logPath);
+    GenLogFileFullPath(logPath, buf);
     return open(buf, O_CREAT | O_APPEND | O_RDWR, 0777);
 }
 
@@ -96,6 +102,7 @@ Logger* NewLogger(char* logPath, int logLevel)
         return NULL;
     }
     logger->loggingLevel = logLevel;
+    logger->logPath = strdup(logPath);
     return logger;
 }
 

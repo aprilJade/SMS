@@ -9,12 +9,14 @@
 typedef struct Logger
 {
     pthread_mutex_t fdLock;
+    char* logPath;
     int loggingLevel;
     int logFd;
 } Logger;
 
 Logger* NewLogger(char* logPath, int logLevel);
 int Log(Logger* handle, int logLevel, char* logMsg);
+int GenLogFileFullPath(char* logPath, char* buf);
 
 enum eLoggingLevel
 {
