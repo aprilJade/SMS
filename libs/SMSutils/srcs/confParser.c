@@ -85,7 +85,7 @@ int ParseConf(const char* confPath, SHashTable* table)
         key[keyLen] = 0;
         if (keyLen == lineLen) // this means there is no value...
         {
-            AddKeyValue(key, NULL, table);
+            AddKeyValue(key, NULL, 0, table);
             free(key);
             continue;
         }
@@ -97,7 +97,7 @@ int ParseConf(const char* confPath, SHashTable* table)
             return 1;
         strncpy(value, line + keyLen + 1, valueLen);
         value[valueLen] = 0;
-        AddKeyValue(key, value, table);
+        AddKeyValue(key, value, valueLen + 1,table);
         free(key);
         free(value);
     }

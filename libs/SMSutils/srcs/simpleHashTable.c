@@ -26,7 +26,7 @@ SHashTable* NewHashTable()
     return result;
 }
 
-int AddKeyValue(const char* key, const char* value, SHashTable* hashTable)
+int AddKeyValue(const char* key, const void* value, const size_t valueSize, SHashTable* hashTable)
 {
     assert(key && value && hashTable);
     
@@ -40,15 +40,15 @@ int AddKeyValue(const char* key, const char* value, SHashTable* hashTable)
     }
     SHashNode* node = (SHashNode*)malloc(sizeof(SHashNode));
     node->key = hashedKey;
-    node->value = strdup(value);
+    node->value = malloc(valueSize);
+    memcpy(node->value, value, valueSize);
     node->next = NULL;
-
     list->next = node;
 
     return 0;
 }
 
-char* GetValueByKey(const char* key, SHashTable* hashTable)
+void* GetValueByKey(const char* key, SHashTable* hashTable)
 {
     assert(key && hashTable);
     unsigned int hashedKey = hash65599(key);
@@ -83,7 +83,7 @@ void ReleaseHashTable(SHashTable* hashTable)
     }
 }
 
-int UpdateValue(const char* key, const char* newValue, SHashTable* hashTable)
+int UpdateValue(const char* key, const void* newValue, SHashTable* hashTable)
 {
     // Not implemented yet
 }

@@ -5,10 +5,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#define DETAIL_PRINT_CPU 0
-#define DETAIL_PRINT_MEM 0
-#define DETAIL_PRINT_NET 0
-#define DETAIL_PRINT_PROC 0
+#define RECV_BUFFER_SIZE 1024 * 512
 
 int IsValidSignature(int signature)
 {
@@ -29,7 +26,7 @@ void* ReceiveRoutine(void* param)
 {
     SReceiveParam* pParam = (SReceiveParam*)param;
     int readSize;
-    char buf[1024 * 1024] = { 0, };
+    char buf[RECV_BUFFER_SIZE] = { 0, };
     Logger* logger = pParam->logger;
     Queue* queue = pParam->queue;
     char logMsg[128];
@@ -39,7 +36,7 @@ void* ReceiveRoutine(void* param)
     SHeader* hHeader;
     while (1)
     {
-        if ((readSize = read(pParam->clientSock, buf, 1024 * 1024)) == -1)
+        if ((readSize = read(pParam->clientSock, buf, RECV_BUFFER_SIZE)) == -1)
         {
             sprintf(logMsg, "Failed to receive packet from %s:%d", pParam->host, pParam->port);
             Log(logger, LOG_ERROR, logMsg);

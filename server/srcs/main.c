@@ -19,6 +19,73 @@
 #define MAX_WORKER_COUNT 16
 #define DEFAULT_PORT 4242
 
+const Logger* g_logger;
+int g_stderrFd;
+
+void HandleSignal(int signo)
+{
+	char logMsg[512];
+	switch (signo)
+	{
+	case SIGINT:
+		sprintf(logMsg, "Killed by SIGINT");
+		Log(g_logger, LOG_ERROR, logMsg);
+		break;
+	case SIGABRT:
+		sprintf(logMsg, "Killed by SIGIABRT");
+		Log(g_logger, LOG_FATAL, logMsg);
+		break;
+	case SIGSEGV:
+		sprintf(logMsg, "Killed by SIGSEGV");
+		Log(g_logger, LOG_FATAL, logMsg);
+		break;
+	case SIGBUS:
+		sprintf(logMsg, "Killed by SIGBUS");
+		Log(g_logger, LOG_FATAL, logMsg);
+		break;
+	case SIGFPE:
+		sprintf(logMsg, "Killed by SIGFPE");
+		Log(g_logger, LOG_FATAL, logMsg);
+		break;
+	case SIGTERM:
+		sprintf(logMsg, "Killed by SIGTERM");
+		Log(g_logger, LOG_FATAL, logMsg);
+		break;
+	case SIGSYS:
+		sprintf(logMsg, "Killed by SIGSYS");
+		Log(g_logger, LOG_FATAL, logMsg);
+		break;
+	case SIGILL:
+		sprintf(logMsg, "Killed by SIGILL");
+		Log(g_logger, LOG_FATAL, logMsg);
+		break;
+	case SIGQUIT:
+		sprintf(logMsg, "Killed by SIGQUIT");
+		Log(g_logger, LOG_INFO, logMsg);
+		break;
+	case SIGKILL:
+		sprintf(logMsg, "Killed by user");
+		Log(g_logger, LOG_INFO, logMsg);
+		break;
+	}
+
+	if (signo != SIGQUIT && signo != SIGKILL)
+	{
+		// TODO: handle log path in agent.conf is absolute path...
+		char buf[128];
+		getcwd(buf, 128);
+		char logPathBuf[128];
+		GenLogFileFullPath(g_logger->logPath, logPathBuf);
+		int len = strlen(logPathBuf);
+		memmove(logPathBuf, logPathBuf + 1, len - 1);
+		logPathBuf[len - 1] = 0;
+
+		sprintf(logMsg, "SMS: Server is aborted. Check below log.\n%s%s\n", buf, logPathBuf);
+		write(g_stderrFd, logMsg, strlen(logMsg));
+	}
+	exit(signo);
+}
+
 int OpenSocket(short port)
 {
     struct sockaddr_in servAddr;
@@ -48,7 +115,12 @@ void CreateWorker(int workerCount, Logger* logger, Queue* queue)
     pthread_t tid;
     SPgWrapper* db = NewPgWrapper("dbname = postgres");
     if (db == NULL)
+    {
+        Log(logger, LOG_FATAL, "PostgreSQL connection failed");
+        fprintf(stderr, "PostgreSQL connection failed. Check psql status running below commands.\nsudo service postgresql status\n");
         exit(1);
+    }
+
     for (int i = 0; i < workerCount; i++)
     {
         param = (SWorkerParam*)malloc(sizeof(SWorkerParam));
@@ -122,15 +194,26 @@ int main(int argc, char** argv)
 		}
 	}
 
+    signal(SIGBUS, HandleSignal);	// bus error
+	signal(SIGABRT, HandleSignal);	// abort signal
+	signal(SIGFPE, HandleSignal);	// floating point error
+	signal(SIGQUIT, HandleSignal);	// quit signal
+	signal(SIGSEGV, HandleSignal);  // segmentation fault
+	signal(SIGINT, HandleSignal);	// interrupted
+	signal(SIGILL, HandleSignal);	// illegal instruction
+	signal(SIGSYS, HandleSignal);	// system call error
+	signal(SIGTERM, HandleSignal);	// terminate signalr
+	signal(SIGKILL, HandleSignal);	// terminate signal
+
     tmp = GetValueByKey(CONF_KEY_LISTEN_PORT, options);
     unsigned short port = 4242;
     if (tmp != NULL)
         port = (unsigned short)atoi(tmp);
-	Logger* logger = GenLogger(options);
+	g_logger = GenLogger(options);
     char logMsg[128];
 
     sprintf(logMsg, "Server loaded: %d", getpid());
-    Log(logger, LOG_INFO, logMsg);
+    Log(g_logger, LOG_INFO, logMsg);
     
 
     int servFd, clientFd;
@@ -149,42 +232,42 @@ int main(int argc, char** argv)
     int workerCount = 2;
     if (tmp != NULL)
         workerCount = atoi(tmp);
-    CreateWorker(workerCount, logger, queue);
+    CreateWorker(workerCount, g_logger, queue);
 
     while (1)
     {
         if (listen(servFd, CONNECTION_COUNT) == -1)
         {
-            Log(logger, LOG_FATAL, "Failed listening");
+            Log(g_logger, LOG_FATAL, "Failed listening");
             exit(1);
         }
 
         sprintf(logMsg, "Wait for connection from client at %d", port);
-        Log(logger, LOG_INFO, logMsg);
+        Log(g_logger, LOG_INFO, logMsg);
 
         clientFd = accept(servFd, (struct sockaddr*)&clientAddr, &len);
         if (clientFd == -1)
         {
-            Log(logger, LOG_FATAL, "Failed to accept connection");
+            Log(g_logger, LOG_FATAL, "Failed to accept connection");
             exit(1);
         }
 
         param = (SReceiveParam*)malloc(sizeof(SReceiveParam));
         param->clientSock = clientFd;
-        param->logger = logger;
+        param->logger = g_logger;
         param->host = inet_ntoa(clientAddr.sin_addr);
         param->port = ntohs(clientAddr.sin_port);
         param->queue = queue;
 
         if (pthread_create(&tid, NULL, ReceiveRoutine, param) == -1)
         {
-            Log(logger, LOG_FATAL, "Failed to create receiver");
+            Log(g_logger, LOG_FATAL, "Failed to create receiver");
             close(clientFd);
             continue;
         }
 
         sprintf(logMsg, "Start receiver for %s:%d", param->host, param->port);
-        Log(logger, LOG_INFO, logMsg);
+        Log(g_logger, LOG_INFO, logMsg);
         pthread_detach(tid);
     }
 }   

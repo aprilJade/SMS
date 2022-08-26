@@ -21,7 +21,8 @@ const char* procInsertSqlNoCmd =
     "INSERT INTO process_informations(agent_id, collect_time, pid, process_name, process_state, ppid, usr_run_time, sys_run_time, uname) VALUES";
 const char* diskInsertSql =
     "INSERT INTO disk_informations(agnet_id, collect_time, device_name, read_success_count, read_sector_count, read_time, write_success_count, write_sector_count, write_time, current_io_count, doing_io_time, weighted_doing_io_time) VALUES";
-void WorkCpuInfo(void* data, SWorkTools* tools)
+
+void InsertCpuInfo(void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodyc* hBody;
@@ -50,7 +51,7 @@ void WorkCpuInfo(void* data, SWorkTools* tools)
     }
 }
 
-void WorkMemInfo(void* data, SWorkTools* tools)
+void InsertMemInfo(void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodym* hBody = (SBodym*)(data + sizeof(SHeader));
@@ -76,7 +77,7 @@ void WorkMemInfo(void* data, SWorkTools* tools)
     }
 }
 
-void WorkNetInfo(void* data, SWorkTools* tools)
+void InsertNetInfo(void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodyn* hBody = (SBodyn*)(data + sizeof(SHeader));
@@ -107,7 +108,7 @@ void WorkNetInfo(void* data, SWorkTools* tools)
     }
 }
 
-void WorkProcInfo(void* data, SWorkTools* tools)
+void InsertProcInfo(void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     struct tm* ts;
@@ -122,7 +123,6 @@ void WorkProcInfo(void* data, SWorkTools* tools)
     SBodyp* hBody;
     char cmdlineBuf[2048];
 
-    // Start transaction block
     if (Query(tools->dbWrapper, "BEGIN") == -1)
     {
         sprintf(sql, "%d: Failed to BEGIN command: Process", tools->workerId);
@@ -172,8 +172,7 @@ void WorkProcInfo(void* data, SWorkTools* tools)
         }
 
     }
-    
-    // Commit current transaction block
+
     if (Query(tools->dbWrapper, "END") == -1)
     {
         sprintf(sql, "%d: Failed to END command: Process", tools->workerId);
@@ -181,7 +180,7 @@ void WorkProcInfo(void* data, SWorkTools* tools)
     }
 }
 
-void WorkDiskInfo(void* data, SWorkTools* tools)
+void InsertDiskInfo(void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodyd* hBody = (SBodyd*)(data + sizeof(SHeader));
@@ -189,9 +188,6 @@ void WorkDiskInfo(void* data, SWorkTools* tools)
     ts = localtime(&hHeader->collectTime);
     char sql[512];
 
-    printf("WorkDiskInfo: Not implemented yet. just print disk info instead of DB storing\n");
-    printf("%s: %d * %d  %d\n", 
-        hHeader->agentId, hHeader->bodyCount, hHeader->bodySize, hHeader->collectPeriod);
     for (int i = 0; i < hHeader->bodyCount; i++)
     {
         sprintf(sql, "%s (%s, \'%04d-%02d-%02d %02d:%02d:%02d\', \'%s\', %ld, %ld, %ld, %ld, %ld, %ld, %d, %ld, %ld);",
@@ -262,19 +258,19 @@ void* WorkerRoutine(void* param)
         switch(pktId)
         {
         case 'c':
-            WorkCpuInfo(data, &workTools);
+            InsertCpuInfo(data, &workTools);
             break;
         case 'm':
-            WorkMemInfo(data, &workTools);
+            InsertMemInfo(data, &workTools);
             break;
         case 'n':
-            WorkNetInfo(data, &workTools);
+            InsertNetInfo(data, &workTools);
             break;
         case 'p':
-            WorkProcInfo(data, &workTools);
+            InsertProcInfo(data, &workTools);
             break;
         case 'd':
-            WorkDiskInfo(data, &workTools);
+            InsertDiskInfo(data, &workTools);
             break;
         }
         free(data);
