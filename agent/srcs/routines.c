@@ -72,7 +72,7 @@ void* CpuInfoRoutine(void* param)
         curIdle = CalcTotalCpuIdleTime(collectedData);
         deltaIdle = (float)(curIdle - prevIdle) / 4.0 * 5.0;
         prevIdle = curIdle;
-        printf("CPU Usage: %f\n", ((float)pParam->collectPeriod - deltaIdle) / (float)pParam->collectPeriod * 100.0);
+        //printf("CPU Usage: %f\n", ((float)pParam->collectPeriod - deltaIdle) / (float)pParam->collectPeriod * 100.0);
 
         pthread_mutex_lock(&queue->lock);
         Push(collectedData, queue);
@@ -106,7 +106,6 @@ void* MemInfoRoutine(void* param)
 
     float memUsage;
     float swapUsage;
-
     SBodym* hBody;
 
     while(1)
@@ -119,8 +118,8 @@ void* MemInfoRoutine(void* param)
         
         memUsage = (float)(hBody->memTotal - hBody->memAvail) / (float)hBody->memTotal * 100;
         swapUsage = (float)(hBody->swapTotal - hBody->swapFree) / (float)hBody->swapTotal * 100; 
-        printf("Memory usage: %f\n", memUsage);
-        printf("Swap usage: %f\n", swapUsage);
+        //printf("Memory usage: %f\n", memUsage);
+        //printf("Swap usage: %f\n", swapUsage);
 
         pthread_mutex_lock(&queue->lock);
         Push(collectedData, queue);
@@ -183,6 +182,25 @@ void* NetInfoRoutine(void* param)
     Log(logger, LOG_INFO, logmsgBuf);
 
     SCData* collectedData;
+    
+    ulong prevRecvBytes;
+    ulong curRecvBytes;
+    float recvBytesPerSec;
+
+    ulong prevRecvPackets;
+    ulong curRecvPackets;
+    float recvPacketsPerSec;
+
+    ulong prevSendBytes;
+    ulong curSendBytes;
+    float sendBytesPerSec;
+
+    ulong prevSendPackets;
+    ulong curSendPackets;
+    float sendPacketsPerSec;
+
+    SHeader* hHeader;
+    SBodyn* hBody;
 
     while(1)
     {
@@ -190,7 +208,33 @@ void* NetInfoRoutine(void* param)
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
         collectedData = CollectNetInfo(buf, nicCount, pParam->collectPeriod, pParam->agentId);
+        
+        hHeader = (SHeader*)(collectedData->data);
+        hBody = (SBodyn*)(collectedData->data + sizeof(SHeader));
+        int lastIdx = hHeader->bodyCount - 1;
+        printf("<=== %s information ===>\n", hBody[lastIdx].name);
 
+        curRecvBytes = hBody[lastIdx].recvBytes;
+        recvBytesPerSec = (float)(curRecvBytes - prevRecvBytes) / (float)pParam->collectPeriod * 1000.0;
+        prevRecvBytes = curRecvBytes;
+        printf("Received bytes: %f B/s\n", recvBytesPerSec);
+
+        curRecvPackets = hBody[lastIdx].recvPackets;
+        recvPacketsPerSec = (float)(curRecvPackets - prevRecvPackets) / (float)pParam->collectPeriod * 1000.0;
+        prevRecvPackets = curRecvPackets;
+        printf("Received packets: %f per s\n", recvPacketsPerSec);
+
+        curSendBytes = hBody[lastIdx].sendBytes;
+        sendBytesPerSec = (float)(curSendBytes - prevSendBytes) / (float)pParam->collectPeriod * 1000.0;
+        prevSendBytes = curSendBytes;
+        printf("Send bytes: %f B/s\n", sendBytesPerSec);
+
+        curSendPackets = hBody[lastIdx].sendPackets;
+        sendPacketsPerSec = (float)(curSendPackets - prevSendPackets) / (float)pParam->collectPeriod * 1000.0;
+        prevSendPackets =curSendPackets;
+        printf("Send packets: %f per s\n", sendPacketsPerSec);
+
+        
         pthread_mutex_lock(&queue->lock);
         Push(collectedData, queue);
         pthread_mutex_unlock(&queue->lock);
