@@ -57,8 +57,10 @@ void* CpuInfoRoutine(void* param)
 
     SCData* collectedData;
     ulong curIdle;
-    double deltaIdle;
     ulong prevIdle;
+    float deltaIdle;
+    //int pdSize = (60 * 60 * 12 * 1000) / pParam->collectPeriod;
+    //double* pd = (double*)malloc(sizeof(double) * pdSize);
 
     while (1)
     {
@@ -68,9 +70,9 @@ void* CpuInfoRoutine(void* param)
         collectedData = CollectEachCpuInfo(cpuCnt, toMs, buf, pParam->collectPeriod, pParam->agentId);
 
         curIdle = CalcTotalCpuIdleTime(collectedData);
-        deltaIdle = (curIdle - prevIdle) / 4.0 * 5.0;
+        deltaIdle = (float)(curIdle - prevIdle) / 4.0 * 5.0;
         prevIdle = curIdle;
-        printf("CPU Usage: %lf\n", ((double)pParam->collectPeriod - deltaIdle) / (double)pParam->collectPeriod * 100.0);
+        printf("CPU Usage: %f\n", ((float)pParam->collectPeriod - deltaIdle) / (float)pParam->collectPeriod * 100.0);
 
         pthread_mutex_lock(&queue->lock);
         Push(collectedData, queue);
@@ -102,12 +104,23 @@ void* MemInfoRoutine(void* param)
     sprintf(logmsgBuf, "Start memory information collection routine in %d ms cycle", pParam->collectPeriod);
     Log(logger, LOG_INFO, logmsgBuf);
 
+    float memUsage;
+    float swapUsage;
+
+    SBodym* hBody;
+
     while(1)
     {
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
         collectedData = CollectMemInfo(buf, pParam->collectPeriod, pParam->agentId);
+        hBody = (SBodym*)(collectedData->data + sizeof(SHeader));
+        
+        memUsage = (float)(hBody->memTotal - hBody->memAvail) / (float)hBody->memTotal * 100;
+        swapUsage = (float)(hBody->swapTotal - hBody->swapFree) / (float)hBody->swapTotal * 100; 
+        printf("Memory usage: %f\n", memUsage);
+        printf("Swap usage: %f\n", swapUsage);
 
         pthread_mutex_lock(&queue->lock);
         Push(collectedData, queue);
