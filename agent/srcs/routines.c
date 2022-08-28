@@ -10,12 +10,7 @@
 
 #define RECONNECT_PERIOD 6    // seconds
 #define RECONNECT_MAX_TRY 100
-
-#define NO_SLEEP 0
-#define PRINT_CPU 0
-#define PRINT_MEM 0
-#define PRINT_NET 0
-#define PRINT_PROC 0
+#define AVG_TARGET_TIME_AS_MS 3600000.0 // 1 hour => 60 * 60 * 1000ms
 
 
 SRoutineParam* GenRoutineParam(int collectPeriod, int collectorID, Queue* queue)
@@ -53,7 +48,7 @@ SCData* MakeCpuAvgPacket(uchar* collectedData, int cpuCnt, float* utilization, f
     avgData->dataSize = sizeof(SHeader) + sizeof(SBodyAvgC) * cpuCnt;
     avgData->data = (uchar*)malloc(avgData->dataSize);
 
-    memcpy(avgData->data, collectedData, sizeof(SHeader));
+    memcpy(collectedData, avgData->data, sizeof(SHeader));
     SHeader* hHeader = (SHeader*)avgData->data;
     SBodyAvgC* hBody = (SBodyAvgC*)(avgData->data + sizeof(SHeader));
     hHeader->signature = SIGNATURE_AVG_CPU;
@@ -87,8 +82,7 @@ void* CpuInfoRoutine(void* param)
     ulong* prevIdle = (ulong*)malloc(sizeof(ulong) * cpuCnt);
     float* deltaIdle = (ulong*)malloc(sizeof(float) * cpuCnt);
 
-    int maxCount = (int)((float)(60 * 60 * 1000) / (float)pParam->collectPeriod);
-    maxCount = 5;
+    int maxCount = (int)(AVG_TARGET_TIME_AS_MS / (float)pParam->collectPeriod);
     float** cpuUtilizations = (float**)malloc(sizeof(float*) * maxCount);
     for (int i = 0; i < maxCount; i++)
     {
@@ -121,22 +115,22 @@ void* CpuInfoRoutine(void* param)
             curIdle[i] = hBody[i].idleTime;
             deltaIdle[i] = (float)(curIdle[i] - prevIdle[i]) * (float)toMs;
             prevIdle[i] = curIdle[i];
-            cpuUtilizations[idx][i] = round(100 - ((deltaIdle[i]) / (float)pParam->collectPeriod * 100.0));
+            cpuUtilizations[idx][i] = round(100.0 - ((deltaIdle[i]) / (float)pParam->collectPeriod * 100.0));
             if (cpuUtilizations[idx][i] < 0)
                 cpuUtilizations[idx][i] = 0;
             avg[i] = 0;
             for (int j = 0; j < curCount; j++)
                 avg[i] += cpuUtilizations[j][i];
             avg[i] = round(avg[i] / (float)curCount);
-            printf("%d: Cpu utilization average: %f%%\n", i, avg[i]);
-            printf("%d: CPU Usage: %f%%\n", i, cpuUtilizations[idx][i]);
+            // printf("%d: Cpu utilization average: %f%%\n", i, avg[i]);
+            // printf("%d: CPU Usage: %f%%\n", i, cpuUtilizations[idx][i]);
         }
         if (curCount != 0)
         {
-            //avgData = MakeCpuAvgPacket(collectedData->data, cpuCnt, cpuUtilizations[idx], avg);
-            //pthread_mutex_lock(&queue->lock);
-            //Push(avgData, queue);
-            //pthread_mutex_unlock(&queue->lock);
+            // avgData = MakeCpuAvgPacket(collectedData->data, cpuCnt, cpuUtilizations[idx], avg);
+            // pthread_mutex_lock(&queue->lock);
+            // Push(avgData, queue);
+            // pthread_mutex_unlock(&queue->lock);
             idx++;
             idx %= maxCount;
         }
@@ -168,8 +162,13 @@ void* MemInfoRoutine(void* param)
     sprintf(logmsgBuf, "Start memory information collection routine in %d ms cycle", pParam->collectPeriod);
     Log(logger, LOG_INFO, logmsgBuf);
 
-    float memUsage;
-    float swapUsage;
+    int maxCount = (int)(AVG_TARGET_TIME_AS_MS / (float)pParam->collectPeriod);
+    int curCount = 1;
+    float* memUsage = (float*)malloc(sizeof(float) * maxCount);
+    float* swapUsage = (float*)malloc(sizeof(float) * maxCount);
+    float memAvg;
+    float swapAvg;
+
     SBodym* hBody;
 
     while(1)
@@ -180,11 +179,25 @@ void* MemInfoRoutine(void* param)
         collectedData = CollectMemInfo(buf, pParam->collectPeriod, pParam->agentId);
         hBody = (SBodym*)(collectedData->data + sizeof(SHeader));
         
-        memUsage = (float)(hBody->memTotal - hBody->memAvail) / (float)hBody->memTotal * 100;
-        swapUsage = (float)(hBody->swapTotal - hBody->swapFree) / (float)hBody->swapTotal * 100; 
-        //printf("Memory usage: %f\n", memUsage);
-        //printf("Swap usage: %f\n", swapUsage);
-
+        memUsage[curCount - 1] = round((float)(hBody->memTotal - hBody->memAvail) / (float)hBody->memTotal * 100);
+        swapUsage[curCount - 1] = round((float)(hBody->swapTotal - hBody->swapFree) / (float)hBody->swapTotal * 100);
+        memAvg = 0;
+        swapAvg = 0;
+        for (int i = 0; i < curCount; i++)
+        {
+            memAvg += memUsage[i];
+            swapAvg += swapUsage[i];
+        }
+        memAvg = round(memAvg / (float)curCount);
+        swapAvg = round(swapAvg / (float)curCount);
+        
+        printf("Memory usage: %f%%\n", memUsage[curCount - 1]);
+        printf("Memory avg: %f%%\n", memAvg);
+        printf("Swap usage: %f%%\n", swapUsage[curCount - 1]);
+        printf("Swap avg: %f%%\n", swapAvg);
+        if (curCount < maxCount - 1)
+            curCount++;
+            
         pthread_mutex_lock(&queue->lock);
         Push(collectedData, queue);
         pthread_mutex_unlock(&queue->lock);
