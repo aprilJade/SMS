@@ -53,7 +53,7 @@ SCData* MakeCpuAvgPacket(uchar* collectedData, int cpuCnt, float* utilization, f
     avgData->dataSize = sizeof(SHeader) + sizeof(SBodyAvgC) * cpuCnt;
     avgData->data = (uchar*)malloc(avgData->dataSize);
 
-    memcpy(collectedData, avgData->data, sizeof(SHeader));
+    memcpy(avgData->data, collectedData, sizeof(SHeader));
     SHeader* hHeader = (SHeader*)avgData->data;
     SBodyAvgC* hBody = (SBodyAvgC*)(avgData->data + sizeof(SHeader));
     hHeader->signature = SIGNATURE_AVG_CPU;
