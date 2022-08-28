@@ -89,11 +89,11 @@ void* CpuInfoRoutine(void* param)
 
     int maxCount = (int)((float)(60 * 60 * 1000) / (float)pParam->collectPeriod);
     maxCount = 5;
-    float** cpuUtilizations = (float**)malloc(sizeof(float*) * cpuCnt);
-    for (int i = 0; i < cpuCnt; i++)
+    float** cpuUtilizations = (float**)malloc(sizeof(float*) * maxCount);
+    for (int i = 0; i < maxCount; i++)
     {
-        cpuUtilizations[i] = (float*)malloc(sizeof(float) * maxCount);
-        memset(cpuUtilizations[i], 0, sizeof(float) * maxCount);
+        cpuUtilizations[i] = (float*)malloc(sizeof(float) * cpuCnt);
+        memset(cpuUtilizations[i], 0, sizeof(float) * cpuCnt);
     }
     int curCount = 0;
     int idx = 0;
@@ -121,25 +121,24 @@ void* CpuInfoRoutine(void* param)
             curIdle[i] = hBody[i].idleTime;
             deltaIdle[i] = (float)(curIdle[i] - prevIdle[i]) * (float)toMs;
             prevIdle[i] = curIdle[i];
-            cpuUtilizations[i][idx] = round(100 - ((deltaIdle[i]) / (float)pParam->collectPeriod * 100.0));
-            if (cpuUtilizations[i][idx] < 0)
-                cpuUtilizations[i][idx] = 0;
+            cpuUtilizations[idx][i] = round(100 - ((deltaIdle[i]) / (float)pParam->collectPeriod * 100.0));
+            if (cpuUtilizations[idx][i] < 0)
+                cpuUtilizations[idx][i] = 0;
             avg[i] = 0;
             for (int j = 0; j < curCount; j++)
-                avg[i] += cpuUtilizations[i][j];
+                avg[i] += cpuUtilizations[j][i];
             avg[i] = round(avg[i] / (float)curCount);
             printf("%d: Cpu utilization average: %f%%\n", i, avg[i]);
-            printf("%d: CPU Usage: %f%%\n", i, cpuUtilizations[i][idx]);
+            printf("%d: CPU Usage: %f%%\n", i, cpuUtilizations[idx][i]);
         }
         if (curCount != 0)
         {
-            avgData = MakeCpuAvgPacket(collectedData->data, cpuCnt, cpuUtilizations, avg);
-            pthread_mutex_lock(&queue->lock);
-            Push(avgData, queue);
-            pthread_mutex_unlock(&queue->lock);
+            //avgData = MakeCpuAvgPacket(collectedData->data, cpuCnt, cpuUtilizations[idx], avg);
+            //pthread_mutex_lock(&queue->lock);
+            //Push(avgData, queue);
+            //pthread_mutex_unlock(&queue->lock);
             idx++;
             idx %= maxCount;
-            // make packet and push in queue
         }
         if (curCount < maxCount)
             curCount++;
