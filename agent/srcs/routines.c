@@ -147,6 +147,25 @@ void* CpuInfoRoutine(void* param)
     }
 }
 
+SCData* MakeMemAvgPacket(uchar* collectedData, float memUsage, float memAvg, float swapUsage, float swapAvg)
+{
+    SCData* avgData = (SCData*)malloc(sizeof(SCData));
+    avgData->dataSize = sizeof(SHeader) + sizeof(SBodyAvgM);
+    avgData->data = (uchar*)malloc(avgData->dataSize);
+    
+    memcpy(avgData->data, collectedData, sizeof(SHeader));
+    SHeader* hHeader = (SHeader*)avgData->data;
+    hHeader->signature = SIGNATURE_AVG_MEM;
+
+    SBodyAvgM* hBody = (SBodyAvgM*)(avgData->data + sizeof(SHeader));
+    hBody->memUsage = memUsage;
+    hBody->memUsageAvg = memAvg;
+    hBody->swapUsage = swapUsage;
+    hBody->swapUsageAvg = swapAvg;
+
+    return avgData;
+}
+
 void* MemInfoRoutine(void* param)
 {
     ulong prevTime, postTime, elapseTime;
@@ -158,6 +177,7 @@ void* MemInfoRoutine(void* param)
     char logmsgBuf[128];
     SCData* collectedData;
     ulong collectPeriodUs = pParam->collectPeriod * 1000;
+    SCData* avgData;
 
     sprintf(logmsgBuf, "Start memory information collection routine in %d ms cycle", pParam->collectPeriod);
     Log(logger, LOG_INFO, logmsgBuf);
@@ -177,6 +197,11 @@ void* MemInfoRoutine(void* param)
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
         collectedData = CollectMemInfo(buf, pParam->collectPeriod, pParam->agentId);
+        
+        pthread_mutex_lock(&queue->lock);
+        Push(collectedData, queue);
+        pthread_mutex_unlock(&queue->lock);
+
         hBody = (SBodym*)(collectedData->data + sizeof(SHeader));
         
         memUsage[curCount - 1] = round((float)(hBody->memTotal - hBody->memAvail) / (float)hBody->memTotal * 100);
@@ -197,9 +222,10 @@ void* MemInfoRoutine(void* param)
         printf("Swap avg: %f%%\n", swapAvg);
         if (curCount < maxCount - 1)
             curCount++;
-            
+        avgData = MakeMemAvgPacket(collectedData->data, memUsage[curCount], memAvg, swapUsage[curCount], swapAvg);
+        
         pthread_mutex_lock(&queue->lock);
-        Push(collectedData, queue);
+        Push(avgData, queue);
         pthread_mutex_unlock(&queue->lock);
 
         gettimeofday(&timeVal, NULL);

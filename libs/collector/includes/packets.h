@@ -89,12 +89,14 @@ typedef struct SBodyAvgC
 
 typedef struct SBodyAvgN
 {
-
 } SBodyAvgN;
 
 typedef struct SbodyAvgM
 {
-
+    float memUsage;
+    float swapUsage;
+    float memUsageAvg;
+    float swapUsageAvg;
 } SBodyAvgM;
 #pragma pack(pop)
 
