@@ -51,6 +51,11 @@ void InsertCpuInfo(void* data, SWorkTools* tools)
     }
 }
 
+void InsertCpuAvgInfo(void* data, SWorkTools* tools)
+{
+    // Not implemented yet
+}
+
 void InsertMemInfo(void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
@@ -75,6 +80,11 @@ void InsertMemInfo(void* data, SWorkTools* tools)
         sprintf(sql, "%d: Failed to store in DB: Memory", tools->workerId);
         Log(tools->logger, LOG_ERROR, sql);
     }
+}
+
+void InsertMemAvgInfo(void* data, SWorkTools* tools)
+{
+    // Not implemented yet
 }
 
 void InsertNetInfo(void* data, SWorkTools* tools)
@@ -106,6 +116,11 @@ void InsertNetInfo(void* data, SWorkTools* tools)
             Log(tools->logger, LOG_ERROR, sql);
         }
     }
+}
+
+void InsertNetAvgInfo(void* data, SWorkTools* tools)
+{
+    // Not implemented yet
 }
 
 void InsertProcInfo(void* data, SWorkTools* tools)
@@ -210,8 +225,11 @@ void InsertDiskInfo(void* data, SWorkTools* tools)
 
 static const void* const (*InsertFunc[])(void*, SWorkTools*) = {
     ['c'] = InsertCpuInfo,
+    ['C'] = InsertCpuAvgInfo,
     ['m'] = InsertMemInfo,
+    ['M'] = InsertMemAvgInfo,
     ['n'] = InsertNetInfo,
+    ['N'] = InsertNetAvgInfo,
     ['p'] = InsertProcInfo,
     ['d'] = InsertDiskInfo
 };
