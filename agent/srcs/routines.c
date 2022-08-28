@@ -37,8 +37,8 @@ ulong CalcTotalCpuIdleTime(SCData* collectedData)
 float round(float x)
 {
     x += 0.005;
-    x = (int)(x * 100);
-    x = x / 100.0;
+    int tmp = (int)(x * 100);
+    x = tmp / 100.0;
     return x;
 }
 
@@ -216,10 +216,10 @@ void* MemInfoRoutine(void* param)
         memAvg = round(memAvg / (float)curCount);
         swapAvg = round(swapAvg / (float)curCount);
         
-        printf("Memory usage: %f%%\n", memUsage[curCount - 1]);
-        printf("Memory avg: %f%%\n", memAvg);
-        printf("Swap usage: %f%%\n", swapUsage[curCount - 1]);
-        printf("Swap avg: %f%%\n", swapAvg);
+        printf("Memory usage: %.2f%%\n", memUsage[curCount - 1]);
+        printf("Memory avg: %.2f%%\n", memAvg);
+        printf("Swap usage: %.2f%%\n", swapUsage[curCount - 1]);
+        printf("Swap avg: %.2f%%\n", swapAvg);
         if (curCount < maxCount - 1)
             curCount++;
         avgData = MakeMemAvgPacket(collectedData->data, memUsage[curCount], memAvg, swapUsage[curCount], swapAvg);
