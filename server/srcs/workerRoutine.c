@@ -208,6 +208,14 @@ void InsertDiskInfo(void* data, SWorkTools* tools)
     }
 }
 
+static const void* const (*InsertFunc[])(void*, SWorkTools*) = {
+    ['c'] = InsertCpuInfo,
+    ['m'] = InsertMemInfo,
+    ['n'] = InsertNetInfo,
+    ['p'] = InsertProcInfo,
+    ['d'] = InsertDiskInfo
+};
+
 void* WorkerRoutine(void* param)
 {
     SWorkerParam* pParam = (SWorkerParam*)param;
@@ -254,25 +262,7 @@ void* WorkerRoutine(void* param)
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
         hHeader = (SHeader*)data;
-        pktId = hHeader->signature & EXTRACT_SIGNATURE;
-        switch(pktId)
-        {
-        case 'c':
-            InsertCpuInfo(data, &workTools);
-            break;
-        case 'm':
-            InsertMemInfo(data, &workTools);
-            break;
-        case 'n':
-            InsertNetInfo(data, &workTools);
-            break;
-        case 'p':
-            InsertProcInfo(data, &workTools);
-            break;
-        case 'd':
-            InsertDiskInfo(data, &workTools);
-            break;
-        }
+        InsertFunc[hHeader->signature & EXTRACT_SIGNATURE](data, &workTools);
         free(data);
 
         gettimeofday(&timeVal, NULL);
