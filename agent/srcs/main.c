@@ -12,6 +12,19 @@
 #include "collector.h"
 #include "confParser.h"
 
+static const char* const strSignal[] = {
+	[SIGBUS] = "SIGBUS",
+	[SIGABRT] = "SIGABRT",
+	[SIGFPE] = "SIGFPE",
+	[SIGQUIT] = "SIGQUIT",
+	[SIGSEGV] = "SIGSEGV",
+	[SIGINT] = "SIGINT",
+	[SIGILL] = "SIGILL",
+	[SIGSYS] = "SIGSYS",
+	[SIGTERM] = "SIGTERM",
+	[SIGKILL] = "SIGKILL",
+};
+
 const Logger* g_logger;
 int g_stderrFd;
 
@@ -119,52 +132,13 @@ int main(int argc, char** argv)
 void HandleSignal(int signo)
 {
 	char logMsg[512];
-	switch (signo)
-	{
-	case SIGINT:
-		sprintf(logMsg, "Killed by SIGINT");
-		Log(g_logger, LOG_ERROR, logMsg);
-		break;
-	case SIGABRT:
-		sprintf(logMsg, "Killed by SIGIABRT");
-		Log(g_logger, LOG_FATAL, logMsg);
-		break;
-	case SIGSEGV:
-		sprintf(logMsg, "Killed by SIGSEGV");
-		Log(g_logger, LOG_FATAL, logMsg);
-		break;
-	case SIGBUS:
-		sprintf(logMsg, "Killed by SIGBUS");
-		Log(g_logger, LOG_FATAL, logMsg);
-		break;
-	case SIGFPE:
-		sprintf(logMsg, "Killed by SIGFPE");
-		Log(g_logger, LOG_FATAL, logMsg);
-		break;
-	case SIGTERM:
-		sprintf(logMsg, "Killed by SIGTERM");
-		Log(g_logger, LOG_FATAL, logMsg);
-		break;
-	case SIGSYS:
-		sprintf(logMsg, "Killed by SIGSYS");
-		Log(g_logger, LOG_FATAL, logMsg);
-		break;
-	case SIGILL:
-		sprintf(logMsg, "Killed by SIGILL");
-		Log(g_logger, LOG_FATAL, logMsg);
-		break;
-	case SIGQUIT:
-		sprintf(logMsg, "Killed by SIGQUIT");
-		Log(g_logger, LOG_INFO, logMsg);
-		break;
-	case SIGKILL:
-		sprintf(logMsg, "Killed by user");
-		Log(g_logger, LOG_INFO, logMsg);
-		break;
-	}
+	sprintf(logMsg, "Killed by %s", strSignal[signo]);
 
-	if (signo != SIGQUIT && signo != SIGKILL)
+	if (signo == SIGQUIT || signo == SIGKILL)
+		Log(g_logger, LOG_INFO, logMsg);
+	else
 	{
+		Log(g_logger, LOG_FATAL, logMsg);
 		// TODO: handle log path in agent.conf is absolute path...
 		char buf[128];
 		getcwd(buf, 128);
@@ -177,6 +151,7 @@ void HandleSignal(int signo)
 		sprintf(logMsg, "SMS: Agent is aborted. Check below log.\n%s%s\n", buf, logPathBuf);
 		write(g_stderrFd, logMsg, strlen(logMsg));
 	}
+
 	exit(signo);
 }
 

@@ -84,7 +84,7 @@ typedef struct SBodyd
 typedef struct SBodyAvgC
 {
     float cpuUtilization;   /* Moment of collection */
-    float avgUtilization;   /* Last hour */
+    float cpuUtilizationAvg;   /* Last hour */
 } SBodyAvgC;
 
 typedef struct SBodyAvgN

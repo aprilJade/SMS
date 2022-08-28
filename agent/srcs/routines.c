@@ -54,7 +54,7 @@ SCData* MakeCpuAvgPacket(uchar* collectedData, int cpuCnt, float* utilization, f
     hHeader->signature = SIGNATURE_AVG_CPU;
     for (int i = 0; i < cpuCnt; i++)
     {
-        hBody[i].avgUtilization = avg[i];
+        hBody[i].cpuUtilizationAvg = avg[i];
         hBody[i].cpuUtilization = utilization[i];
     }
     return avgData;
@@ -183,7 +183,9 @@ void* MemInfoRoutine(void* param)
     Log(logger, LOG_INFO, logmsgBuf);
 
     int maxCount = (int)(AVG_TARGET_TIME_AS_MS / (float)pParam->collectPeriod);
-    int curCount = 1;
+    maxCount = 3;
+    int curCount = 0;
+    int idx = 0;
     float* memUsage = (float*)malloc(sizeof(float) * maxCount);
     float* swapUsage = (float*)malloc(sizeof(float) * maxCount);
     float memAvg;
@@ -204,10 +206,14 @@ void* MemInfoRoutine(void* param)
 
         hBody = (SBodym*)(collectedData->data + sizeof(SHeader));
         
-        memUsage[curCount - 1] = round((float)(hBody->memTotal - hBody->memAvail) / (float)hBody->memTotal * 100);
-        swapUsage[curCount - 1] = round((float)(hBody->swapTotal - hBody->swapFree) / (float)hBody->swapTotal * 100);
+        memUsage[idx] = round((float)(hBody->memTotal - hBody->memAvail) / (float)hBody->memTotal * 100);
+        swapUsage[idx] = round((float)(hBody->swapTotal - hBody->swapFree) / (float)hBody->swapTotal * 100);
         memAvg = 0;
         swapAvg = 0;
+
+        if (curCount < maxCount)
+            curCount++;
+
         for (int i = 0; i < curCount; i++)
         {
             memAvg += memUsage[i];
@@ -216,17 +222,19 @@ void* MemInfoRoutine(void* param)
         memAvg = round(memAvg / (float)curCount);
         swapAvg = round(swapAvg / (float)curCount);
         
-        printf("Memory usage: %.2f%%\n", memUsage[curCount - 1]);
+        printf("Memory usage: %.2f%%\n", memUsage[idx]);
         printf("Memory avg: %.2f%%\n", memAvg);
-        printf("Swap usage: %.2f%%\n", swapUsage[curCount - 1]);
+        printf("Swap usage: %.2f%%\n", swapUsage[idx]);
         printf("Swap avg: %.2f%%\n", swapAvg);
-        if (curCount < maxCount - 1)
-            curCount++;
-        avgData = MakeMemAvgPacket(collectedData->data, memUsage[curCount], memAvg, swapUsage[curCount], swapAvg);
+        
+        avgData = MakeMemAvgPacket(collectedData->data, memUsage[idx], memAvg, swapUsage[idx], swapAvg);
         
         pthread_mutex_lock(&queue->lock);
         Push(avgData, queue);
         pthread_mutex_unlock(&queue->lock);
+
+        idx++;
+        idx %= maxCount;
 
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
