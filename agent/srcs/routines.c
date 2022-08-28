@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <fcntl.h>
-#include <math.h>
 #include "routines.h"
 #include "collector.h"
 
@@ -40,6 +39,32 @@ ulong CalcTotalCpuIdleTime(SCData* collectedData)
     return totalIdle;
 }
 
+float round(float x)
+{
+    x += 0.005;
+    x = (int)(x * 100);
+    x = x / 100.0;
+    return x;
+}
+
+SCData* MakeCpuAvgPacket(uchar* collectedData, int cpuCnt, float* utilization, float* avg)
+{
+    SCData* avgData = (SCData*)malloc(sizeof(SCData));
+    avgData->dataSize = sizeof(SHeader) + sizeof(SBodyAvgC) * cpuCnt;
+    avgData->data = (uchar*)malloc(avgData->dataSize);
+
+    memcpy(collectedData, avgData->data, sizeof(SHeader));
+    SHeader* hHeader = (SHeader*)avgData->data;
+    SBodyAvgC* hBody = (SBodyAvgC*)(avgData->data + sizeof(SHeader));
+    hHeader->signature = SIGNATURE_AVG_CPU;
+    for (int i = 0; i < cpuCnt; i++)
+    {
+        hBody[i].avgUtilization = avg[i];
+        hBody[i].cpuUtilization = utilization[i];
+    }
+    return avgData;
+}
+
 void* CpuInfoRoutine(void* param)
 {
     ulong prevTime, postTime, elapseTime;
@@ -56,15 +81,26 @@ void* CpuInfoRoutine(void* param)
     sprintf(logmsgBuf, "Start CPU information collection routine in %d ms cycle", pParam->collectPeriod);
     Log(logger, LOG_INFO, logmsgBuf);
 
+    SCData* avgData;
     SCData* collectedData;
-    ulong curIdle;
-    ulong prevIdle;
-    float deltaIdle;
-    float cpuUtilization;
-    int maxCount = (int)((float)(60 * 60 * 12 * 1000) / (float)pParam->collectPeriod);
-    int curCount = 0;
-    float cpuUtilizationAvg = 0.0;
+    ulong* curIdle = (ulong*)malloc(sizeof(ulong) * cpuCnt);
+    ulong* prevIdle = (ulong*)malloc(sizeof(ulong) * cpuCnt);
+    float* deltaIdle = (ulong*)malloc(sizeof(float) * cpuCnt);
 
+    int maxCount = (int)((float)(60 * 60 * 1000) / (float)pParam->collectPeriod);
+    maxCount = 5;
+    float** cpuUtilizations = (float**)malloc(sizeof(float*) * cpuCnt);
+    for (int i = 0; i < cpuCnt; i++)
+    {
+        cpuUtilizations[i] = (float*)malloc(sizeof(float) * maxCount);
+        memset(cpuUtilizations[i], 0, sizeof(float) * maxCount);
+    }
+    int curCount = 0;
+    int idx = 0;
+    float* avg = (float*)malloc(sizeof(float) * cpuCnt);
+    memset(avg, 0, sizeof(float) * cpuCnt);
+
+    SBodyc* hBody;
     while (1)
     {
         gettimeofday(&timeVal, NULL);
@@ -72,26 +108,45 @@ void* CpuInfoRoutine(void* param)
         
         collectedData = CollectEachCpuInfo(cpuCnt, toMs, buf, pParam->collectPeriod, pParam->agentId);
 
-        curIdle = CalcTotalCpuIdleTime(collectedData);
-        deltaIdle = (float)(curIdle - prevIdle) / 4.0 * 5.0;
-        cpuUtilization = ((float)pParam->collectPeriod - deltaIdle) / (float)pParam->collectPeriod * 100.0;
-        if (cpuUtilization < 0)
-            cpuUtilization = 0;
-        prevIdle = curIdle;
-        cpuUtilizationAvg = ((cpuUtilizationAvg * curCount) + cpuUtilization) / (curCount + 1);
-        if (curCount != maxCount - 1)
-            curCount++;
-        printf("Cpu utilization average: %.2f%%\n", (cpuUtilizationAvg));
-        printf("CPU Usage: %.2f%%\n", cpuUtilization);
-
+        // Push to collected data
         pthread_mutex_lock(&queue->lock);
         Push(collectedData, queue);
         pthread_mutex_unlock(&queue->lock);
 
+        // calculate cpu utilization and that average value
+        hBody = (SBodyc*)(collectedData->data + sizeof(SHeader));
+
+        for (int i = 0; i < cpuCnt; i++)
+        {
+            curIdle[i] = hBody[i].idleTime;
+            deltaIdle[i] = (float)(curIdle[i] - prevIdle[i]) * (float)toMs;
+            prevIdle[i] = curIdle[i];
+            cpuUtilizations[i][idx] = round(100 - ((deltaIdle[i]) / (float)pParam->collectPeriod * 100.0));
+            if (cpuUtilizations[i][idx] < 0)
+                cpuUtilizations[i][idx] = 0;
+            avg[i] = 0;
+            for (int j = 0; j < curCount; j++)
+                avg[i] += cpuUtilizations[i][j];
+            avg[i] = round(avg[i] / (float)curCount);
+            printf("%d: Cpu utilization average: %f%%\n", i, avg[i]);
+            printf("%d: CPU Usage: %f%%\n", i, cpuUtilizations[i][idx]);
+        }
+        if (curCount != 0)
+        {
+            avgData = MakeCpuAvgPacket(collectedData->data, cpuCnt, cpuUtilizations, avg);
+            pthread_mutex_lock(&queue->lock);
+            Push(avgData, queue);
+            pthread_mutex_unlock(&queue->lock);
+            idx++;
+            idx %= maxCount;
+            // make packet and push in queue
+        }
+        if (curCount < maxCount)
+            curCount++;
+
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
-
         sprintf(logmsgBuf, "Collected in %ldus: CPU", elapseTime);
         Log(logger, LOG_DEBUG, logmsgBuf);
 
