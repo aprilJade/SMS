@@ -22,50 +22,12 @@ extern const char g_serverIp[16];
 extern unsigned short g_serverPort;
 static int g_servSockFd;
 
-SRoutineParam* GenRoutineParam(int collectPeriod, int collectorID, Queue* queue)
-{
-    SRoutineParam* ret = (SRoutineParam*)malloc(sizeof(SRoutineParam));
-    if (collectPeriod < MIN_SLEEP_MS)
-        ret->collectPeriod = MIN_SLEEP_MS;
-    else
-        ret->collectPeriod = collectPeriod;
-    return ret;
-}
-
-ulong CalcTotalCpuIdleTime(SCData* collectedData)
-{
-    SHeader* hHeader = (SHeader*)collectedData->data;
-    SBodyc* hBody = (SBodyc*)(collectedData->data + sizeof(SHeader));
-    ulong totalIdle = 0;
-    for (int i = 0; i < hHeader->bodyCount; i++)
-        totalIdle += hBody[i].idleTime;
-    return totalIdle;
-}
-
 float RoundingOff(float x)
 {
     x += 0.005;
     int tmp = (int)(x * 100);
     x = tmp / 100.0;
     return x;
-}
-
-SCData* MakeCpuAvgPacket(uchar* collectedData, int cpuCnt, float* utilization, float* avg)
-{
-    SCData* avgData = (SCData*)malloc(sizeof(SCData));
-    avgData->dataSize = sizeof(SHeader) + sizeof(SBodyAvgC) * cpuCnt;
-    avgData->data = (uchar*)malloc(avgData->dataSize);
-
-    memcpy(collectedData, avgData->data, sizeof(SHeader));
-    SHeader* hHeader = (SHeader*)avgData->data;
-    SBodyAvgC* hBody = (SBodyAvgC*)(avgData->data + sizeof(SHeader));
-    hHeader->signature = SIGNATURE_AVG_CPU;
-    for (int i = 0; i < cpuCnt; i++)
-    {
-        hBody[i].cpuUtilizationAvg = avg[i];
-        hBody[i].cpuUtilization = utilization[i];
-    }
-    return avgData;
 }
 
 void* CpuInfoRoutine(void* param)
