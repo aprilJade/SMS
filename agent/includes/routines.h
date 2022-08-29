@@ -2,8 +2,6 @@
 #define ROUTINES_H
 #define MIN_SLEEP_MS 500
 #define ROUTINE_COUNT 5
-#define DEFAULT_HOST "127.0.0.1"
-#define DEFAULT_PORT 4242
 
 #include "packets.h"
 #include "logger.h"
@@ -16,7 +14,7 @@ typedef struct SRoutineParam
     uint collectPeriod;
 } SRoutineParam;
 
-int GetNicCount();
+int GetNicCount();  // ?? Move to appropriate file
 
 void* CpuInfoRoutine(void* param);
 void* MemInfoRoutine(void* param);
