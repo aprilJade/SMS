@@ -22,14 +22,6 @@ extern const char g_serverIp[16];
 extern unsigned short g_serverPort;
 static int g_servSockFd;
 
-float RoundingOff(float x)
-{
-    x += 0.005;
-    int tmp = (int)(x * 100);
-    x = tmp / 100.0;
-    return x;
-}
-
 void* CpuInfoRoutine(void* param)
 {
     ulong prevTime, postTime, elapseTime;
@@ -166,49 +158,9 @@ void* NetInfoRoutine(void* param)
     Log(g_logger, LOG_INFO, logmsgBuf);
 
     SCData* collectedData;
-    
+    SCData* avgData;
     int maxCount = (int)(AVG_TARGET_TIME_AS_MS / (float)pParam->collectPeriod);
-    int idx = 0;
-    int curCount = 0;
-
-    ulong* prevRecvBytes = (ulong*)malloc(sizeof(ulong) * nicCount);
-    ulong* curRecvBytes = (ulong*)malloc(sizeof(ulong) * nicCount);
-    float** recvBytesPerSec = (float**)malloc(sizeof(float*) * maxCount);
-    for (int i = 0; i < maxCount; i++)
-    {
-        recvBytesPerSec[i] = (float*)malloc(sizeof(float) * nicCount);
-        memset(recvBytesPerSec[i], 0, sizeof(float) * nicCount);
-    }
-
-    ulong* prevRecvPackets = (ulong*)malloc(sizeof(ulong) * nicCount);
-    ulong* curRecvPackets = (ulong*)malloc(sizeof(ulong) * nicCount);
-    float** recvPacketsPerSec = (float**)malloc(sizeof(float*) * maxCount);
-    for (int i = 0; i < maxCount; i++)
-    {
-        recvPacketsPerSec[i] = (float*)malloc(sizeof(float) * nicCount);
-        memset(recvPacketsPerSec[i], 0, sizeof(float) * nicCount);
-    }
-
-    ulong* prevSendBytes = (ulong*)malloc(sizeof(ulong) * nicCount);
-    ulong* curSendBytes = (ulong*)malloc(sizeof(ulong) * nicCount);
-    float** sendBytesPerSec = (float**)malloc(sizeof(float*) * maxCount);
-    for (int i = 0; i < maxCount; i++)
-    {
-        sendBytesPerSec[i] = (float*)malloc(sizeof(float) * nicCount);
-        memset(sendBytesPerSec[i], 0, sizeof(float) * nicCount);
-    }
-
-    ulong* prevSendPackets = (ulong*)malloc(sizeof(ulong) * nicCount);
-    ulong* curSendPackets = (ulong*)malloc(sizeof(ulong) * nicCount);
-    float** sendPacketsPerSec = (float**)malloc(sizeof(float*) * maxCount);
-    for (int i = 0; i < maxCount; i++)
-    {
-        sendPacketsPerSec[i] = (float*)malloc(sizeof(float) * nicCount);
-        memset(sendPacketsPerSec[i], 0, sizeof(float) * nicCount);
-    }
-
-    SBodyn* hBody;
-    float sumValue;
+   
     while(1)
     {
         gettimeofday(&timeVal, NULL);
@@ -219,84 +171,7 @@ void* NetInfoRoutine(void* param)
         Push(collectedData, g_queue);
         pthread_mutex_unlock(&g_queue->lock);
         
-        hBody = (SBodyn*)(collectedData->data + sizeof(SHeader));
-        SCData* avgData = (SCData*)malloc(sizeof(SCData));
-        avgData->dataSize = sizeof(SHeader) + sizeof(SBodyAvgN) * nicCount;
-        avgData->data = (uchar*)malloc(avgData->dataSize);
-        memcpy(avgData->data, collectedData->data, sizeof(SHeader));
-        SHeader* hHeader = (SHeader*)avgData->data;
-        hHeader->signature = SIGNATURE_AVG_NET;
-        SBodyAvgN* hAvgBody = (SBodyAvgN*)(avgData->data + sizeof(SHeader));
-
-        for (int i = 0; i < nicCount; i++)
-        {
-            hAvgBody[i].nameLength = hBody[i].nameLength;
-            memcpy(hAvgBody[i].name, hBody[i].name, hBody[i].nameLength);
-
-            curRecvBytes[i] = hBody[i].recvBytes;
-            recvBytesPerSec[idx][i] = RoundingOff((float)(curRecvBytes[i] - prevRecvBytes[i]) / (float)pParam->collectPeriod * 1000.0);
-            prevRecvBytes[i] = curRecvBytes[i];
-            hAvgBody[i].recvBytesPerSec = recvBytesPerSec[idx][i];
-
-            sumValue = 0.0;
-            for (int j = 0; j < curCount; j++)
-                sumValue += recvBytesPerSec[j][i];
-            hAvgBody[i].recvBytesPerSecAvg = sumValue / curCount;
-
-            curRecvPackets[i] = hBody[i].recvPackets;
-            recvPacketsPerSec[idx][i] = RoundingOff((float)(curRecvPackets[i] - prevRecvPackets[i]) / (float)pParam->collectPeriod * 1000.0);
-            prevRecvPackets[i] = curRecvPackets[i];
-            hAvgBody[i].recvPacketsPerSec = recvPacketsPerSec[idx][i];
-
-            sumValue = 0.0;
-            for (int j = 0; j < curCount; j++)
-                sumValue += recvPacketsPerSec[j][i];
-            hAvgBody[i].recvPacketsPerSecAvg = sumValue / curCount;
-
-            curSendBytes[i] = hBody[i].sendBytes;
-            sendBytesPerSec[idx][i] = RoundingOff((float)(curSendBytes[i] - prevSendBytes[i]) / (float)pParam->collectPeriod * 1000.0);
-            prevSendBytes[i] = curSendBytes[i];
-            hAvgBody[i].sendBytesPerSec = sendBytesPerSec[idx][i];
-
-            sumValue = 0.0;
-            for (int j = 0; j < curCount; j++)
-                sumValue += sendBytesPerSec[j][i];
-            hAvgBody[i].sendBytesPerSecAvg = sumValue / curCount;
-
-
-            curSendPackets[i] = hBody[i].sendPackets;
-            sendPacketsPerSec[idx][i] = RoundingOff((float)(curSendPackets[i] - prevSendPackets[i]) / (float)pParam->collectPeriod * 1000.0);
-            prevSendPackets[i] = curSendPackets[i];
-            hAvgBody[i].sendPacketsPerSec = sendPacketsPerSec[idx][i];
-
-            sumValue = 0.0;
-            for (int j = 0; j < curCount; j++)
-                sumValue += sendPacketsPerSec[j][i];
-            hAvgBody[i].sendPacketsPerSecAvg = sumValue / curCount;
-
-            // printf("<=== %s information ===>\n", hAvgBody[i].name);
-
-            // printf("Received bytes: %.2f B/s\t", hAvgBody[i].recvBytesPerSec);
-            // printf("Avg: %.2f B/s\n", hAvgBody[i].recvBytesPerSecAvg);
-
-            // printf("Received packets: %.2f per s\t", hAvgBody[i].recvPacketsPerSec);
-            // printf("Avg: %.2f per s\n", hAvgBody[i].recvPacketsPerSecAvg);
-
-            // printf("Send bytes: %.2f B/s\t\t", hAvgBody[i].sendBytesPerSec);
-            // printf("Avg: %.2f B/s\n", hAvgBody[i].sendBytesPerSecAvg);
-
-            // printf("Send packets: %.2f per s\t", hAvgBody[i].sendPacketsPerSec);
-            // printf("Avg: %.2f per s\n", hAvgBody[i].sendPacketsPerSecAvg);
-        }
-        
-        if (curCount < maxCount)
-            curCount++;
-
-        if (curCount != 1)
-        {
-            idx++;
-            idx %= maxCount;
-        }
+        avgData = CalcNetThroughputAvg(collectedData->data, nicCount, maxCount, pParam->collectPeriod);
 
         pthread_mutex_lock(&g_queue->lock);
         Push(avgData, g_queue);

@@ -27,11 +27,11 @@ SCData* CalcCpuUtilizationAvg(uchar* collectedData, int cpuCnt, int maxCount, fl
         curIdle = (ulong*)malloc(sizeof(ulong) * cpuCnt);
         prevIdle = (ulong*)malloc(sizeof(ulong) * cpuCnt);
         deltaIdle = (float*)malloc(sizeof(float) * cpuCnt);
-        cpuUtilizations = (float**)malloc(sizeof(float*) * maxCount);
-        for (int i = 0; i < maxCount; i++)
+        cpuUtilizations = (float**)malloc(sizeof(float*) * cpuCnt);
+        for (int i = 0; i < cpuCnt; i++)
         {
-            cpuUtilizations[i] = (float*)malloc(sizeof(float) * cpuCnt);
-            memset(cpuUtilizations[i], 0, sizeof(float) * cpuCnt);
+            cpuUtilizations[i] = (float*)malloc(sizeof(float) * maxCount);
+            memset(cpuUtilizations[i], 0, sizeof(float) * maxCount);
         }
         initialized = true;
     }
@@ -51,14 +51,12 @@ SCData* CalcCpuUtilizationAvg(uchar* collectedData, int cpuCnt, int maxCount, fl
         curIdle[i] = hBody[i].idleTime;
         deltaIdle[i] = (float)(curIdle[i] - prevIdle[i]) * toMs;
         prevIdle[i] = curIdle[i];
-        cpuUtilizations[idx][i] = RoundingOff(100.0 - ((deltaIdle[i]) / (float)collectPeriod * 100.0));
-        if (cpuUtilizations[idx][i] < 0)
-            cpuUtilizations[idx][i] = 0;
+        cpuUtilizations[i][idx] = RoundingOff(100.0 - ((deltaIdle[i]) / (float)collectPeriod * 100.0));
         avg = 0.0;
         for (int j = 0; j < curCount; j++)
-            avg += cpuUtilizations[j][i];
+            avg += cpuUtilizations[i][j];
         hAvgBody[i].cpuUtilizationAvg = RoundingOff(avg / (float)curCount);
-        hAvgBody[i].cpuUtilization = cpuUtilizations[idx][i];
+        hAvgBody[i].cpuUtilization = cpuUtilizations[i][idx];
         // printf("%d: Cpu utilization average: %.2f%%\n", i, hAvgBody[i].cpuUtilizationAvg);
         // printf("%d: CPU Usage: %.2f%%\n", i, hAvgBody[i].cpuUtilization);
     }
@@ -124,6 +122,116 @@ SCData* CalcMemAvg(uchar* collectedData, int maxCount)
         idx++;
         idx %= maxCount;
     }
+    if (curCount < maxCount)
+        curCount++;
+    
+    return avgData;
+}
+
+SCData* CalcNetThroughputAvg(uchar* collectedData, int nicCount, int maxCount, int collectPeriod)
+{
+    static int idx;
+    static int curCount;
+    static bool initialized;
+    static ulong* prevVal[4];
+    static ulong* curVal[4];
+    static float** deltaVal[4];
+
+    if (initialized == false)
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            prevVal[i] = (ulong*)malloc(sizeof(ulong) * nicCount);
+            curVal[i] = (ulong*)malloc(sizeof(ulong) * nicCount);
+            deltaVal[i] = (float**)malloc(sizeof(float*) * nicCount);
+            for (int j = 0; j < nicCount; j++)
+            {
+                deltaVal[i][j] = (float*)malloc(sizeof(float) * maxCount);
+                memset(deltaVal[i][j], 0, sizeof(float) * maxCount);
+            }
+
+        }
+        initialized = true;
+    }
+    
+    SBodyn* hBody = (SBodyn*)(collectedData + sizeof(SHeader));
+
+    SCData* avgData = (SCData*)malloc(sizeof(SCData));
+    avgData->dataSize = sizeof(SHeader) + sizeof(SBodyAvgN) * nicCount;
+    avgData->data = (uchar*)malloc(avgData->dataSize);
+    memcpy(avgData->data, collectedData, sizeof(SHeader));
+
+    SHeader* hHeader = (SHeader*)avgData->data;
+    hHeader->signature = SIGNATURE_AVG_NET;
+
+    SBodyAvgN* hAvgBody = (SBodyAvgN*)(avgData->data + sizeof(SHeader));
+    float sum = 0.0;
+    for (int i = 0; i < nicCount; i++)
+    {
+        hAvgBody[i].nameLength = hBody[i].nameLength;
+        memcpy(hAvgBody[i].name, hBody[i].name, hBody[i].nameLength);
+
+        curVal[RECV_BYTES][i] = hBody[i].recvBytes;
+        deltaVal[RECV_BYTES][i][idx] = RoundingOff((float)(curVal[RECV_BYTES][i] - prevVal[RECV_BYTES][i]) / (float)collectPeriod * 1000.0);
+        prevVal[RECV_BYTES][i] = curVal[RECV_BYTES][i];
+        hAvgBody[i].recvBytesPerSec = deltaVal[RECV_BYTES][i][idx];
+
+        sum = 0.0;
+        for (int j = 0; j < curCount; j++)
+            sum += deltaVal[RECV_BYTES][i][j];
+        hAvgBody[i].recvBytesPerSecAvg = sum / curCount;
+
+        curVal[RECV_PACKETS][i] = hBody[i].recvPackets;
+        deltaVal[RECV_PACKETS][i][idx] = RoundingOff((float)(curVal[RECV_PACKETS][i] - prevVal[RECV_PACKETS][i]) / (float)collectPeriod * 1000.0);
+        prevVal[RECV_PACKETS][i] = curVal[RECV_PACKETS][i];
+        hAvgBody[i].recvPacketsPerSec = deltaVal[RECV_PACKETS][i][idx];
+
+        sum = 0.0;
+        for (int j = 0; j < curCount; j++)
+            sum += deltaVal[RECV_PACKETS][i][j];
+        hAvgBody[i].recvPacketsPerSecAvg = sum / curCount;
+
+        curVal[SEND_BYTES][i] = hBody[i].sendBytes;
+        deltaVal[SEND_BYTES][i][idx] = RoundingOff((float)(curVal[SEND_BYTES][i] - prevVal[SEND_BYTES][i]) / (float)collectPeriod * 1000.0);
+        prevVal[SEND_BYTES][i] = curVal[SEND_BYTES][i];
+        hAvgBody[i].sendBytesPerSec = deltaVal[SEND_BYTES][i][idx];
+
+        sum = 0.0;
+        for (int j = 0; j < curCount; j++)
+            sum += deltaVal[RECV_BYTES][i][j];
+        hAvgBody[i].sendBytesPerSecAvg = sum / curCount;
+
+        curVal[SEND_PACKETS][i] = hBody[i].sendPackets;
+        deltaVal[SEND_PACKETS][i][idx] = RoundingOff((float)(curVal[SEND_PACKETS][i] - prevVal[SEND_PACKETS][i]) / (float)collectPeriod * 1000.0);
+        prevVal[SEND_PACKETS][i] = curVal[SEND_PACKETS][i];
+        hAvgBody[i].sendPacketsPerSec = deltaVal[SEND_PACKETS][i][idx];
+
+        sum = 0.0;
+        for (int j = 0; j < curCount; j++)
+            sum += deltaVal[SEND_PACKETS][i][j];
+        hAvgBody[i].sendPacketsPerSecAvg = sum / curCount;
+
+        printf("<=== %s information ===>\n", hAvgBody[i].name);
+
+        printf("Received bytes: %.2f B/s\t", hAvgBody[i].recvBytesPerSec);
+        printf("Avg: %.2f B/s\n", hAvgBody[i].recvBytesPerSecAvg);
+
+        printf("Received packets: %.2f per s\t", hAvgBody[i].recvPacketsPerSec);
+        printf("Avg: %.2f per s\n", hAvgBody[i].recvPacketsPerSecAvg);
+
+        printf("Send bytes: %.2f B/s\t\t", hAvgBody[i].sendBytesPerSec);
+        printf("Avg: %.2f B/s\n", hAvgBody[i].sendBytesPerSecAvg);
+
+        printf("Send packets: %.2f per s\t", hAvgBody[i].sendPacketsPerSec);
+        printf("Avg: %.2f per s\n", hAvgBody[i].sendPacketsPerSecAvg);
+    }
+    
+    if (curCount)
+    {
+        idx++;
+        idx %= maxCount;
+    }
+
     if (curCount < maxCount)
         curCount++;
     
