@@ -4,5 +4,6 @@
 #include "collector.h"
 
 SCData* CalcCpuUtilizationAvg(uchar* collectedData, int cpuCnt, int maxCount, float toMs, int collectPeriod);
+SCData* CalcMemAvg(uchar* collectedData, int maxCount);
 
 #endif

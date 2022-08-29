@@ -33,7 +33,7 @@ float RoundingOff(float x)
 void* CpuInfoRoutine(void* param)
 {
     ulong prevTime, postTime, elapseTime;
-	long toMs = 1000 / sysconf(_SC_CLK_TCK);
+	float toMs = 1000.0 / sysconf(_SC_CLK_TCK);
     ushort cpuCnt = sysconf(_SC_NPROCESSORS_ONLN);
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
@@ -60,7 +60,7 @@ void* CpuInfoRoutine(void* param)
         Push(collectedData, g_queue);
         pthread_mutex_unlock(&g_queue->lock);
 
-        avgData = CalcCpuUtilizationAvg(collectedData->data, cpuCnt, maxCount, (float)toMs, pParam->collectPeriod);
+        avgData = CalcCpuUtilizationAvg(collectedData->data, cpuCnt, maxCount, toMs, pParam->collectPeriod);
 
         pthread_mutex_lock(&g_queue->lock);
         Push(avgData, g_queue);
@@ -74,25 +74,6 @@ void* CpuInfoRoutine(void* param)
 
         usleep(collectPeriodUs - elapseTime);
     }
-}
-
-SCData* MakeMemAvgPacket(uchar* collectedData, float memUsage, float memAvg, float swapUsage, float swapAvg)
-{
-    SCData* avgData = (SCData*)malloc(sizeof(SCData));
-    avgData->dataSize = sizeof(SHeader) + sizeof(SBodyAvgM);
-    avgData->data = (uchar*)malloc(avgData->dataSize);
-    
-    memcpy(avgData->data, collectedData, sizeof(SHeader));
-    SHeader* hHeader = (SHeader*)avgData->data;
-    hHeader->signature = SIGNATURE_AVG_MEM;
-
-    SBodyAvgM* hBody = (SBodyAvgM*)(avgData->data + sizeof(SHeader));
-    hBody->memUsage = memUsage;
-    hBody->memUsageAvg = memAvg;
-    hBody->swapUsage = swapUsage;
-    hBody->swapUsageAvg = swapAvg;
-
-    return avgData;
 }
 
 void* MemInfoRoutine(void* param)
@@ -110,14 +91,7 @@ void* MemInfoRoutine(void* param)
     Log(g_logger, LOG_INFO, logmsgBuf);
 
     int maxCount = (int)(AVG_TARGET_TIME_AS_MS / (float)pParam->collectPeriod);
-    maxCount = 3;
-    int curCount = 0;
-    int idx = 0;
-    float* memUsage = (float*)malloc(sizeof(float) * maxCount);
-    float* swapUsage = (float*)malloc(sizeof(float) * maxCount);
-    float memAvg;
-    float swapAvg;
-
+    
     SBodym* hBody;
 
     while(1)
@@ -131,37 +105,11 @@ void* MemInfoRoutine(void* param)
         Push(collectedData, g_queue);
         pthread_mutex_unlock(&g_queue->lock);
 
-        hBody = (SBodym*)(collectedData->data + sizeof(SHeader));
-        
-        memUsage[idx] = RoundingOff((float)(hBody->memTotal - hBody->memAvail) / (float)hBody->memTotal * 100);
-        swapUsage[idx] = RoundingOff((float)(hBody->swapTotal - hBody->swapFree) / (float)hBody->swapTotal * 100);
-        memAvg = 0;
-        swapAvg = 0;
-
-        if (curCount < maxCount)
-            curCount++;
-
-        for (int i = 0; i < curCount; i++)
-        {
-            memAvg += memUsage[i];
-            swapAvg += swapUsage[i];
-        }
-        memAvg = RoundingOff(memAvg / (float)curCount);
-        swapAvg = RoundingOff(swapAvg / (float)curCount);
-        
-        // printf("Memory usage: %.2f%%\n", memUsage[idx]);
-        // printf("Memory avg: %.2f%%\n", memAvg);
-        // printf("Swap usage: %.2f%%\n", swapUsage[idx]);
-        // printf("Swap avg: %.2f%%\n", swapAvg);
-        
-        avgData = MakeMemAvgPacket(collectedData->data, memUsage[idx], memAvg, swapUsage[idx], swapAvg);
+        avgData = CalcMemAvg(collectedData->data, maxCount);
         
         pthread_mutex_lock(&g_queue->lock);
         Push(avgData, g_queue);
         pthread_mutex_unlock(&g_queue->lock);
-
-        idx++;
-        idx %= maxCount;
 
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;

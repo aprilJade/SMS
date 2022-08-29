@@ -1,7 +1,6 @@
 #ifndef ROUTINES_H
 #define ROUTINES_H
 #define MIN_SLEEP_MS 500
-#define ROUTINE_COUNT 5
 
 #include "packets.h"
 #include "logger.h"
