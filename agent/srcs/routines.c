@@ -10,6 +10,7 @@
 #include <signal.h>
 #include "routines.h"
 #include "collector.h"
+#include "avgCalculator.h"
 
 #define RECONNECT_PERIOD 6    // seconds
 #define RECONNECT_MAX_TRY 100
@@ -77,27 +78,13 @@ void* CpuInfoRoutine(void* param)
     SRoutineParam* pParam = (SRoutineParam*)param;
     char logmsgBuf[128];
     ulong collectPeriodUs = pParam->collectPeriod * 1000;
+    int maxCount = (int)(AVG_TARGET_TIME_AS_MS / (float)pParam->collectPeriod);
 
     sprintf(logmsgBuf, "Start CPU information collection routine in %d ms cycle", pParam->collectPeriod);
     Log(g_logger, LOG_INFO, logmsgBuf);
 
     SCData* avgData;
     SCData* collectedData;
-    ulong* curIdle = (ulong*)malloc(sizeof(ulong) * cpuCnt);
-    ulong* prevIdle = (ulong*)malloc(sizeof(ulong) * cpuCnt);
-    float* deltaIdle = (float*)malloc(sizeof(float) * cpuCnt);
-
-    int maxCount = (int)(AVG_TARGET_TIME_AS_MS / (float)pParam->collectPeriod);
-    float** cpuUtilizations = (float**)malloc(sizeof(float*) * maxCount);
-    for (int i = 0; i < maxCount; i++)
-    {
-        cpuUtilizations[i] = (float*)malloc(sizeof(float) * cpuCnt);
-        memset(cpuUtilizations[i], 0, sizeof(float) * cpuCnt);
-    }
-    int curCount = 0;
-    int idx = 0;
-    float* avg = (float*)malloc(sizeof(float) * cpuCnt);
-    memset(avg, 0, sizeof(float) * cpuCnt);
 
     SBodyc* hBody;
     while (1)
@@ -107,41 +94,16 @@ void* CpuInfoRoutine(void* param)
         
         collectedData = CollectEachCpuInfo(cpuCnt, toMs, buf, pParam->collectPeriod, pParam->agentId);
 
-        // Push to collected data
         pthread_mutex_lock(&g_queue->lock);
         Push(collectedData, g_queue);
         pthread_mutex_unlock(&g_queue->lock);
 
-        // calculate cpu utilization and that average value
-        hBody = (SBodyc*)(collectedData->data + sizeof(SHeader));
+        avgData = CalcCpuUtilizationAvg(collectedData->data, cpuCnt, maxCount, (float)toMs, pParam->collectPeriod);
 
-        for (int i = 0; i < cpuCnt; i++)
-        {
-            curIdle[i] = hBody[i].idleTime;
-            deltaIdle[i] = (float)(curIdle[i] - prevIdle[i]) * (float)toMs;
-            prevIdle[i] = curIdle[i];
-            cpuUtilizations[idx][i] = RoundingOff(100.0 - ((deltaIdle[i]) / (float)pParam->collectPeriod * 100.0));
-            if (cpuUtilizations[idx][i] < 0)
-                cpuUtilizations[idx][i] = 0;
-            avg[i] = 0;
-            for (int j = 0; j < curCount; j++)
-                avg[i] += cpuUtilizations[j][i];
-            avg[i] = RoundingOff(avg[i] / (float)curCount);
-            // printf("%d: Cpu utilization average: %f%%\n", i, avg[i]);
-            // printf("%d: CPU Usage: %f%%\n", i, cpuUtilizations[idx][i]);
-        }
-        if (curCount != 0)
-        {
-            // avgData = MakeCpuAvgPacket(collectedData->data, cpuCnt, cpuUtilizations[idx], avg);
-            // pthread_mutex_lock(&queue->lock);
-            // Push(avgData, queue);
-            // pthread_mutex_unlock(&queue->lock);
-            idx++;
-            idx %= maxCount;
-        }
-        if (curCount < maxCount)
-            curCount++;
-
+        pthread_mutex_lock(&g_queue->lock);
+        Push(avgData, g_queue);
+        pthread_mutex_unlock(&g_queue->lock);
+        
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
@@ -402,19 +364,19 @@ void* NetInfoRoutine(void* param)
                 sumValue += sendPacketsPerSec[j][i];
             hAvgBody[i].sendPacketsPerSecAvg = sumValue / curCount;
 
-            printf("<=== %s information ===>\n", hAvgBody[i].name);
+            // printf("<=== %s information ===>\n", hAvgBody[i].name);
 
-            printf("Received bytes: %.2f B/s\t", hAvgBody[i].recvBytesPerSec);
-            printf("Avg: %.2f B/s\n", hAvgBody[i].recvBytesPerSecAvg);
+            // printf("Received bytes: %.2f B/s\t", hAvgBody[i].recvBytesPerSec);
+            // printf("Avg: %.2f B/s\n", hAvgBody[i].recvBytesPerSecAvg);
 
-            printf("Received packets: %.2f per s\t", hAvgBody[i].recvPacketsPerSec);
-            printf("Avg: %.2f per s\n", hAvgBody[i].recvPacketsPerSecAvg);
+            // printf("Received packets: %.2f per s\t", hAvgBody[i].recvPacketsPerSec);
+            // printf("Avg: %.2f per s\n", hAvgBody[i].recvPacketsPerSecAvg);
 
-            printf("Send bytes: %.2f B/s\t\t", hAvgBody[i].sendBytesPerSec);
-            printf("Avg: %.2f B/s\n", hAvgBody[i].sendBytesPerSecAvg);
+            // printf("Send bytes: %.2f B/s\t\t", hAvgBody[i].sendBytesPerSec);
+            // printf("Avg: %.2f B/s\n", hAvgBody[i].sendBytesPerSecAvg);
 
-            printf("Send packets: %.2f per s\t", hAvgBody[i].sendPacketsPerSec);
-            printf("Avg: %.2f per s\n", hAvgBody[i].sendPacketsPerSecAvg);
+            // printf("Send packets: %.2f per s\t", hAvgBody[i].sendPacketsPerSec);
+            // printf("Avg: %.2f per s\n", hAvgBody[i].sendPacketsPerSecAvg);
         }
         
         if (curCount < maxCount)
