@@ -2,8 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include "packets.h"
-#include "collector.h"
+#include "avgCalculator.h"
 
 float RoundingOff(float x);
 
