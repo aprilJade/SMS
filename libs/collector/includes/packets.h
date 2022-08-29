@@ -48,7 +48,7 @@ typedef struct SBodym
 typedef struct SBodyn
 {
     uchar nameLength;
-    uchar name[16];
+    uchar name[15];
     ulong recvBytes;
     ulong recvPackets;
     ulong sendBytes;
@@ -87,10 +87,6 @@ typedef struct SBodyAvgC
     float cpuUtilizationAvg;   /* Last hour */
 } SBodyAvgC;
 
-typedef struct SBodyAvgN
-{
-} SBodyAvgN;
-
 typedef struct SbodyAvgM
 {
     float memUsage;
@@ -98,6 +94,21 @@ typedef struct SbodyAvgM
     float memUsageAvg;
     float swapUsageAvg;
 } SBodyAvgM;
+
+typedef struct SBodyAvgN
+{
+    uchar nameLength;
+    uchar name[15];
+    float recvBytesPerSec;
+    float recvBytesPerSecAvg;
+    float recvPacketsPerSec;
+    float recvPacketsPerSecAvg;
+    float sendBytesPerSec;
+    float sendBytesPerSecAvg;
+    float sendPacketsPerSec;
+    float sendPacketsPerSecAvg;
+} SBodyAvgN;
+
 #pragma pack(pop)
 
 #endif

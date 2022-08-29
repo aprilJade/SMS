@@ -25,11 +25,10 @@ static const char* const strSignal[] = {
 	[SIGKILL] = "SIGKILL",
 };
 
-const Logger* g_logger;
 int g_stderrFd;
 
 void HandleSignal(int);
-pthread_t RunCollector(void* (*)(void*), const char*, const char*, Logger*, Queue*, SHashTable*);
+pthread_t RunCollector(void* (*)(void*), const char*, const char*, SHashTable*);
 Logger* GenLogger(SHashTable*);
 
 /****************************** Start Main ******************************/
@@ -50,6 +49,7 @@ int main(int argc, char** argv)
 	char* value;
 	char logmsgBuf[128] = { 0, };
 	g_logger = GenLogger(options);
+	g_queue = NewQueue();
 	
 	if ((value = GetValueByKey(CONF_KEY_RUN_AS_DAEMON, options)) != NULL)
 	{
@@ -79,16 +79,13 @@ int main(int argc, char** argv)
 	}
 
 	
-	Queue* queue = NewQueue();
 
-	pthread_t cpuTid = RunCollector(CpuInfoRoutine, CONF_KEY_RUN_CPU_COLLECTOR, CONF_KEY_CPU_COLLECTION_PERIOD, g_logger, queue, options);
-	pthread_t memTid = RunCollector(MemInfoRoutine, CONF_KEY_RUN_MEM_COLLECTOR, CONF_KEY_MEM_COLLECTION_PERIOD, g_logger, queue, options);
-	pthread_t netTid = RunCollector(NetInfoRoutine, CONF_KEY_RUN_NET_COLLECTOR, CONF_KEY_NET_COLLECTION_PERIOD, g_logger, queue, options);
-	pthread_t procTid = RunCollector(ProcInfoRoutine, CONF_KEY_RUN_PROC_COLLECTOR, CONF_KEY_PROC_COLLECTION_PERIOD, g_logger, queue, options);
-	pthread_t diskTid = RunCollector(DiskInfoRoutine, CONF_KEY_RUN_DISK_COLLECTOR, CONF_KEY_DISK_COLLECTION_PERIOD, g_logger, queue, options);
+	pthread_t cpuTid = RunCollector(CpuInfoRoutine, CONF_KEY_RUN_CPU_COLLECTOR, CONF_KEY_CPU_COLLECTION_PERIOD, options);
+	pthread_t memTid = RunCollector(MemInfoRoutine, CONF_KEY_RUN_MEM_COLLECTOR, CONF_KEY_MEM_COLLECTION_PERIOD, options);
+	pthread_t netTid = RunCollector(NetInfoRoutine, CONF_KEY_RUN_NET_COLLECTOR, CONF_KEY_NET_COLLECTION_PERIOD, options);
+	pthread_t procTid = RunCollector(ProcInfoRoutine, CONF_KEY_RUN_PROC_COLLECTOR, CONF_KEY_PROC_COLLECTION_PERIOD, options);
+	pthread_t diskTid = RunCollector(DiskInfoRoutine, CONF_KEY_RUN_DISK_COLLECTOR, CONF_KEY_DISK_COLLECTION_PERIOD, options);
 	
-	signal(SIGPIPE, SIG_IGN);
-	Log(g_logger, LOG_INFO, "Ignored SIGPIPE");
 	
 	// handle below signal
 	signal(SIGBUS, HandleSignal);	// bus error
@@ -105,8 +102,6 @@ int main(int argc, char** argv)
 
 	pthread_t senderTid;
 	SSenderParam senderParam;
-	senderParam.logger = g_logger;
-	senderParam.queue = queue;
 
 	if ((value = GetValueByKey(CONF_KEY_HOST_ADDRESS, options)) != NULL)
 		strcpy(senderParam.host, value);
@@ -156,15 +151,12 @@ void HandleSignal(int signo)
 }
 
 pthread_t RunCollector(void* (*collectRoutine)(void*), const char* keyRunOrNot,
-						const char* keyPeriod, Logger* logger , Queue* queue,
-						SHashTable* options)
+						const char* keyPeriod, SHashTable* options)
 {
 	char* tmp;
 	char logmsgBuf[128];
 	pthread_t tid = -1;
 	SRoutineParam* param = (SRoutineParam*)malloc(sizeof(SRoutineParam));
-	param->logger = logger;
-	param->queue = queue;
 
 	if ((tmp = GetValueByKey(keyRunOrNot, options)) != NULL)
 	{
@@ -187,7 +179,7 @@ pthread_t RunCollector(void* (*collectRoutine)(void*), const char* keyRunOrNot,
 			if (pthread_create(&tid, NULL, collectRoutine, param) == -1)
 			{
 				sprintf(logmsgBuf, "Failed to start collector");
-				Log(param->logger, LOG_FATAL, logmsgBuf);
+				Log(g_logger, LOG_FATAL, logmsgBuf);
 				exit(EXIT_FAILURE);
 			}
 		}

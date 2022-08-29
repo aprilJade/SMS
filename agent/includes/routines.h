@@ -10,18 +10,17 @@
 #include "Queue.h"
 #include "tcpCtrl.h"
 
+const Logger* g_logger;
+const Queue* g_queue;
+
 typedef struct SRoutineParam
 {
     char agentId[16];
     uint collectPeriod;
-    Queue* queue;
-    Logger* logger;
 } SRoutineParam;
 
 typedef struct SSenderParam
 {
-    Queue* queue;
-    Logger* logger;
     char host[16];
     short port;
 } SSenderParam;

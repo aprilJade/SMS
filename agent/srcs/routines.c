@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <sys/socket.h>
+#include <signal.h>
 #include "routines.h"
 #include "collector.h"
 
@@ -12,6 +14,7 @@
 #define RECONNECT_MAX_TRY 100
 #define AVG_TARGET_TIME_AS_MS 3600000.0 // 1 hour => 60 * 60 * 1000ms
 
+static int g_servSockFd;
 
 SRoutineParam* GenRoutineParam(int collectPeriod, int collectorID, Queue* queue)
 {
@@ -20,7 +23,6 @@ SRoutineParam* GenRoutineParam(int collectPeriod, int collectorID, Queue* queue)
         ret->collectPeriod = MIN_SLEEP_MS;
     else
         ret->collectPeriod = collectPeriod;
-    ret->queue = queue;
     return ret;
 }
 
@@ -68,13 +70,11 @@ void* CpuInfoRoutine(void* param)
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
     SRoutineParam* pParam = (SRoutineParam*)param;
-    Queue* queue = pParam->queue;
-    Logger* logger = pParam->logger;
     char logmsgBuf[128];
     ulong collectPeriodUs = pParam->collectPeriod * 1000;
 
     sprintf(logmsgBuf, "Start CPU information collection routine in %d ms cycle", pParam->collectPeriod);
-    Log(logger, LOG_INFO, logmsgBuf);
+    Log(g_logger, LOG_INFO, logmsgBuf);
 
     SCData* avgData;
     SCData* collectedData;
@@ -93,7 +93,7 @@ void* CpuInfoRoutine(void* param)
     int idx = 0;
     float* avg = (float*)malloc(sizeof(float) * cpuCnt);
     memset(avg, 0, sizeof(float) * cpuCnt);
-
+    
     SBodyc* hBody;
     while (1)
     {
@@ -103,9 +103,9 @@ void* CpuInfoRoutine(void* param)
         collectedData = CollectEachCpuInfo(cpuCnt, toMs, buf, pParam->collectPeriod, pParam->agentId);
 
         // Push to collected data
-        pthread_mutex_lock(&queue->lock);
-        Push(collectedData, queue);
-        pthread_mutex_unlock(&queue->lock);
+        pthread_mutex_lock(&g_queue->lock);
+        Push(collectedData, g_queue);
+        pthread_mutex_unlock(&g_queue->lock);
 
         // calculate cpu utilization and that average value
         hBody = (SBodyc*)(collectedData->data + sizeof(SHeader));
@@ -141,7 +141,7 @@ void* CpuInfoRoutine(void* param)
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
         sprintf(logmsgBuf, "Collected in %ldus: CPU", elapseTime);
-        Log(logger, LOG_DEBUG, logmsgBuf);
+        Log(g_logger, LOG_DEBUG, logmsgBuf);
 
         usleep(collectPeriodUs - elapseTime);
     }
@@ -172,15 +172,13 @@ void* MemInfoRoutine(void* param)
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
     SRoutineParam* pParam = (SRoutineParam*)param;
-    Queue* queue = pParam->queue;
-    Logger* logger = pParam->logger;
     char logmsgBuf[128];
     SCData* collectedData;
     ulong collectPeriodUs = pParam->collectPeriod * 1000;
     SCData* avgData;
 
     sprintf(logmsgBuf, "Start memory information collection routine in %d ms cycle", pParam->collectPeriod);
-    Log(logger, LOG_INFO, logmsgBuf);
+    Log(g_logger, LOG_INFO, logmsgBuf);
 
     int maxCount = (int)(AVG_TARGET_TIME_AS_MS / (float)pParam->collectPeriod);
     maxCount = 3;
@@ -200,9 +198,9 @@ void* MemInfoRoutine(void* param)
 
         collectedData = CollectMemInfo(buf, pParam->collectPeriod, pParam->agentId);
         
-        pthread_mutex_lock(&queue->lock);
-        Push(collectedData, queue);
-        pthread_mutex_unlock(&queue->lock);
+        pthread_mutex_lock(&g_queue->lock);
+        Push(collectedData, g_queue);
+        pthread_mutex_unlock(&g_queue->lock);
 
         hBody = (SBodym*)(collectedData->data + sizeof(SHeader));
         
@@ -229,9 +227,9 @@ void* MemInfoRoutine(void* param)
         
         avgData = MakeMemAvgPacket(collectedData->data, memUsage[idx], memAvg, swapUsage[idx], swapAvg);
         
-        pthread_mutex_lock(&queue->lock);
-        Push(avgData, queue);
-        pthread_mutex_unlock(&queue->lock);
+        pthread_mutex_lock(&g_queue->lock);
+        Push(avgData, g_queue);
+        pthread_mutex_unlock(&g_queue->lock);
 
         idx++;
         idx %= maxCount;
@@ -241,7 +239,7 @@ void* MemInfoRoutine(void* param)
         elapseTime = postTime - prevTime;
 
         sprintf(logmsgBuf, "Collected in %ldus: Memory", elapseTime);
-        Log(logger, LOG_DEBUG, logmsgBuf);
+        Log(g_logger, LOG_DEBUG, logmsgBuf);
 
         usleep(collectPeriodUs - elapseTime);
     }
@@ -283,14 +281,12 @@ void* NetInfoRoutine(void* param)
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
     SRoutineParam* pParam = (SRoutineParam*)param;
-    Queue* queue = pParam->queue;
-    Logger* logger = pParam->logger;
     char logmsgBuf[128];
     int nicCount = GetNicCount();
     ulong collectPeriodUs = pParam->collectPeriod * 1000;
 
     sprintf(logmsgBuf, "Start network information collection routine in %d ms cycle", pParam->collectPeriod);
-    Log(logger, LOG_INFO, logmsgBuf);
+    Log(g_logger, LOG_INFO, logmsgBuf);
 
     SCData* collectedData;
     
@@ -306,7 +302,6 @@ void* NetInfoRoutine(void* param)
         recvBytesPerSec[i] = (float*)malloc(sizeof(float) * nicCount);
         memset(recvBytesPerSec[i], 0, sizeof(float) * nicCount);
     }
-    float* recvBytesAvg = (float*)malloc(sizeof(float) * nicCount);
 
     ulong* prevRecvPackets = (ulong*)malloc(sizeof(ulong) * nicCount);
     ulong* curRecvPackets = (ulong*)malloc(sizeof(ulong) * nicCount);
@@ -316,7 +311,6 @@ void* NetInfoRoutine(void* param)
         recvPacketsPerSec[i] = (float*)malloc(sizeof(float) * nicCount);
         memset(recvPacketsPerSec[i], 0, sizeof(float) * nicCount);
     }
-    float* recvPacketsAvg = (float*)malloc(sizeof(float) * nicCount);
 
     ulong* prevSendBytes = (ulong*)malloc(sizeof(ulong) * nicCount);
     ulong* curSendBytes = (ulong*)malloc(sizeof(ulong) * nicCount);
@@ -326,7 +320,6 @@ void* NetInfoRoutine(void* param)
         sendBytesPerSec[i] = (float*)malloc(sizeof(float) * nicCount);
         memset(sendBytesPerSec[i], 0, sizeof(float) * nicCount);
     }
-    float* sendBytesAvg = (float*)malloc(sizeof(float) * nicCount);
 
     ulong* prevSendPackets = (ulong*)malloc(sizeof(ulong) * nicCount);
     ulong* curSendPackets = (ulong*)malloc(sizeof(ulong) * nicCount);
@@ -336,78 +329,87 @@ void* NetInfoRoutine(void* param)
         sendPacketsPerSec[i] = (float*)malloc(sizeof(float) * nicCount);
         memset(sendPacketsPerSec[i], 0, sizeof(float) * nicCount);
     }
-    float* sendPacketsAvg = (float*)malloc(sizeof(float) * nicCount);
 
     SBodyn* hBody;
-    
+    float sumValue;
     while(1)
     {
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
         collectedData = CollectNetInfo(buf, nicCount, pParam->collectPeriod, pParam->agentId);
-        pthread_mutex_lock(&queue->lock);
-        Push(collectedData, queue);
-        pthread_mutex_unlock(&queue->lock);
+        pthread_mutex_lock(&g_queue->lock);
+        Push(collectedData, g_queue);
+        pthread_mutex_unlock(&g_queue->lock);
         
         hBody = (SBodyn*)(collectedData->data + sizeof(SHeader));
+        SCData* avgData = (SCData*)malloc(sizeof(SCData));
+        avgData->dataSize = sizeof(SHeader) + sizeof(SBodyAvgN) * nicCount;
+        avgData->data = (uchar*)malloc(avgData->dataSize);
+        memcpy(avgData->data, collectedData->data, sizeof(SHeader));
+        SHeader* hHeader = (SHeader*)avgData->data;
+        hHeader->signature = SIGNATURE_AVG_NET;
+        SBodyAvgN* hAvgBody = (SBodyAvgN*)(avgData->data + sizeof(SHeader));
 
         for (int i = 0; i < nicCount; i++)
         {
+            hAvgBody[i].nameLength = hBody[i].nameLength;
+            memcpy(hAvgBody[i].name, hBody[i].name, hBody[i].nameLength);
+
             curRecvBytes[i] = hBody[i].recvBytes;
             recvBytesPerSec[idx][i] = round((float)(curRecvBytes[i] - prevRecvBytes[i]) / (float)pParam->collectPeriod * 1000.0);
             prevRecvBytes[i] = curRecvBytes[i];
-            
-            recvBytesAvg[i] = 0.0;
-            for (int j = 0; j < curCount; j++)
-                recvBytesAvg[i] += recvBytesPerSec[j][i];
-            recvBytesAvg[i] = recvBytesAvg[i] / curCount;
+            hAvgBody[i].recvBytesPerSec = recvBytesPerSec[idx][i];
 
+            sumValue = 0.0;
+            for (int j = 0; j < curCount; j++)
+                sumValue += recvBytesPerSec[j][i];
+            hAvgBody[i].recvBytesPerSecAvg = sumValue / curCount;
 
             curRecvPackets[i] = hBody[i].recvPackets;
             recvPacketsPerSec[idx][i] = round((float)(curRecvPackets[i] - prevRecvPackets[i]) / (float)pParam->collectPeriod * 1000.0);
             prevRecvPackets[i] = curRecvPackets[i];
+            hAvgBody[i].recvPacketsPerSec = recvPacketsPerSec[idx][i];
 
-            recvPacketsAvg[i] = 0.0;
+            sumValue = 0.0;
             for (int j = 0; j < curCount; j++)
-                recvPacketsAvg[i] += recvPacketsPerSec[j][i];
-            recvPacketsAvg[i] = recvPacketsAvg[i] / curCount;
-
+                sumValue += recvPacketsPerSec[j][i];
+            hAvgBody[i].recvPacketsPerSecAvg = sumValue / curCount;
 
             curSendBytes[i] = hBody[i].sendBytes;
             sendBytesPerSec[idx][i] = round((float)(curSendBytes[i] - prevSendBytes[i]) / (float)pParam->collectPeriod * 1000.0);
             prevSendBytes[i] = curSendBytes[i];
+            hAvgBody[i].sendBytesPerSec = sendBytesPerSec[idx][i];
 
-            sendBytesAvg[i] = 0.0;
+            sumValue = 0.0;
             for (int j = 0; j < curCount; j++)
-                sendBytesAvg[i] += sendBytesPerSec[j][i];
-            sendBytesAvg[i] = recvBytesAvg[i] / curCount;
+                sumValue += sendBytesPerSec[j][i];
+            hAvgBody[i].sendBytesPerSecAvg = sumValue / curCount;
 
 
             curSendPackets[i] = hBody[i].sendPackets;
             sendPacketsPerSec[idx][i] = round((float)(curSendPackets[i] - prevSendPackets[i]) / (float)pParam->collectPeriod * 1000.0);
             prevSendPackets[i] = curSendPackets[i];
-            
+            hAvgBody[i].sendPacketsPerSec = sendPacketsPerSec[idx][i];
 
-            sendPacketsAvg[i] = 0.0;
+            sumValue = 0.0;
             for (int j = 0; j < curCount; j++)
-                sendPacketsAvg[i] += sendPacketsPerSec[j][i];
-            sendPacketsAvg[i] = sendPacketsAvg[i] / curCount;
+                sumValue += sendPacketsPerSec[j][i];
+            hAvgBody[i].sendPacketsPerSecAvg = sumValue / curCount;
 
+            printf("<=== %s information ===>\n", hAvgBody[i].name);
 
-            printf("<=== %s information ===>\n", hBody[i].name);
+            printf("Received bytes: %.2f B/s\t", hAvgBody[i].recvBytesPerSec);
+            printf("Avg: %.2f B/s\n", hAvgBody[i].recvBytesPerSecAvg);
 
-            printf("Received bytes: %.2f B/s\t", recvBytesPerSec[idx][i]);
-            printf("Avg: %.2f B/s\n", recvBytesAvg[i]);
+            printf("Received packets: %.2f per s\t", hAvgBody[i].recvPacketsPerSec);
+            printf("Avg: %.2f per s\n", hAvgBody[i].recvPacketsPerSecAvg);
 
-            printf("Received packets: %.2f per s\t", recvPacketsPerSec[idx][i]);
-            printf("Avg: %.2f per s\n", recvPacketsAvg[i]);
+            printf("Send bytes: %.2f B/s\t\t", hAvgBody[i].sendBytesPerSec);
+            printf("Avg: %.2f B/s\n", hAvgBody[i].sendBytesPerSecAvg);
 
-            printf("Send bytes: %.2f B/s\t\t", sendBytesPerSec[idx][i]);
-            printf("Avg: %.2f B/s\n", sendBytesAvg[i]);
-
-            printf("Send packets: %.2f per s\t", sendPacketsPerSec[idx][i]);
-            printf("Avg: %.2f per s\n", sendPacketsAvg[i]);
+            printf("Send packets: %.2f per s\t", hAvgBody[i].sendPacketsPerSec);
+            printf("Avg: %.2f per s\n", hAvgBody[i].sendPacketsPerSecAvg);
         }
         
         if (curCount < maxCount)
@@ -418,13 +420,17 @@ void* NetInfoRoutine(void* param)
             idx++;
             idx %= maxCount;
         }
+
+        pthread_mutex_lock(&g_queue->lock);
+        Push(avgData, g_queue);
+        pthread_mutex_unlock(&g_queue->lock);
         
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 
         sprintf(logmsgBuf, "Collected in %ldus: Network", elapseTime);
-        Log(logger, LOG_DEBUG, logmsgBuf);
+        Log(g_logger, LOG_DEBUG, logmsgBuf);
         usleep(collectPeriodUs - elapseTime);
     }
 }
@@ -435,13 +441,11 @@ void* ProcInfoRoutine(void* param)
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
     SRoutineParam* pParam = (SRoutineParam*)param;
-    Queue* queue = pParam->queue;
-    Logger* logger = pParam->logger;
     char logmsgBuf[128];
     ulong collectPeriodUs = pParam->collectPeriod * 1000;
     
     sprintf(logmsgBuf, "Start process information collection routine in %d ms cycle", pParam->collectPeriod);
-    Log(logger, LOG_INFO, logmsgBuf);
+    Log(g_logger, LOG_INFO, logmsgBuf);
 
     // TODO: change dynamic dataBuf size
     uchar dataBuf[1024 * 1024] = { 0, };
@@ -454,9 +458,9 @@ void* ProcInfoRoutine(void* param)
         memset(dataBuf, 0, 1024 * 1024);
         collectedData = CollectProcInfo(buf, dataBuf, pParam->collectPeriod, pParam->agentId);
 
-        pthread_mutex_lock(&queue->lock);
-        Push(collectedData, queue);
-        pthread_mutex_unlock(&queue->lock);
+        pthread_mutex_lock(&g_queue->lock);
+        Push(collectedData, g_queue);
+        pthread_mutex_unlock(&g_queue->lock);
 
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
@@ -466,7 +470,7 @@ void* ProcInfoRoutine(void* param)
         SHeader* hHeader = (SHeader*)pData;
 
         sprintf(logmsgBuf, "Collected in %ldus: %d Process", elapseTime, hHeader->bodyCount);
-        Log(logger, LOG_DEBUG, logmsgBuf);
+        Log(g_logger, LOG_DEBUG, logmsgBuf);
 
         usleep(collectPeriodUs - elapseTime);
     }
@@ -511,15 +515,13 @@ void* DiskInfoRoutine(void* param)
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
     SRoutineParam* pParam = (SRoutineParam*)param;
-    Queue* queue = pParam->queue;
-    Logger* logger = pParam->logger;
     char logmsgBuf[128];
     int diskDevCnt = GetDiskDeviceCount(buf);
     ulong collectPeriodUs = pParam->collectPeriod * 1000;
     
     sprintf(logmsgBuf, "Start disk information collection routine in %d ms cycle",
         pParam->collectPeriod);
-    Log(logger, LOG_INFO, logmsgBuf);
+    Log(g_logger, LOG_INFO, logmsgBuf);
 
     SCData* collectedData;
 
@@ -530,32 +532,35 @@ void* DiskInfoRoutine(void* param)
 
         collectedData = CollectDiskInfo(buf, diskDevCnt, pParam->collectPeriod, pParam->agentId);
 
-        pthread_mutex_lock(&queue->lock);
-        Push(collectedData, queue);
-        pthread_mutex_unlock(&queue->lock);
+        pthread_mutex_lock(&g_queue->lock);
+        Push(collectedData, g_queue);
+        pthread_mutex_unlock(&g_queue->lock);
 
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 
         sprintf(logmsgBuf, "Collected in %ldus: Disk", elapseTime);
-        Log(logger, LOG_DEBUG, logmsgBuf);
+        Log(g_logger, LOG_DEBUG, logmsgBuf);
         usleep(collectPeriodUs - elapseTime);
     }
+}
+
+void RecoverTcpConnection(int signo)
+{
+    
 }
 
 void* SendRoutine(void* param)
 {
     SSenderParam* pParam = (SSenderParam*)param;
-    Queue* queue = pParam->queue;
-    Logger* logger = pParam->logger;
-
     SCData* colletecData = NULL;
-    int sockFd, connFailCount = 0;
+    int connFailCount = 0;
     int sendBytes;
     char logmsgBuf[128];
 
-    Log(logger, LOG_INFO, "Start sender routine");
+	signal(SIGPIPE, SIG_IGN);
+    Log(g_logger, LOG_INFO, "Start sender routine");
 
     int i = 0;
     while(1)
@@ -563,45 +568,45 @@ void* SendRoutine(void* param)
         while (1)
         {
             sprintf(logmsgBuf, "Try to connect: %s:%d", pParam->host, pParam->port);
-            Log(logger, LOG_DEBUG, logmsgBuf);
-            if ((sockFd = ConnectToServer(pParam->host, pParam->port)) != -1)
+            Log(g_logger, LOG_DEBUG, logmsgBuf);
+            if ((g_servSockFd = ConnectToServer(pParam->host, pParam->port)) != -1)
                 break;
             connFailCount++;
             sprintf(logmsgBuf, "Failed to connect %s:%d (%d)", pParam->host, pParam->port, connFailCount);
-            Log(logger, LOG_ERROR, logmsgBuf);
+            Log(g_logger, LOG_ERROR, logmsgBuf);
             sleep(RECONNECT_PERIOD);
         }
 
         sprintf(logmsgBuf, "Connected to %s:%d", pParam->host, pParam->port);
-        Log(logger, LOG_INFO, logmsgBuf);
+        Log(g_logger, LOG_INFO, logmsgBuf);
         connFailCount = 0;
 
         while (1)
         {
             if (colletecData == NULL)
             {
-                if (IsEmpty(queue))
+                if (IsEmpty(g_queue))
                 {
                     // TODO: Remove busy wait or change to the optimized set sleep time 
                     usleep(500);
                     continue;
                 }
                 
-                pthread_mutex_lock(&queue->lock);
-                colletecData = Pop(queue);
-                pthread_mutex_unlock(&queue->lock);
+                pthread_mutex_lock(&g_queue->lock);
+                colletecData = Pop(g_queue);
+                pthread_mutex_unlock(&g_queue->lock);
             }
             
-            if ((sendBytes = write(sockFd, colletecData->data, colletecData->dataSize)) == -1)
+            if ((sendBytes = send(g_servSockFd, colletecData->data, colletecData->dataSize, NULL)) == -1)
             {
-                close(sockFd);
+                close(g_servSockFd);
                 sprintf(logmsgBuf, "Disconnected to %s:%d", pParam->host, pParam->port);
-                Log(logger, LOG_INFO, logmsgBuf);
+                Log(g_logger, LOG_INFO, logmsgBuf);
                 break;
             }
             
             sprintf(logmsgBuf, "Send %d bytes to %s:%d ", sendBytes, pParam->host, pParam->port);
-            Log(logger, LOG_DEBUG, logmsgBuf);
+            Log(g_logger, LOG_DEBUG, logmsgBuf);
             free(colletecData->data);
             free(colletecData);
             colletecData = NULL;
