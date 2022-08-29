@@ -17,7 +17,6 @@ typedef struct SRoutineParam
 } SRoutineParam;
 
 int GetNicCount();
-SRoutineParam* GenRoutineParam(int collectPeriod, int collectorID, Queue* queue);
 
 void* CpuInfoRoutine(void* param);
 void* MemInfoRoutine(void* param);

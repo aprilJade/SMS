@@ -4,7 +4,13 @@
 #include <stdbool.h>
 #include "avgCalculator.h"
 
-float RoundingOff(float x);
+static float RoundingOff(float x)
+{
+    x += 0.005;
+    int tmp = (int)(x * 100);
+    x = tmp / 100.0;
+    return x;
+}
 
 SCData* CalcCpuUtilizationAvg(uchar* collectedData, int cpuCnt, int maxCount, float toMs, int collectPeriod)
 {
