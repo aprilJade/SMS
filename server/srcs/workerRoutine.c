@@ -7,8 +7,9 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 
-// Calc delta value, average value
-// And save to DB
+extern const Logger* g_logger;
+extern Queue* g_queue;
+
 const char* cpuInsertSql = 
     "INSERT INTO cpu_informations(agent_id, collect_time, core_id, usr_run_time, sys_run_time, idle_time, wait_time) VALUES";
 const char* memInsertSql = 
@@ -46,7 +47,7 @@ void InsertCpuInfo(void* data, SWorkTools* tools)
         if (Query(tools->dbWrapper, sql) == -1)
         {
             sprintf(sql, "%d: Failed to store in DB: CPU", tools->workerId);
-            Log(tools->logger, LOG_ERROR, sql);
+            Log(g_logger, LOG_ERROR, sql);
         }
     }
 }
@@ -78,7 +79,7 @@ void InsertMemInfo(void* data, SWorkTools* tools)
     if (Query(tools->dbWrapper, sql) == -1)
     {
         sprintf(sql, "%d: Failed to store in DB: Memory", tools->workerId);
-        Log(tools->logger, LOG_ERROR, sql);
+        Log(g_logger, LOG_ERROR, sql);
     }
 }
 
@@ -113,7 +114,7 @@ void InsertNetInfo(void* data, SWorkTools* tools)
         if (Query(tools->dbWrapper, sql) == -1)
         {
             sprintf(sql, "%d: Failed to store in DB: Network", tools->workerId);
-            Log(tools->logger, LOG_ERROR, sql);
+            Log(g_logger, LOG_ERROR, sql);
         }
     }
 }
@@ -141,7 +142,7 @@ void InsertProcInfo(void* data, SWorkTools* tools)
     if (Query(tools->dbWrapper, "BEGIN") == -1)
     {
         sprintf(sql, "%d: Failed to BEGIN command: Process", tools->workerId);
-        Log(tools->logger, LOG_ERROR, sql);
+        Log(g_logger, LOG_ERROR, sql);
     }
 
     for (int i = 0; i < hHeader->bodyCount; i++)
@@ -183,7 +184,7 @@ void InsertProcInfo(void* data, SWorkTools* tools)
         if (Query(tools->dbWrapper, sql) == -1)
         {
             sprintf(sql, "%d: Failed to store in DB: Process", tools->workerId);
-            Log(tools->logger, LOG_ERROR, sql);
+            Log(g_logger, LOG_ERROR, sql);
         }
 
     }
@@ -191,7 +192,7 @@ void InsertProcInfo(void* data, SWorkTools* tools)
     if (Query(tools->dbWrapper, "END") == -1)
     {
         sprintf(sql, "%d: Failed to END command: Process", tools->workerId);
-        Log(tools->logger, LOG_ERROR, sql);
+        Log(g_logger, LOG_ERROR, sql);
     }
 }
 
@@ -217,13 +218,13 @@ void InsertDiskInfo(void* data, SWorkTools* tools)
         if (Query(tools->dbWrapper, sql) == -1)
         {
             sprintf(sql, "%d: Failed to store in DB: Disk", tools->workerId);
-            Log(tools->logger, LOG_ERROR, sql);
+            Log(g_logger, LOG_ERROR, sql);
         }
         hBody++;
     }
 }
 
-static const void* const (*InsertFunc[])(void*, SWorkTools*) = {
+static const void (*InsertFunc[])(void*, SWorkTools*) = {
     ['c'] = InsertCpuInfo,
     ['C'] = InsertCpuAvgInfo,
     ['m'] = InsertMemInfo,
@@ -237,8 +238,6 @@ static const void* const (*InsertFunc[])(void*, SWorkTools*) = {
 void* WorkerRoutine(void* param)
 {
     SWorkerParam* pParam = (SWorkerParam*)param;
-    Queue* queue = pParam->queue;
-    Logger* logger = pParam->logger;
     char logMsg[128];
     SHeader* hHeader;
     void* data;
@@ -248,33 +247,32 @@ void* WorkerRoutine(void* param)
     int pktId;
     workTools.dbWrapper = pParam->db;
     workTools.workerId = pParam->workerId;
-    workTools.logger = logger;
     
     sprintf(logMsg, "%d worker-created", pParam->workerId);
-    Log(logger, LOG_INFO, logMsg);
+    Log(g_logger, LOG_INFO, logMsg);
     sprintf(logMsg, "%d work-wait", pParam->workerId);
-    Log(logger, LOG_DEBUG, logMsg);
+    Log(g_logger, LOG_DEBUG, logMsg);
 
     while (1)
     {
-        if (IsEmpty(queue))
+        if (IsEmpty(g_queue))
         {
             // TODO: Remove busy wait or change to the optimized set sleep time 
             usleep(500);
             continue;
         }
         
-        pthread_mutex_lock(&queue->lock);
-        if (IsEmpty(queue))
+        pthread_mutex_lock(&g_queue->lock);
+        if (IsEmpty(g_queue))
         {
-            pthread_mutex_unlock(&queue->lock);
+            pthread_mutex_unlock(&g_queue->lock);
             continue;
         }
-        data = Pop(queue);
-        pthread_mutex_unlock(&queue->lock);
+        data = Pop(g_queue);
+        pthread_mutex_unlock(&g_queue->lock);
 
         sprintf(logMsg, "%d work-start", pParam->workerId);
-        Log(logger, LOG_DEBUG, logMsg);
+        Log(g_logger, LOG_DEBUG, logMsg);
         
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
@@ -286,9 +284,9 @@ void* WorkerRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         elapseTime = (timeVal.tv_sec * 1000000 + timeVal.tv_usec) - prevTime;
         sprintf(logMsg, "%d work-done in %ld us", pParam->workerId, elapseTime);
-        Log(logger, LOG_DEBUG, logMsg);
+        Log(g_logger, LOG_DEBUG, logMsg);
 
         sprintf(logMsg, "%d work-wait", pParam->workerId);
-        Log(logger, LOG_DEBUG, logMsg);
+        Log(g_logger, LOG_DEBUG, logMsg);
     }
 }

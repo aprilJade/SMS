@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <assert.h>
 #include <sys/socket.h>
 #include <signal.h>
 #include "routines.h"
@@ -14,6 +15,10 @@
 #define RECONNECT_MAX_TRY 100
 #define AVG_TARGET_TIME_AS_MS 3600000.0 // 1 hour => 60 * 60 * 1000ms
 
+extern const Logger* g_logger;
+extern Queue* g_queue;
+extern const char g_serverIp[16];
+extern unsigned short g_serverPort;
 static int g_servSockFd;
 
 SRoutineParam* GenRoutineParam(int collectPeriod, int collectorID, Queue* queue)
@@ -36,7 +41,7 @@ ulong CalcTotalCpuIdleTime(SCData* collectedData)
     return totalIdle;
 }
 
-float round(float x)
+float RoundingOff(float x)
 {
     x += 0.005;
     int tmp = (int)(x * 100);
@@ -80,7 +85,7 @@ void* CpuInfoRoutine(void* param)
     SCData* collectedData;
     ulong* curIdle = (ulong*)malloc(sizeof(ulong) * cpuCnt);
     ulong* prevIdle = (ulong*)malloc(sizeof(ulong) * cpuCnt);
-    float* deltaIdle = (ulong*)malloc(sizeof(float) * cpuCnt);
+    float* deltaIdle = (float*)malloc(sizeof(float) * cpuCnt);
 
     int maxCount = (int)(AVG_TARGET_TIME_AS_MS / (float)pParam->collectPeriod);
     float** cpuUtilizations = (float**)malloc(sizeof(float*) * maxCount);
@@ -93,7 +98,7 @@ void* CpuInfoRoutine(void* param)
     int idx = 0;
     float* avg = (float*)malloc(sizeof(float) * cpuCnt);
     memset(avg, 0, sizeof(float) * cpuCnt);
-    
+
     SBodyc* hBody;
     while (1)
     {
@@ -115,13 +120,13 @@ void* CpuInfoRoutine(void* param)
             curIdle[i] = hBody[i].idleTime;
             deltaIdle[i] = (float)(curIdle[i] - prevIdle[i]) * (float)toMs;
             prevIdle[i] = curIdle[i];
-            cpuUtilizations[idx][i] = round(100.0 - ((deltaIdle[i]) / (float)pParam->collectPeriod * 100.0));
+            cpuUtilizations[idx][i] = RoundingOff(100.0 - ((deltaIdle[i]) / (float)pParam->collectPeriod * 100.0));
             if (cpuUtilizations[idx][i] < 0)
                 cpuUtilizations[idx][i] = 0;
             avg[i] = 0;
             for (int j = 0; j < curCount; j++)
                 avg[i] += cpuUtilizations[j][i];
-            avg[i] = round(avg[i] / (float)curCount);
+            avg[i] = RoundingOff(avg[i] / (float)curCount);
             // printf("%d: Cpu utilization average: %f%%\n", i, avg[i]);
             // printf("%d: CPU Usage: %f%%\n", i, cpuUtilizations[idx][i]);
         }
@@ -204,8 +209,8 @@ void* MemInfoRoutine(void* param)
 
         hBody = (SBodym*)(collectedData->data + sizeof(SHeader));
         
-        memUsage[idx] = round((float)(hBody->memTotal - hBody->memAvail) / (float)hBody->memTotal * 100);
-        swapUsage[idx] = round((float)(hBody->swapTotal - hBody->swapFree) / (float)hBody->swapTotal * 100);
+        memUsage[idx] = RoundingOff((float)(hBody->memTotal - hBody->memAvail) / (float)hBody->memTotal * 100);
+        swapUsage[idx] = RoundingOff((float)(hBody->swapTotal - hBody->swapFree) / (float)hBody->swapTotal * 100);
         memAvg = 0;
         swapAvg = 0;
 
@@ -217,8 +222,8 @@ void* MemInfoRoutine(void* param)
             memAvg += memUsage[i];
             swapAvg += swapUsage[i];
         }
-        memAvg = round(memAvg / (float)curCount);
-        swapAvg = round(swapAvg / (float)curCount);
+        memAvg = RoundingOff(memAvg / (float)curCount);
+        swapAvg = RoundingOff(swapAvg / (float)curCount);
         
         // printf("Memory usage: %.2f%%\n", memUsage[idx]);
         // printf("Memory avg: %.2f%%\n", memAvg);
@@ -357,7 +362,7 @@ void* NetInfoRoutine(void* param)
             memcpy(hAvgBody[i].name, hBody[i].name, hBody[i].nameLength);
 
             curRecvBytes[i] = hBody[i].recvBytes;
-            recvBytesPerSec[idx][i] = round((float)(curRecvBytes[i] - prevRecvBytes[i]) / (float)pParam->collectPeriod * 1000.0);
+            recvBytesPerSec[idx][i] = RoundingOff((float)(curRecvBytes[i] - prevRecvBytes[i]) / (float)pParam->collectPeriod * 1000.0);
             prevRecvBytes[i] = curRecvBytes[i];
             hAvgBody[i].recvBytesPerSec = recvBytesPerSec[idx][i];
 
@@ -367,7 +372,7 @@ void* NetInfoRoutine(void* param)
             hAvgBody[i].recvBytesPerSecAvg = sumValue / curCount;
 
             curRecvPackets[i] = hBody[i].recvPackets;
-            recvPacketsPerSec[idx][i] = round((float)(curRecvPackets[i] - prevRecvPackets[i]) / (float)pParam->collectPeriod * 1000.0);
+            recvPacketsPerSec[idx][i] = RoundingOff((float)(curRecvPackets[i] - prevRecvPackets[i]) / (float)pParam->collectPeriod * 1000.0);
             prevRecvPackets[i] = curRecvPackets[i];
             hAvgBody[i].recvPacketsPerSec = recvPacketsPerSec[idx][i];
 
@@ -377,7 +382,7 @@ void* NetInfoRoutine(void* param)
             hAvgBody[i].recvPacketsPerSecAvg = sumValue / curCount;
 
             curSendBytes[i] = hBody[i].sendBytes;
-            sendBytesPerSec[idx][i] = round((float)(curSendBytes[i] - prevSendBytes[i]) / (float)pParam->collectPeriod * 1000.0);
+            sendBytesPerSec[idx][i] = RoundingOff((float)(curSendBytes[i] - prevSendBytes[i]) / (float)pParam->collectPeriod * 1000.0);
             prevSendBytes[i] = curSendBytes[i];
             hAvgBody[i].sendBytesPerSec = sendBytesPerSec[idx][i];
 
@@ -388,7 +393,7 @@ void* NetInfoRoutine(void* param)
 
 
             curSendPackets[i] = hBody[i].sendPackets;
-            sendPacketsPerSec[idx][i] = round((float)(curSendPackets[i] - prevSendPackets[i]) / (float)pParam->collectPeriod * 1000.0);
+            sendPacketsPerSec[idx][i] = RoundingOff((float)(curSendPackets[i] - prevSendPackets[i]) / (float)pParam->collectPeriod * 1000.0);
             prevSendPackets[i] = curSendPackets[i];
             hAvgBody[i].sendPacketsPerSec = sendPacketsPerSec[idx][i];
 
@@ -548,68 +553,79 @@ void* DiskInfoRoutine(void* param)
 
 void RecoverTcpConnection(int signo)
 {
-    
+    assert(signo == SIGPIPE);
+    int connFailCount = 0;
+    char logmsgBuf[128];
+    sprintf(logmsgBuf, "Disconnected to server: %s:%d", g_serverIp, g_serverPort);
+    Log(g_logger, LOG_FATAL, logmsgBuf);
+    while (1)
+    {
+        sprintf(logmsgBuf, "Try to reconnect: %s:%d", g_serverIp, g_serverPort);
+        Log(g_logger, LOG_DEBUG, logmsgBuf);
+        close(g_servSockFd);
+        if ((g_servSockFd = ConnectToServer(g_serverIp, g_serverPort)) != -1)
+            break;
+        connFailCount++;
+        sprintf(logmsgBuf, "Failed to connect %s:%d (%d)", g_serverIp, g_serverPort, connFailCount);
+        Log(g_logger, LOG_ERROR, logmsgBuf);
+        sleep(RECONNECT_PERIOD);
+    }
+
+    sprintf(logmsgBuf, "Connected to %s:%d", g_serverIp, g_serverPort);
+    Log(g_logger, LOG_INFO, logmsgBuf);
 }
 
 void* SendRoutine(void* param)
 {
-    SSenderParam* pParam = (SSenderParam*)param;
     SCData* colletecData = NULL;
-    int connFailCount = 0;
     int sendBytes;
     char logmsgBuf[128];
+    int connFailCount = 0;
 
-	signal(SIGPIPE, SIG_IGN);
+	signal(SIGPIPE, RecoverTcpConnection);
     Log(g_logger, LOG_INFO, "Start sender routine");
+    
+    while (1)
+    {
+        Log(g_logger, LOG_DEBUG, logmsgBuf);
+        if ((g_servSockFd = ConnectToServer(g_serverIp, g_serverPort)) != -1)
+            break;
+        sprintf(logmsgBuf, "Failed to connect %s:%d (%d)", g_serverIp, g_serverPort, connFailCount);
+        connFailCount++;
+        Log(g_logger, LOG_ERROR, logmsgBuf);
+        sprintf(logmsgBuf, "Try to reconnect: %s:%d", g_serverIp, g_serverPort);
+        sleep(RECONNECT_PERIOD);
+    }
+    sprintf(logmsgBuf, "Connected to %s:%d", g_serverIp, g_serverPort);
+    Log(g_logger, LOG_INFO, logmsgBuf);
 
     int i = 0;
     while(1)
     {
-        while (1)
+        if (colletecData == NULL)
         {
-            sprintf(logmsgBuf, "Try to connect: %s:%d", pParam->host, pParam->port);
-            Log(g_logger, LOG_DEBUG, logmsgBuf);
-            if ((g_servSockFd = ConnectToServer(pParam->host, pParam->port)) != -1)
-                break;
-            connFailCount++;
-            sprintf(logmsgBuf, "Failed to connect %s:%d (%d)", pParam->host, pParam->port, connFailCount);
-            Log(g_logger, LOG_ERROR, logmsgBuf);
-            sleep(RECONNECT_PERIOD);
-        }
-
-        sprintf(logmsgBuf, "Connected to %s:%d", pParam->host, pParam->port);
-        Log(g_logger, LOG_INFO, logmsgBuf);
-        connFailCount = 0;
-
-        while (1)
-        {
-            if (colletecData == NULL)
+            if (IsEmpty(g_queue))
             {
-                if (IsEmpty(g_queue))
-                {
-                    // TODO: Remove busy wait or change to the optimized set sleep time 
-                    usleep(500);
-                    continue;
-                }
-                
-                pthread_mutex_lock(&g_queue->lock);
-                colletecData = Pop(g_queue);
-                pthread_mutex_unlock(&g_queue->lock);
+                // TODO: Remove busy wait or change to the optimized set sleep time 
+                usleep(500);
+                continue;
             }
             
-            if ((sendBytes = send(g_servSockFd, colletecData->data, colletecData->dataSize, NULL)) == -1)
-            {
-                close(g_servSockFd);
-                sprintf(logmsgBuf, "Disconnected to %s:%d", pParam->host, pParam->port);
-                Log(g_logger, LOG_INFO, logmsgBuf);
-                break;
-            }
-            
-            sprintf(logmsgBuf, "Send %d bytes to %s:%d ", sendBytes, pParam->host, pParam->port);
-            Log(g_logger, LOG_DEBUG, logmsgBuf);
-            free(colletecData->data);
-            free(colletecData);
-            colletecData = NULL;
+            pthread_mutex_lock(&g_queue->lock);
+            colletecData = Pop(g_queue);
+            pthread_mutex_unlock(&g_queue->lock);
         }
+        
+        if ((sendBytes = send(g_servSockFd, colletecData->data, colletecData->dataSize, 0)) == -1)
+        {
+            usleep(1000);
+            continue;
+        }
+        
+        sprintf(logmsgBuf, "Send %d bytes to %s:%d ", sendBytes, g_serverIp, g_serverPort);
+        Log(g_logger, LOG_DEBUG, logmsgBuf);
+        free(colletecData->data);
+        free(colletecData);
+        colletecData = NULL;
     }
 }

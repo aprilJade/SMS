@@ -19,58 +19,33 @@
 #define MAX_WORKER_COUNT 16
 #define DEFAULT_PORT 4242
 
+static const char* const strSignal[] = {
+	[SIGBUS] = "SIGBUS",
+	[SIGABRT] = "SIGABRT",
+	[SIGFPE] = "SIGFPE",
+	[SIGQUIT] = "SIGQUIT",
+	[SIGSEGV] = "SIGSEGV",
+	[SIGINT] = "SIGINT",
+	[SIGILL] = "SIGILL",
+	[SIGSYS] = "SIGSYS",
+	[SIGTERM] = "SIGTERM",
+	[SIGKILL] = "SIGKILL",
+};
+
 const Logger* g_logger;
+Queue* g_queue;
 int g_stderrFd;
 
 void HandleSignal(int signo)
 {
 	char logMsg[512];
-	switch (signo)
-	{
-	case SIGINT:
-		sprintf(logMsg, "Killed by SIGINT");
-		Log(g_logger, LOG_ERROR, logMsg);
-		break;
-	case SIGABRT:
-		sprintf(logMsg, "Killed by SIGIABRT");
-		Log(g_logger, LOG_FATAL, logMsg);
-		break;
-	case SIGSEGV:
-		sprintf(logMsg, "Killed by SIGSEGV");
-		Log(g_logger, LOG_FATAL, logMsg);
-		break;
-	case SIGBUS:
-		sprintf(logMsg, "Killed by SIGBUS");
-		Log(g_logger, LOG_FATAL, logMsg);
-		break;
-	case SIGFPE:
-		sprintf(logMsg, "Killed by SIGFPE");
-		Log(g_logger, LOG_FATAL, logMsg);
-		break;
-	case SIGTERM:
-		sprintf(logMsg, "Killed by SIGTERM");
-		Log(g_logger, LOG_FATAL, logMsg);
-		break;
-	case SIGSYS:
-		sprintf(logMsg, "Killed by SIGSYS");
-		Log(g_logger, LOG_FATAL, logMsg);
-		break;
-	case SIGILL:
-		sprintf(logMsg, "Killed by SIGILL");
-		Log(g_logger, LOG_FATAL, logMsg);
-		break;
-	case SIGQUIT:
-		sprintf(logMsg, "Killed by SIGQUIT");
-		Log(g_logger, LOG_INFO, logMsg);
-		break;
-	case SIGKILL:
-		sprintf(logMsg, "Killed by user");
-		Log(g_logger, LOG_INFO, logMsg);
-		break;
-	}
+	sprintf(logMsg, "Killed by %s", strSignal[signo]);
 
-	if (signo != SIGQUIT && signo != SIGKILL)
+	if (signo == SIGQUIT || signo == SIGKILL)
+		Log(g_logger, LOG_INFO, logMsg);
+	else
 	{
+		Log(g_logger, LOG_FATAL, logMsg);
 		// TODO: handle log path in agent.conf is absolute path...
 		char buf[128];
 		getcwd(buf, 128);
@@ -83,6 +58,7 @@ void HandleSignal(int signo)
 		sprintf(logMsg, "SMS: Server is aborted. Check below log.\n%s%s\n", buf, logPathBuf);
 		write(g_stderrFd, logMsg, strlen(logMsg));
 	}
+
 	exit(signo);
 }
 
@@ -109,14 +85,14 @@ int OpenSocket(short port)
     return servFd;
 }
 
-void CreateWorker(int workerCount, Logger* logger, Queue* queue)
+void CreateWorker(int workerCount)
 {
     SWorkerParam* param;
     pthread_t tid;
     SPgWrapper* db = NewPgWrapper("dbname = postgres");
     if (db == NULL)
     {
-        Log(logger, LOG_FATAL, "PostgreSQL connection failed");
+        Log(g_logger, LOG_FATAL, "PostgreSQL connection failed");
         fprintf(stderr, "PostgreSQL connection failed. Check psql status running below commands.\nsudo service postgresql status\n");
         exit(1);
     }
@@ -125,8 +101,6 @@ void CreateWorker(int workerCount, Logger* logger, Queue* queue)
     {
         param = (SWorkerParam*)malloc(sizeof(SWorkerParam));
         param->workerId = i;
-        param->logger = logger;
-        param->queue = queue;
         param->db = db;
         pthread_create(&tid, NULL, WorkerRoutine, param);
         pthread_detach(tid);
@@ -227,12 +201,12 @@ int main(int argc, char** argv)
     socklen_t len = sizeof(clientAddr);
     pthread_t tid;
     SReceiveParam* param;
-    Queue* queue = NewQueue();
+    g_queue = NewQueue();
     tmp = GetValueByKey(CONF_KEY_WORKER_COUNT, options);
     int workerCount = 2;
     if (tmp != NULL)
         workerCount = atoi(tmp);
-    CreateWorker(workerCount, g_logger, queue);
+    CreateWorker(workerCount);
 
     while (1)
     {
@@ -254,10 +228,8 @@ int main(int argc, char** argv)
 
         param = (SReceiveParam*)malloc(sizeof(SReceiveParam));
         param->clientSock = clientFd;
-        param->logger = g_logger;
         param->host = inet_ntoa(clientAddr.sin_addr);
         param->port = ntohs(clientAddr.sin_port);
-        param->queue = queue;
 
         if (pthread_create(&tid, NULL, ReceiveRoutine, param) == -1)
         {

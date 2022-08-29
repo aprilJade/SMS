@@ -12,7 +12,7 @@ typedef struct Logger
 } Logger;
 
 Logger* NewLogger(char* logPath, int logLevel);
-int Log(Logger* handle, int logLevel, char* logMsg);
+int Log(const Logger* handle, int logLevel, char* logMsg);
 int GenLogFileFullPath(char* logPath, char* buf);
 
 enum eLoggingLevel

@@ -10,20 +10,11 @@
 #include "Queue.h"
 #include "tcpCtrl.h"
 
-const Logger* g_logger;
-const Queue* g_queue;
-
 typedef struct SRoutineParam
 {
     char agentId[16];
     uint collectPeriod;
 } SRoutineParam;
-
-typedef struct SSenderParam
-{
-    char host[16];
-    short port;
-} SSenderParam;
 
 int GetNicCount();
 SRoutineParam* GenRoutineParam(int collectPeriod, int collectorID, Queue* queue);

@@ -7,7 +7,7 @@
 #include <assert.h>
 #include "tcpCtrl.h"
 
-int ConnectToServer(char *host, short port)
+int ConnectToServer(const char *host, short port)
 {
     assert(host && port >= 0 && port < 65536);
     struct sockaddr_in sockaddr;

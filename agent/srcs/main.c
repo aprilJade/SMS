@@ -24,7 +24,10 @@ static const char* const strSignal[] = {
 	[SIGTERM] = "SIGTERM",
 	[SIGKILL] = "SIGKILL",
 };
-
+const Logger* g_logger;
+Queue* g_queue;
+const char g_serverIp[16];
+unsigned short g_serverPort;
 int g_stderrFd;
 
 void HandleSignal(int);
@@ -78,8 +81,6 @@ int main(int argc, char** argv)
 		
 	}
 
-	
-
 	pthread_t cpuTid = RunCollector(CpuInfoRoutine, CONF_KEY_RUN_CPU_COLLECTOR, CONF_KEY_CPU_COLLECTION_PERIOD, options);
 	pthread_t memTid = RunCollector(MemInfoRoutine, CONF_KEY_RUN_MEM_COLLECTOR, CONF_KEY_MEM_COLLECTION_PERIOD, options);
 	pthread_t netTid = RunCollector(NetInfoRoutine, CONF_KEY_RUN_NET_COLLECTOR, CONF_KEY_NET_COLLECTION_PERIOD, options);
@@ -101,17 +102,16 @@ int main(int argc, char** argv)
 
 
 	pthread_t senderTid;
-	SSenderParam senderParam;
 
 	if ((value = GetValueByKey(CONF_KEY_HOST_ADDRESS, options)) != NULL)
-		strcpy(senderParam.host, value);
+		strcpy((char*)g_serverIp, value);
 	else
-		strcpy(senderParam.host, "127.0.0.1");
+		strcpy((char*)g_serverIp, "127.0.0.1");
 	value = GetValueByKey(CONF_KEY_HOST_PORT, options);
-	senderParam.port = value != NULL ? atoi(value) : 4242;
+	g_serverPort = value != NULL ? atoi(value) : 4242;
 
 	// why did you make sender thread...?
-	if (pthread_create(&senderTid, NULL, SendRoutine, &senderParam) == -1)
+	if (pthread_create(&senderTid, NULL, SendRoutine, NULL) == -1)
 	{
 		sprintf(logmsgBuf, "Fail to start sender");
 		Log(g_logger, LOG_FATAL, logmsgBuf);

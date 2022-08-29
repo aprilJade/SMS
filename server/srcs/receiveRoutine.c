@@ -7,6 +7,9 @@
 
 #define RECV_BUFFER_SIZE 1024 * 512
 
+extern const Logger* g_logger;
+extern Queue* g_queue;
+
 int IsValidSignature(int signature)
 {
     if (signature == SIGNATURE_CPU)
@@ -27,8 +30,6 @@ void* ReceiveRoutine(void* param)
     SReceiveParam* pParam = (SReceiveParam*)param;
     int readSize;
     char buf[RECV_BUFFER_SIZE] = { 0, };
-    Logger* logger = pParam->logger;
-    Queue* queue = pParam->queue;
     char logMsg[128];
     char* pb;
     int packetSize;
@@ -39,7 +40,7 @@ void* ReceiveRoutine(void* param)
         if ((readSize = read(pParam->clientSock, buf, RECV_BUFFER_SIZE)) == -1)
         {
             sprintf(logMsg, "Failed to receive packet from %s:%d", pParam->host, pParam->port);
-            Log(logger, LOG_ERROR, logMsg);
+            Log(g_logger, LOG_ERROR, logMsg);
             close(pParam->clientSock);
             break;
         }
@@ -48,12 +49,14 @@ void* ReceiveRoutine(void* param)
         if (readSize == 0)
         {
             sprintf(logMsg, "Disconnected from %s:%d", pParam->host, pParam->port);
-            Log(logger, LOG_INFO, logMsg);
+            Log(g_logger, LOG_INFO, logMsg);
             close(pParam->clientSock);
             break;
         }
         pb[readSize] = 0;
 
+        printf("received %d\n", readSize);
+        continue;
 
         while (readSize > 0)
         {
@@ -63,7 +66,7 @@ void* ReceiveRoutine(void* param)
                 sprintf(logMsg, "Invalid packet signature from %s:%d",
                     pParam->host,
                     pParam->port);
-                Log(logger, LOG_FATAL, logMsg);
+                Log(g_logger, LOG_FATAL, logMsg);
                 close(pParam->clientSock);
                 break;
             }
@@ -77,17 +80,17 @@ void* ReceiveRoutine(void* param)
                 pParam->host,
                 pParam->port,
                 packetSize);
-            Log(logger, LOG_DEBUG, logMsg);
+            Log(g_logger, LOG_DEBUG, logMsg);
 
             uchar* receivedData = (uchar*)malloc(sizeof(uchar) * packetSize);
             memcpy(receivedData, pb, packetSize);
             readSize -= packetSize;
             pb += packetSize;
-            pthread_mutex_lock(&queue->lock);
-            Push(receivedData, queue);
-            pthread_mutex_unlock(&queue->lock);
+            pthread_mutex_lock(&g_queue->lock);
+            Push(receivedData, g_queue);
+            pthread_mutex_unlock(&g_queue->lock);
         }
     }
     sprintf(logMsg, "End receiver for %s:%d", pParam->host, pParam->port);
-    Log(logger, LOG_INFO, logMsg);
+    Log(g_logger, LOG_INFO, logMsg);
 }

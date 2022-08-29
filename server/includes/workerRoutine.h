@@ -7,15 +7,12 @@
 
 typedef struct SWorkerParam
 {
-    Logger* logger;
-    Queue* queue;
     SPgWrapper* db;
     int workerId;
 } SWorkerParam;
 
 typedef struct SWorkTools
 {
-    Logger* logger;
     SPgWrapper* dbWrapper;
     int workerId;
 } SWorkTools;
