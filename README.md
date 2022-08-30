@@ -66,21 +66,30 @@ sh run-agent.sh
 |LOG_PATH|로그 저장 경로|/path/to/log|
 
 # Feedback log
-## 2022.08.23 3주차 Feedback
+
+## 2022.08.30 3주차 Feedback
+- [ ] signal handler에서 최소한의 작업만 하며 종료
+  - [ ] agent가 비정상 종료될 때, handler에서 다시 살리기보단 sentinel을 두어 살리기
+  - [ ] sentinel
+    - [ ] Heartbeat 체크하기
+      - [ ] Agent가 죽었을 때 (비정상 종료)
+        - [ ] 로그를 남기고 시스템의 사용자에게 종료가 되고 재실행되었음을 알림
+        - [ ] 로그는 프로그램 종료 직전 실행 중이던 스레드의 line 번호 등 정보를 남기자    
+## 2022.08.23 2주차 Feedback
 - [x] ~Queuing을 위한 Queue접근 시 Lock 사용 비율을 줄이는 방향으로 개선~
 
-## 2022.08.16 2주차 Feedback
+## 2022.08.16 1주차 Feedback
 - [x] ~Process 패킷을 하나로 만들어서 송신~
 - [x] ~Process 정보를 한번에 쿼리하기 (auto commit을 안하는 것으로 반복적인 commit을 최소화하는 것으로 해결)~
 - [x] ~Log level을 두고 Logging~
 - [x] ~Agent ID를 추가하여 Agent 식별하기~
 
-## 2022.08.09 1주차 Feedback
+## 2022.08.09 0주차 Feedback
 - [x] ~배열로 구현한 큐를 링크드 리스트로 구현하기(큐의 사이즈가 정적인 것이 큰 문제를 일으킬 수 있음)~
 - [x] ~서버 스레드 구조 개편~
   - [x] ~수신스레드를 하나로 만들고 Queuing (비즈니스 로직과 수신을 분리)~
   - [x] ~복수의 워커스레드를 만들어 Queue에서 데이터를 가져와 가공 및 DB저장~
-- [ ] 클라이언트가 수천개일때도 생각해서 구현하기 ...
+- [x] ~클라이언트가 수천개일때도 생각해서 구현하기 ...~
 
 
 # Todo List

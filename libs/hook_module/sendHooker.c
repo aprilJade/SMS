@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <string.h>
+#include <stdbool.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <sys/stat.h>
@@ -29,13 +30,14 @@ struct SAfterPkt
 ssize_t send(int fd, const void* buf, size_t len, int flags)
 {
     static ssize_t (*orgSend)(int, const void*, size_t, int);
+    static bool initialized;
     static int sockFd = 0;
     static struct sockaddr_in sockaddr;
     static struct stat statBuf;
     static struct SBeforePkt beforePkt;
     static struct SAfterPkt afterPkt;
     
-    if (orgSend == NULL)
+    if (initialized == false)
     {
         orgSend = (ssize_t (*)(int, const void*, size_t, int))dlsym(RTLD_NEXT, "send");
 
@@ -72,11 +74,11 @@ ssize_t send(int fd, const void* buf, size_t len, int flags)
                     beforePkt.processName[j++] = buf[i];            
             }
         }
-
+        initialized = true;
         // beforePkt.processName = 
     }
 
-    printf("hooked!: len = %lu\n", len);
+    //("hooked!: len = %lu\n", len);
 
     return orgSend(fd, buf, len, flags);
 }
