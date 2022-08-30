@@ -26,18 +26,18 @@ struct SAfterPkt
     unsigned long elapseTime; 
 };
 
-ssize_t write(int fd, const void* buf, size_t count)
+ssize_t send(int fd, const void* buf, size_t len, int flags)
 {
-    static ssize_t (*orgWrite)(int, const void*, size_t) = 0;
+    static ssize_t (*orgSend)(int, const void*, size_t, int);
     static int sockFd = 0;
     static struct sockaddr_in sockaddr;
     static struct stat statBuf;
     static struct SBeforePkt beforePkt;
     static struct SAfterPkt afterPkt;
     
-    if (orgWrite == NULL)
+    if (orgSend == NULL)
     {
-        orgWrite = (ssize_t (*)(int, const void*, size_t))dlsym(RTLD_NEXT, "write");
+        orgSend = (ssize_t (*)(int, const void*, size_t, int))dlsym(RTLD_NEXT, "send");
 
         sockFd = socket(PF_INET, SOCK_DGRAM, 0);
         if (sockFd == -1)
@@ -75,16 +75,8 @@ ssize_t write(int fd, const void* buf, size_t count)
 
         // beforePkt.processName = 
     }
-        
 
-    fstat(fd, &statBuf);
-    if (S_ISSOCK(statBuf.st_mode))
-    {
-        // send before packet
-        if (count > 65536)
-            count = 65536;
-        sendto(sockFd, buf, count, 0, (struct sockaddr*)&sockaddr, sizeof(sockaddr));
-        // send after packet
-    }
-    return orgWrite(fd, buf, count);
+    printf("hooked!: len = %lu\n", len);
+
+    return orgSend(fd, buf, len, flags);
 }

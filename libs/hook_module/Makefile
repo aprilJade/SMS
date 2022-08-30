@@ -1,22 +1,18 @@
 NAME		=	libhook_module.so
-SRC_DIR		=	./srcs
-SRCS		=	$(notdir $(wildcard $(SRC_DIR)/*.c))
+BIN_PATH	=	../../bin
 
-ifeq (, $(wildcard $(OBJ_DIR)))
-$(shell mkdir $(OBJ_DIR))
-endif
-
-$(NAME): $(SRCS)
-	cc -fPIC -shared -o $(NAME) $(OBJECTS) -ldl 
+$(NAME):
+	cc -c sendHooker.c -o sendHooker.o
+	cc -fPIC -shared -o $(BIN_PATH)/$(NAME) sendHooker.o -ldl 
 
 
 all: $(NAME)
 
 clean:
-	rm -rf $(OBJ_DIR)
+	rm -rf sendHooker.o
 
 fclean: clean
-	rm -rf $(NAME)
+	rm -rf $(BIN_PATH)/$(NAME)
 
 re:
 	make fclean

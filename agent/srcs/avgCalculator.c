@@ -211,19 +211,19 @@ SCData* CalcNetThroughputAvg(uchar* collectedData, int nicCount, int maxCount, i
             sum += deltaVal[SEND_PACKETS][i][j];
         hAvgBody[i].sendPacketsPerSecAvg = sum / curCount;
 
-        printf("<=== %s information ===>\n", hAvgBody[i].name);
+        // printf("<=== %s information ===>\n", hAvgBody[i].name);
 
-        printf("Received bytes: %.2f B/s\t", hAvgBody[i].recvBytesPerSec);
-        printf("Avg: %.2f B/s\n", hAvgBody[i].recvBytesPerSecAvg);
+        // printf("Received bytes: %.2f B/s\t", hAvgBody[i].recvBytesPerSec);
+        // printf("Avg: %.2f B/s\n", hAvgBody[i].recvBytesPerSecAvg);
 
-        printf("Received packets: %.2f per s\t", hAvgBody[i].recvPacketsPerSec);
-        printf("Avg: %.2f per s\n", hAvgBody[i].recvPacketsPerSecAvg);
+        // printf("Received packets: %.2f per s\t", hAvgBody[i].recvPacketsPerSec);
+        // printf("Avg: %.2f per s\n", hAvgBody[i].recvPacketsPerSecAvg);
 
-        printf("Send bytes: %.2f B/s\t\t", hAvgBody[i].sendBytesPerSec);
-        printf("Avg: %.2f B/s\n", hAvgBody[i].sendBytesPerSecAvg);
+        // printf("Send bytes: %.2f B/s\t\t", hAvgBody[i].sendBytesPerSec);
+        // printf("Avg: %.2f B/s\n", hAvgBody[i].sendBytesPerSecAvg);
 
-        printf("Send packets: %.2f per s\t", hAvgBody[i].sendPacketsPerSec);
-        printf("Avg: %.2f per s\n", hAvgBody[i].sendPacketsPerSecAvg);
+        // printf("Send packets: %.2f per s\t", hAvgBody[i].sendPacketsPerSec);
+        // printf("Avg: %.2f per s\n", hAvgBody[i].sendPacketsPerSecAvg);
     }
     
     if (curCount)

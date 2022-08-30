@@ -8,4 +8,4 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/bin
 # process info every 3000ms, then start below command
 # ./agent/agent -c 500 -m 500 -n 500 -p 3000
 
-./bin/agent ./agent.conf
+LD_PRELOAD=./bin/libhook_module.so ./bin/agent ./agent.conf
