@@ -24,17 +24,91 @@ static const char* const strSignal[] = {
 	[SIGTERM] = "SIGTERM",
 	[SIGKILL] = "SIGKILL",
 };
+
 const Logger* g_logger;
 Queue* g_queue;
 const char g_serverIp[16];
 unsigned short g_serverPort;
 int g_stderrFd;
 
-void HandleSignal(int);
-pthread_t RunCollector(void* (*)(void*), const char*, const char*, SHashTable*);
-Logger* GenLogger(SHashTable*);
+void HandleSignal(int signo)
+{
+	char logMsg[512];
+	sprintf(logMsg, "Killed by %s", strSignal[signo]);
 
-/****************************** Start Main ******************************/
+	if (signo == SIGQUIT || signo == SIGKILL)
+		Log(g_logger, LOG_INFO, logMsg);
+	else
+	{
+		Log(g_logger, LOG_FATAL, logMsg);
+		// TODO: handle absolute path
+		char buf[128];
+		getcwd(buf, 128);
+		char logPathBuf[128];
+		GenLogFileFullPath(g_logger->logPath, logPathBuf);
+		int len = strlen(logPathBuf);
+		memmove(logPathBuf, logPathBuf + 1, len - 1);
+		logPathBuf[len - 1] = 0;
+
+		sprintf(logMsg, "SMS: Agent is aborted. Check below log.\n%s%s\n", buf, logPathBuf);
+		write(g_stderrFd, logMsg, strlen(logMsg));
+	}
+
+	exit(signo);
+}
+
+pthread_t RunCollector(void* (*collectRoutine)(void*), const char* keyRunOrNot,
+						const char* keyPeriod, SHashTable* options)
+{
+	char* tmp;
+	char logmsgBuf[128];
+	pthread_t tid = -1;
+	SRoutineParam* param = (SRoutineParam*)malloc(sizeof(SRoutineParam));
+
+	if ((tmp = GetValueByKey(keyRunOrNot, options)) != NULL)
+	{
+		if (strcmp(tmp, "true") == 0)
+		{
+			if ((tmp = GetValueByKey(keyPeriod, options)) != NULL)
+				param->collectPeriod = atoi(tmp);
+			else
+				param->collectPeriod = 1000;
+					
+			if (param->collectPeriod < MIN_SLEEP_MS)
+				param->collectPeriod = MIN_SLEEP_MS;
+
+			memset(param->agentId, 0, 16);
+			if ((tmp = GetValueByKey(CONF_KEY_ID, options)) == NULL)
+				strcpy(param->agentId, "debug");
+			else
+				strncpy(param->agentId, tmp, 15);
+			
+			if (pthread_create(&tid, NULL, collectRoutine, param) == -1)
+			{
+				sprintf(logmsgBuf, "Failed to start collector");
+				Log(g_logger, LOG_FATAL, logmsgBuf);
+				exit(EXIT_FAILURE);
+			}
+		}
+	}
+	return tid;
+}
+
+Logger* GenLogger(SHashTable* options)
+{
+	char* logPath;
+	char* logLevel;
+	Logger* logger;
+	if ((logPath = GetValueByKey(CONF_KEY_LOG_PATH, options)) == NULL)
+		logPath = "./agent";
+	if ((logLevel = GetValueByKey(CONF_KEY_LOG_LEVEL, options)) != NULL)
+	{
+		if (strcmp(logLevel, "default") == 0)
+			return NewLogger(logPath, LOG_INFO);
+	}
+	return NewLogger(logPath, LOG_DEBUG);
+}
+
 int main(int argc, char** argv)
 {
 	if (argc != 2)
@@ -121,83 +195,4 @@ int main(int argc, char** argv)
 	pthread_join(senderTid, NULL);
 		
 	exit(EXIT_SUCCESS);
-}
-/****************************** End Main ******************************/
-
-void HandleSignal(int signo)
-{
-	char logMsg[512];
-	sprintf(logMsg, "Killed by %s", strSignal[signo]);
-
-	if (signo == SIGQUIT || signo == SIGKILL)
-		Log(g_logger, LOG_INFO, logMsg);
-	else
-	{
-		Log(g_logger, LOG_FATAL, logMsg);
-		// TODO: handle log path in agent.conf is absolute path...
-		char buf[128];
-		getcwd(buf, 128);
-		char logPathBuf[128];
-		GenLogFileFullPath(g_logger->logPath, logPathBuf);
-		int len = strlen(logPathBuf);
-		memmove(logPathBuf, logPathBuf + 1, len - 1);
-		logPathBuf[len - 1] = 0;
-
-		sprintf(logMsg, "SMS: Agent is aborted. Check below log.\n%s%s\n", buf, logPathBuf);
-		write(g_stderrFd, logMsg, strlen(logMsg));
-	}
-
-	exit(signo);
-}
-
-pthread_t RunCollector(void* (*collectRoutine)(void*), const char* keyRunOrNot,
-						const char* keyPeriod, SHashTable* options)
-{
-	char* tmp;
-	char logmsgBuf[128];
-	pthread_t tid = -1;
-	SRoutineParam* param = (SRoutineParam*)malloc(sizeof(SRoutineParam));
-
-	if ((tmp = GetValueByKey(keyRunOrNot, options)) != NULL)
-	{
-		if (strcmp(tmp, "true") == 0)
-		{
-			if ((tmp = GetValueByKey(keyPeriod, options)) != NULL)
-				param->collectPeriod = atoi(tmp);
-			else
-				param->collectPeriod = 1000;
-					
-			if (param->collectPeriod < MIN_SLEEP_MS)
-				param->collectPeriod = MIN_SLEEP_MS;
-
-			memset(param->agentId, 0, 16);
-			if ((tmp = GetValueByKey(CONF_KEY_ID, options)) == NULL)
-				strcpy(param->agentId, "debug");
-			else
-				strncpy(param->agentId, tmp, 15);
-			
-			if (pthread_create(&tid, NULL, collectRoutine, param) == -1)
-			{
-				sprintf(logmsgBuf, "Failed to start collector");
-				Log(g_logger, LOG_FATAL, logmsgBuf);
-				exit(EXIT_FAILURE);
-			}
-		}
-	}
-	return tid;
-}
-
-Logger* GenLogger(SHashTable* options)
-{
-	char* logPath;
-	char* logLevel;
-	Logger* logger;
-	if ((logPath = GetValueByKey(CONF_KEY_LOG_PATH, options)) == NULL)
-		logPath = "./agent";
-	if ((logLevel = GetValueByKey(CONF_KEY_LOG_LEVEL, options)) != NULL)
-	{
-		if (strcmp(logLevel, "default") == 0)
-			return NewLogger(logPath, LOG_INFO);
-	}
-	return NewLogger(logPath, LOG_DEBUG);
 }

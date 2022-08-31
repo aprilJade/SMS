@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <sys/socket.h>
 
 #define RECV_BUFFER_SIZE 1024 * 512
 
@@ -22,6 +23,12 @@ int IsValidSignature(int signature)
         return 1;
     else if (signature == SIGNATURE_DISK)
         return 1;
+    else if (signature == SIGNATURE_AVG_CPU)
+        return 1;
+    else if (signature == SIGNATURE_AVG_MEM)
+        return 1;
+    else if (signature == SIGNATURE_AVG_NET)
+        return 1;
     return 0;
 }
 
@@ -37,7 +44,7 @@ void* ReceiveRoutine(void* param)
     SHeader* hHeader;
     while (1)
     {
-        if ((readSize = read(pParam->clientSock, buf, RECV_BUFFER_SIZE)) == -1)
+        if ((readSize = recv(pParam->clientSock, buf, RECV_BUFFER_SIZE, 0)) == -1)
         {
             sprintf(logMsg, "Failed to receive packet from %s:%d", pParam->host, pParam->port);
             Log(g_logger, LOG_ERROR, logMsg);

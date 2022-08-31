@@ -126,6 +126,34 @@ Logger* GenLogger(SHashTable* options)
 	return logger;
 }
 
+void* UdpRoutine(void* param)
+{
+    int udpSockFd = socket(PF_INET, SOCK_DGRAM, 0);
+    if (udpSockFd < 0)
+        return 0;
+    struct sockaddr_in udpAddr;
+    memset(&udpAddr, 0, sizeof(udpAddr));
+
+    udpAddr.sin_family = AF_INET;
+    udpAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    udpAddr.sin_port = 4343;
+
+    if (bind(udpSockFd, (struct sockaddr*)&udpAddr, sizeof(udpAddr)) < 0)
+        return 0;
+    
+    int readSize;
+    char buf[1024 * 512];
+    struct sockaddr_in udpClientAddr;
+    socklen_t len;
+    while (1)
+    {
+        if ((readSize = recvfrom(udpSockFd, buf, 1024 * 512, 0, (struct sockaddr*)&udpClientAddr, &len)) < 0)
+            break;
+        buf[readSize];
+        printf("receive udp packet: %d\n", readSize);
+    }
+}
+
 int main(int argc, char** argv)
 {
     if (argc != 2)
@@ -189,6 +217,8 @@ int main(int argc, char** argv)
     sprintf(logMsg, "Server loaded: %d", getpid());
     Log(g_logger, LOG_INFO, logMsg);
     
+    pthread_t udpTid;
+    pthread_create(&udpTid, NULL, UdpRoutine, NULL);
 
     int servFd, clientFd;
     struct sockaddr_in clientAddr;
