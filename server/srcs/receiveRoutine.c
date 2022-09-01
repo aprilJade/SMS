@@ -63,16 +63,18 @@ void* ReceiveRoutine(void* param)
         pb[readSize] = 0;
 
         //printf("received %d\n", readSize);
-        continue;
+        //continue;
 
         while (readSize > 0)
         {
+            printf("%d\n", readSize);
             hHeader = (SHeader*)pb;
             if (!IsValidSignature(hHeader->signature))
             {
-                sprintf(logMsg, "Invalid packet signature from %s:%d",
+                sprintf(logMsg, "Invalid packet signature from %s:%d - %x",
                     pParam->host,
-                    pParam->port);
+                    pParam->port,
+                    hHeader->signature);
                 Log(g_logger, LOG_FATAL, logMsg);
                 close(pParam->clientSock);
                 break;

@@ -165,9 +165,9 @@ void* UdpRoutine(void* param)
         }
         
         prevPkt = (SPrefixPkt*)buf;
-        printf("<Prefix Packet Info>\nno.%lu: %lu: %s: %d (%s) addr: %s:%u\n",
-            prevPkt->packetNo ,prevPkt->beginTime, prevPkt->agentId, prevPkt->pid, prevPkt->processName,
-            prevPkt->hostIp, prevPkt->hostPort);
+        //printf("<Prefix Packet Info>\nno.%lu: %lu: %s: %d (%s) addr: %s:%u\n",
+        //    prevPkt->packetNo ,prevPkt->beginTime, prevPkt->agentId, prevPkt->pid, prevPkt->processName,
+        //    prevPkt->hostIp, prevPkt->hostPort);
 
 
         if ((readSize = recvfrom(udpSockFd, buf, sizeof(SPostfixPkt), 0, (struct sockaddr*)&udpClientAddr, &len)) < 0)
@@ -184,8 +184,8 @@ void* UdpRoutine(void* param)
         }
 
         postPkt = (SPostfixPkt*)buf;
-        printf("<Postfix Packet Info>\n%lu: %s: %d (%s) sended: %d\n\n",
-            postPkt->elapseTime, postPkt->agentId, postPkt->pid, postPkt->processName, postPkt->sendBytes);
+        //printf("<Postfix Packet Info>\n%lu: %s: %d (%s) sended: %d\n\n",
+        //    postPkt->elapseTime, postPkt->agentId, postPkt->pid, postPkt->processName, postPkt->sendBytes);
     }
 }
 

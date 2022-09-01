@@ -52,11 +52,11 @@ void* CpuInfoRoutine(void* param)
         Push(collectedData, g_queue);
         pthread_mutex_unlock(&g_queue->lock);
 
-        avgData = CalcCpuUtilizationAvg(collectedData->data, cpuCnt, maxCount, toMs, pParam->collectPeriod);
-
-        pthread_mutex_lock(&g_queue->lock);
-        Push(avgData, g_queue);
-        pthread_mutex_unlock(&g_queue->lock);
+        //avgData = CalcCpuUtilizationAvg(collectedData->data, cpuCnt, maxCount, toMs, pParam->collectPeriod);
+//
+        //pthread_mutex_lock(&g_queue->lock);
+        //Push(avgData, g_queue);
+        //pthread_mutex_unlock(&g_queue->lock);
         
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;

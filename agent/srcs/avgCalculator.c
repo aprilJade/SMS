@@ -42,6 +42,7 @@ SCData* CalcCpuUtilizationAvg(uchar* collectedData, int cpuCnt, int maxCount, fl
     memcpy(result->data, collectedData, sizeof(SHeader));
     SHeader* hHeader = (SHeader*)result->data;
     hHeader->signature = SIGNATURE_AVG_CPU;
+    hHeader->bodySize = sizeof(SBodyAvgC);
 
     SBodyc* hBody = (SBodyc*)(collectedData + sizeof(SHeader));
     SBodyAvgC* hAvgBody = (SBodyAvgC*)(result->data + sizeof(SHeader));
@@ -93,6 +94,7 @@ SCData* CalcMemAvg(uchar* collectedData, int maxCount)
     memcpy(avgData->data, collectedData, sizeof(SHeader));
     SHeader* hHeader = (SHeader*)avgData->data;
     hHeader->signature = SIGNATURE_AVG_MEM;
+    hHeader->bodySize = sizeof(SBodyAvgM);
 
     SBodym* hBody = (SBodym*)(collectedData + sizeof(SHeader));
     SBodyAvgM* hAvgBody = (SBodyAvgM*)(avgData->data + sizeof(SHeader));
@@ -163,7 +165,8 @@ SCData* CalcNetThroughputAvg(uchar* collectedData, int nicCount, int maxCount, i
 
     SHeader* hHeader = (SHeader*)avgData->data;
     hHeader->signature = SIGNATURE_AVG_NET;
-
+    hHeader->bodySize = sizeof(SBodyAvgN);
+    
     SBodyAvgN* hAvgBody = (SBodyAvgN*)(avgData->data + sizeof(SHeader));
     float sum = 0.0;
     for (int i = 0; i < nicCount; i++)

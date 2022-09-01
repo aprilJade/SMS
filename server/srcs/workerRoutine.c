@@ -34,7 +34,7 @@ void InsertCpuInfo(void* data, SWorkTools* tools)
     char sql[512];
     for (int i = 0; i < hHeader->bodyCount; i++)
     {
-        sprintf(sql, "%s (%s, \'%04d-%02d-%02d %02d:%02d:%02d\', %d, %ld, %ld, %ld, %ld);",
+        sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', %d, %ld, %ld, %ld, %ld);",
                     cpuInsertSql,
                     hHeader->agentId,
                     ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
@@ -46,6 +46,7 @@ void InsertCpuInfo(void* data, SWorkTools* tools)
                     hBody[i].waitTime);
         if (Query(tools->dbWrapper, sql) == -1)
         {
+            printf("%s\n", sql);
             sprintf(sql, "%d: Failed to store in DB: CPU", tools->workerId);
             Log(g_logger, LOG_ERROR, sql);
         }
@@ -65,7 +66,7 @@ void InsertMemInfo(void* data, SWorkTools* tools)
 
     char sql[512];
     ts = localtime(&hHeader->collectTime);
-    sprintf(sql, "%s (%s, \'%04d-%02d-%02d %02d:%02d:%02d\', %d, %d, %d, %d, %d, %d);",
+    sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', %d, %d, %d, %d, %d, %d);",
         memInsertSql,
         hHeader->agentId,
         ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
@@ -101,7 +102,7 @@ void InsertNetInfo(void* data, SWorkTools* tools)
     {
         memcpy(nicName, hBody[i].name, hBody[i].nameLength);
         nicName[hBody[i].nameLength] = 0;
-        sprintf(sql, "%s (%s, \'%04d-%02d-%02d %02d:%02d:%02d\', \'%s\', %ld, %ld, %ld, %ld);",
+        sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', \'%s\', %ld, %ld, %ld, %ld);",
             netInsertSql,
             hHeader->agentId,
             ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
@@ -153,7 +154,7 @@ void InsertProcInfo(void* data, SWorkTools* tools)
         {
             strncpy(cmdlineBuf, data, hBody->cmdlineLen);
             cmdlineBuf[hBody->cmdlineLen] = 0;
-            sprintf(sql, "%s (%s, %s, %d, \'%s\', \'%c\', %d, %d, %d, \'%s\', \'%s\');",
+            sprintf(sql, "%s (\'%s\', %s, %d, \'%s\', \'%c\', %d, %d, %d, \'%s\', \'%s\');",
                 procInsertSql,
                 hHeader->agentId,
                 sTimestamp,
@@ -169,8 +170,9 @@ void InsertProcInfo(void* data, SWorkTools* tools)
         }
         else
         {
-            sprintf(sql, "%s (%s, %d, \'%s\', \'%c\', %d, %d, %d, \'%s\');",
+            sprintf(sql, "%s (\'%s\' %s, %d, \'%s\', \'%c\', %d, %d, %d, \'%s\');",
                 procInsertSqlNoCmd,
+                hHeader->agentId,
                 sTimestamp,
                 hBody->pid,
                 hBody->procName,
@@ -206,7 +208,7 @@ void InsertDiskInfo(void* data, SWorkTools* tools)
 
     for (int i = 0; i < hHeader->bodyCount; i++)
     {
-        sprintf(sql, "%s (%s, \'%04d-%02d-%02d %02d:%02d:%02d\', \'%s\', %ld, %ld, %ld, %ld, %ld, %ld, %d, %ld, %ld);",
+        sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', \'%s\', %ld, %ld, %ld, %ld, %ld, %ld, %d, %ld, %ld);",
             diskInsertSql,
             hHeader->agentId,
             ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
