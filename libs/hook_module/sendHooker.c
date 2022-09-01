@@ -9,27 +9,7 @@
 #include <arpa/inet.h>
 #include <sys/stat.h>
 #include <time.h>
-
-#pragma pack(push, 1)
-struct SPrefixPkt
-{
-    char agentId[16];
-    char processName[32];
-    int pid;
-    in_addr_t hostIp;
-    in_port_t hostPort;
-    time_t beginTime;
-};
-
-struct SPostfixPkt
-{
-    char agentId[16];
-    char processName[32];
-    unsigned int pid;
-    unsigned int sendBytes;
-    unsigned long elapseTime; 
-};
-#pragma pack(pop)
+#include "udpPacket.h"
 
 static const char* defaultHostIp = "127.0.0.1";
 static const unsigned short defaultHostPort = 4343;
@@ -71,19 +51,18 @@ static void InitializeUdpPacket(struct SPrefixPkt* prevPkt, struct SPostfixPkt* 
     prevPkt->beginTime = time(NULL);
     prevPkt->hostIp = inet_addr(defaultHostIp);
     prevPkt->hostPort = htons(defaultHostPort);
-    prePktSize = sizeof(prevPkt);
+    prePktSize = sizeof(SPrefixPkt);
 
     /* Initialize Postfix Packet */
     strcpy(postPkt->agentId, prevPkt->agentId);
     strcpy(postPkt->processName, prevPkt->processName);
     postPkt->pid = prevPkt->pid;
-    postPktSize = sizeof(postPkt);
+    postPktSize = sizeof(SPostfixPkt);
 }
 
 __attribute__((constructor))
 static void InitializeHookingModule()
 {
-    printf("module loaded\n");
     orgSend = (ssize_t (*)(int, const void*, size_t, int))dlsym(RTLD_NEXT, "send");
     sockFd = socket(PF_INET, SOCK_DGRAM, 0);
     if (sockFd == -1)
@@ -110,7 +89,7 @@ ssize_t send(int fd, const void* buf, size_t len, int flags)
 
     postPkt.elapseTime = time(NULL) - prevPkt.beginTime;
     postPkt.sendBytes = sendBytes;
-    sendto(sockFd, &postPkt, prePktSize, 0, (struct sockaddr*)&servAddr, sockLen);
+    sendto(sockFd, &postPkt, postPktSize, 0, (struct sockaddr*)&servAddr, sockLen);
 
     return orgSend(fd, buf, len, flags);
 }

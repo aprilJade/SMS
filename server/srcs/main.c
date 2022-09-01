@@ -14,6 +14,7 @@
 #include "workerRoutine.h"
 #include "pgWrapper.h"
 #include "confParser.h"
+#include "udpPacket.h"
 
 #define CONNECTION_COUNT 1024
 #define MAX_WORKER_COUNT 16
@@ -145,7 +146,9 @@ void* UdpRoutine(void* param)
     char buf[1024 * 512];
     struct sockaddr_in udpClientAddr;
     socklen_t len;
-    printf("udp receiver on\n");
+    SPrefixPkt* prevPkt;
+    SPostfixPkt* postPkt;
+    char* pb;
     while (1)
     {
         if ((readSize = recvfrom(udpSockFd, buf, 1024 * 512, 0, (struct sockaddr*)&udpClientAddr, &len)) < 0)
@@ -154,9 +157,26 @@ void* UdpRoutine(void* param)
             break;
         }
         buf[readSize];
-        printf("%s", buf);
+        pb = buf;
+
+        if (readSize == sizeof(SPrefixPkt))
+        {
+            prevPkt = (SPrefixPkt*)buf;
+            
+            printf("<Prefix Packet Info>\n%lu: %s: %d (%s)\n",
+                prevPkt->beginTime, prevPkt->agentId, prevPkt->pid, prevPkt->processName);
+        }
+        else if (readSize == sizeof(SPostfixPkt))
+        {
+            postPkt = (SPostfixPkt*)buf;
+            printf("<Postfix Packet Info>\n%lu: %s: %d (%s) sended: %d\n\n",
+                postPkt->elapseTime, postPkt->agentId, postPkt->pid, postPkt->processName, postPkt->sendBytes);
+        }
+        else
+        {
+            printf("Real Packet Size: %d bytes\n", readSize);
+        }
     }
-    printf("udp receiver off\n");
 }
 
 int main(int argc, char** argv)

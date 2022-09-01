@@ -62,7 +62,7 @@ void* ReceiveRoutine(void* param)
         }
         pb[readSize] = 0;
 
-        printf("received %d\n", readSize);
+        //printf("received %d\n", readSize);
         continue;
 
         while (readSize > 0)
