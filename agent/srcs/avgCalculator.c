@@ -50,7 +50,7 @@ SCData* CalcCpuUtilizationAvg(uchar* collectedData, int cpuCnt, int maxCount, fl
     for (int i = 0; i < cpuCnt; i++)
     {
         curIdle[i] = hBody[i].idleTime;
-        deltaIdle[i] = (float)(curIdle[i] - prevIdle[i]) * toMs;
+        deltaIdle[i] = (float)(curIdle[i] - prevIdle[i]) * 10;
         prevIdle[i] = curIdle[i];
         cpuUtilizations[i][idx] = RoundingOff(100.0 - ((deltaIdle[i]) / (float)collectPeriod * 100.0));
         avg = 0.0;
@@ -58,8 +58,8 @@ SCData* CalcCpuUtilizationAvg(uchar* collectedData, int cpuCnt, int maxCount, fl
             avg += cpuUtilizations[i][j];
         hAvgBody[i].cpuUtilizationAvg = RoundingOff(avg / (float)curCount);
         hAvgBody[i].cpuUtilization = cpuUtilizations[i][idx];
-        // printf("%d: Cpu utilization average: %.2f%%\n", i, hAvgBody[i].cpuUtilizationAvg);
-        // printf("%d: CPU Usage: %.2f%%\n", i, hAvgBody[i].cpuUtilization);
+        printf("%d: Cpu utilization average: %.2f%%\n", i, hAvgBody[i].cpuUtilizationAvg);
+        printf("%d: CPU Usage: %.2f%%\n", i, hAvgBody[i].cpuUtilization);
     }
     if (curCount)
     {
@@ -166,7 +166,7 @@ SCData* CalcNetThroughputAvg(uchar* collectedData, int nicCount, int maxCount, i
     SHeader* hHeader = (SHeader*)avgData->data;
     hHeader->signature = SIGNATURE_AVG_NET;
     hHeader->bodySize = sizeof(SBodyAvgN);
-    
+
     SBodyAvgN* hAvgBody = (SBodyAvgN*)(avgData->data + sizeof(SHeader));
     float sum = 0.0;
     for (int i = 0; i < nicCount; i++)

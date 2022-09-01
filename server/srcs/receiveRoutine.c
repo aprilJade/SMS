@@ -67,7 +67,7 @@ void* ReceiveRoutine(void* param)
 
         while (readSize > 0)
         {
-            printf("%d\n", readSize);
+            //printf("%d\n", readSize);
             hHeader = (SHeader*)pb;
             if (!IsValidSignature(hHeader->signature))
             {

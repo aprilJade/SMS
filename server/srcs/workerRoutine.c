@@ -21,7 +21,7 @@ const char* procInsertSql =
 const char* procInsertSqlNoCmd =
     "INSERT INTO process_informations(agent_id, collect_time, pid, process_name, process_state, ppid, usr_run_time, sys_run_time, uname) VALUES";
 const char* diskInsertSql =
-    "INSERT INTO disk_informations(agnet_id, collect_time, device_name, read_success_count, read_sector_count, read_time, write_success_count, write_sector_count, write_time, current_io_count, doing_io_time, weighted_doing_io_time) VALUES";
+    "INSERT INTO disk_informations(agent_id, collect_time, device_name, read_success_count, read_sector_count, read_time, write_success_count, write_sector_count, write_time, current_io_count, doing_io_time, weighted_doing_io_time) VALUES";
 
 void InsertCpuInfo(void* data, SWorkTools* tools)
 {
@@ -55,7 +55,11 @@ void InsertCpuInfo(void* data, SWorkTools* tools)
 
 void InsertCpuAvgInfo(void* data, SWorkTools* tools)
 {
-    // Not implemented yet
+    SHeader* hHeader = (SHeader*)data;
+    SBodyAvgC* hBody = (SBodyAvgC*)(data + sizeof(SHeader));
+
+    //for (int i = 0; i < hHeader->bodyCount; i++)
+    //    printf("%d: utilization: %.2f avg: %.2f\n", i, hBody[i].cpuUtilization, hBody[i].cpuUtilizationAvg);
 }
 
 void InsertMemInfo(void* data, SWorkTools* tools)
@@ -219,6 +223,7 @@ void InsertDiskInfo(void* data, SWorkTools* tools)
             hBody->currentIoCount, hBody->doingIoTime, hBody->weightedDoingIoTime);
         if (Query(tools->dbWrapper, sql) == -1)
         {
+            printf("%d: %s\n", hHeader->bodyCount, sql);
             sprintf(sql, "%d: Failed to store in DB: Disk", tools->workerId);
             Log(g_logger, LOG_ERROR, sql);
         }
