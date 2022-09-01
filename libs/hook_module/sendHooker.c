@@ -36,7 +36,8 @@ ssize_t send(int fd, const void* buf, size_t len, int flags)
     static struct stat statBuf;
     static struct SBeforePkt beforePkt;
     static struct SAfterPkt afterPkt;
-    
+    static char sendBuffer[128];
+
     if (initialized == false)
     {
         orgSend = (ssize_t (*)(int, const void*, size_t, int))dlsym(RTLD_NEXT, "send");
@@ -50,7 +51,7 @@ ssize_t send(int fd, const void* buf, size_t len, int flags)
         }
         sockaddr.sin_family = AF_INET;
         sockaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-        sockaddr.sin_port = htons(4848);
+        sockaddr.sin_port = htons(4343);
 
         // initialize before packet
         beforePkt.pid = getpid();
@@ -78,6 +79,12 @@ ssize_t send(int fd, const void* buf, size_t len, int flags)
         // beforePkt.processName = 
     }
 
+    sprintf(sendBuffer, "Hooked!\n<info>\nlen: %ld\n", len);
+    if (sendto(sockFd, sendBuffer, strlen(sendBuffer), 0, (struct sockaddr*)&sockaddr, sizeof(sockaddr)) != strlen(sendBuffer))
+        printf("udp send failed\n");
+    else
+        printf("sended\n");
+    
     //("hooked!: len = %lu\n", len);
 
     return orgSend(fd, buf, len, flags);

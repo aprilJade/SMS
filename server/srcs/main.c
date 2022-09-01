@@ -136,7 +136,7 @@ void* UdpRoutine(void* param)
 
     udpAddr.sin_family = AF_INET;
     udpAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    udpAddr.sin_port = 4343;
+    udpAddr.sin_port = htons(4343);
 
     if (bind(udpSockFd, (struct sockaddr*)&udpAddr, sizeof(udpAddr)) < 0)
         return 0;
@@ -145,13 +145,18 @@ void* UdpRoutine(void* param)
     char buf[1024 * 512];
     struct sockaddr_in udpClientAddr;
     socklen_t len;
+    printf("udp receiver on\n");
     while (1)
     {
         if ((readSize = recvfrom(udpSockFd, buf, 1024 * 512, 0, (struct sockaddr*)&udpClientAddr, &len)) < 0)
+        {
+            printf("fail to receive udp packet\n");   
             break;
+        }
         buf[readSize];
-        printf("receive udp packet: %d\n", readSize);
+        printf("%s", buf);
     }
+    printf("udp receiver off\n");
 }
 
 int main(int argc, char** argv)
