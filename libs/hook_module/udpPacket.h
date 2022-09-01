@@ -7,9 +7,10 @@ typedef struct SPrefixPkt
     char agentId[16];
     char processName[32];
     int pid;
-    in_addr_t hostIp;
-    in_port_t hostPort;
+    char hostIp[16];
+    unsigned short hostPort;
     time_t beginTime;
+    unsigned long packetNo;
 } SPrefixPkt;
 
 typedef struct SPostfixPkt

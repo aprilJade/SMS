@@ -143,39 +143,49 @@ void* UdpRoutine(void* param)
         return 0;
     
     int readSize;
-    char buf[1024 * 512];
+    char buf[1024];
     struct sockaddr_in udpClientAddr;
     socklen_t len;
     SPrefixPkt* prevPkt;
     SPostfixPkt* postPkt;
-    char* pb;
+
     while (1)
     {
-        if ((readSize = recvfrom(udpSockFd, buf, 1024 * 512, 0, (struct sockaddr*)&udpClientAddr, &len)) < 0)
+        if ((readSize = recvfrom(udpSockFd, buf, sizeof(SPrefixPkt), 0, (struct sockaddr*)&udpClientAddr, &len)) < 0)
         {
             printf("fail to receive udp packet\n");   
             break;
         }
         buf[readSize];
-        pb = buf;
 
-        if (readSize == sizeof(SPrefixPkt))
+        if (readSize != sizeof(SPrefixPkt))
         {
-            prevPkt = (SPrefixPkt*)buf;
-            
-            printf("<Prefix Packet Info>\n%lu: %s: %d (%s)\n",
-                prevPkt->beginTime, prevPkt->agentId, prevPkt->pid, prevPkt->processName);
+            // packet loss..
+            continue;
         }
-        else if (readSize == sizeof(SPostfixPkt))
+        
+        prevPkt = (SPrefixPkt*)buf;
+        printf("<Prefix Packet Info>\nno.%lu: %lu: %s: %d (%s) addr: %s:%u\n",
+            prevPkt->packetNo ,prevPkt->beginTime, prevPkt->agentId, prevPkt->pid, prevPkt->processName,
+            prevPkt->hostIp, prevPkt->hostPort);
+
+
+        if ((readSize = recvfrom(udpSockFd, buf, sizeof(SPostfixPkt), 0, (struct sockaddr*)&udpClientAddr, &len)) < 0)
         {
-            postPkt = (SPostfixPkt*)buf;
-            printf("<Postfix Packet Info>\n%lu: %s: %d (%s) sended: %d\n\n",
-                postPkt->elapseTime, postPkt->agentId, postPkt->pid, postPkt->processName, postPkt->sendBytes);
+            printf("fail to receive udp packet\n");   
+            break;
         }
-        else
+        buf[readSize];
+
+        if (readSize != sizeof(SPostfixPkt))
         {
-            printf("Real Packet Size: %d bytes\n", readSize);
+            // packet loss...
+            continue;
         }
+
+        postPkt = (SPostfixPkt*)buf;
+        printf("<Postfix Packet Info>\n%lu: %s: %d (%s) sended: %d\n\n",
+            postPkt->elapseTime, postPkt->agentId, postPkt->pid, postPkt->processName, postPkt->sendBytes);
     }
 }
 

@@ -46,11 +46,13 @@ static void InitializeUdpPacket(struct SPrefixPkt* prevPkt, struct SPostfixPkt* 
             for (; buf[i] != ')'; i++)
                 prevPkt->processName[j++] = buf[i];            
         }
+        close(fd);
     }
     strcpy(prevPkt->agentId, "udp-test");
     prevPkt->beginTime = time(NULL);
-    prevPkt->hostIp = inet_addr(defaultHostIp);
-    prevPkt->hostPort = htons(defaultHostPort);
+    strcpy(prevPkt->hostIp, defaultHostIp);
+    prevPkt->hostPort = defaultHostPort;
+    prevPkt->packetNo = 0;
     prePktSize = sizeof(SPrefixPkt);
 
     /* Initialize Postfix Packet */
@@ -80,16 +82,19 @@ static void InitializeHookingModule()
 
 ssize_t send(int fd, const void* buf, size_t len, int flags)
 {   
-    int sendBytes;
-    
+    static ssize_t sendBytes;
+
+    // send udp packet before send real packet
     sendto(sockFd, &prevPkt, prePktSize, 0, (struct sockaddr*)&servAddr, sockLen);
+    prevPkt.packetNo++;
 
-    if ((sendBytes = sendto(sockFd, buf, len, 0, (struct sockaddr*)&servAddr, sockLen)) < 0)
-        printf("fail to udp send\n");
+    // send real packet
+    sendBytes = orgSend(fd, buf, len, flags);
 
+    // send udp packet after send real packet
     postPkt.elapseTime = time(NULL) - prevPkt.beginTime;
     postPkt.sendBytes = sendBytes;
     sendto(sockFd, &postPkt, postPktSize, 0, (struct sockaddr*)&servAddr, sockLen);
 
-    return orgSend(fd, buf, len, flags);
+    return sendBytes;
 }
