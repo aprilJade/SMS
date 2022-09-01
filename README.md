@@ -99,29 +99,22 @@ sh run-agent.sh
     - [ ] agent와 server간의 handshake 구현 (TCP handshake가 아니라 application level의 handshake를 뜻함)
       - [ ] 1. 상수 값 송신(메모리 총량, 디스크 총량, 네트워크 인터페이스 종류, CPU개수 등 시스템 기본 정보)
       - [ ] 2. 가능하다면 인증 기능 추가 => server는 agent 회원 목록을 들고있고 연결 시도하는 agent가 목록에 해당하는 agent인지 검증
-    - [ ] delta값과 average값 계산
-      - [ ] delta값은 cpu 사용율, 메모리 사용율, 디스크 사용율, 네트워크 송수신 패킷수, 네트워크 송수신 바이트수를 계산 (모든 값은 초당 값으로 계산)
-      - [ ] average값은 1시간 단위의 delta값을 측정 (1시간 평균 cpu사용율 등)
+    - [x] ~delta값과 average값 계산~
+      - [x] ~delta값은 cpu 사용율, 메모리 사용율, 디스크 사용율, 네트워크 송수신 패킷수, 네트워크 송수신 바이트수를 계산 (모든 값은 초당 값으로 계산)~
+      - [x] ~average값은 1시간 단위의 delta값을 측정 (1시간 평균 cpu사용율 등)~
     - [ ] Lock을 사용하지 않고 동기화를 해보자
   - [ ] Logger 고도화
     - [ ] Logger 옵션 설정
       - [ ] 시간대 설정
         - [ ] 기본값(옵션 안주었을 때) 서울 표준시 (가능하다면 ip를 이용해 위도 + 경도 흭득 후 해당 위치 표준시로 설정)
 - [ ] Server
-  - [ ] UDP 통신 스레드 생성
-  - [ ] 데이터 수집 시 특정 자료구조에 담아두고 Delta, Average 계산
-    - [ ] CPU usage
-      - [ ] CPU usage per process
-      - [ ] CPU usage per seconds
-    - [ ] Memory usage
-      - [ ] Memory usage per seconds
-    - [ ] Network throughput per seconds
-      - [ ] number of packet
-      - [ ] I/O bytes per seconds
+  - [x] ~UDP 통신 스레드 생성~
 - [ ] LD-PRELOAD
   - [x] ~학습 및 이해하기~
   - [ ] 구현하기
     - [x] ~송신하는 패킷 후킹하여 송신하기~
+    - [x] ~Before 패킷과 After 패킷 설계하기~
+    - [x] ~Before 패킷과 After 패킷 송수신하기~
     - [ ] 서버에서 수신하여 별도의 테이블에 저장하기
 <details>
 <summary>Checked todo list</summary>
