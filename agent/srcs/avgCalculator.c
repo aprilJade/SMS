@@ -58,8 +58,8 @@ SCData* CalcCpuUtilizationAvg(uchar* collectedData, int cpuCnt, int maxCount, fl
             avg += cpuUtilizations[i][j];
         hAvgBody[i].cpuUtilizationAvg = RoundingOff(avg / (float)curCount);
         hAvgBody[i].cpuUtilization = cpuUtilizations[i][idx];
-        printf("%d: Cpu utilization average: %.2f%%\n", i, hAvgBody[i].cpuUtilizationAvg);
-        printf("%d: CPU Usage: %.2f%%\n", i, hAvgBody[i].cpuUtilization);
+        //printf("%d: Cpu utilization average: %.2f%%\n", i, hAvgBody[i].cpuUtilizationAvg);
+        //printf("%d: CPU Usage: %.2f%%\n", i, hAvgBody[i].cpuUtilization);
     }
     if (curCount)
     {
