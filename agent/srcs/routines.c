@@ -22,6 +22,7 @@ extern const char g_serverIp[16];
 extern unsigned short g_serverPort;
 static int g_servSockFd;
 
+
 void* CpuInfoRoutine(void* param)
 {
     ulong prevTime, postTime, elapseTime;
