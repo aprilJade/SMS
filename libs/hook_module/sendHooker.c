@@ -17,11 +17,12 @@
 
 static const char* defaultHostIp = "127.0.0.1";
 static const unsigned short defaultHostPort = 4343;
+
 static ssize_t (*orgSend)(int, const void*, size_t, int);
 static int sockFd;
 static struct sockaddr_in servAddr;
 static socklen_t sockLen;
-static struct stat statBuf;
+
 static struct SPrefixPkt prevPkt;
 static size_t prePktSize;
 static struct SPostfixPkt postPkt;
@@ -36,7 +37,7 @@ static struct timeval tmpTime;
 static int prevIdx;
 static ulong sendBytesAvg[TAGET_SECONDS];
 static int sendBytesCnt[TAGET_SECONDS];
-
+static ssize_t sendBytes;
 
 static void InitializeUdpPacket(struct SPrefixPkt* prevPkt, struct SPostfixPkt* postPkt)
 {
@@ -123,7 +124,7 @@ ssize_t send(int fd, const void* buf, size_t len, int flags)
     prevTime = tmpTime.tv_sec * 1000000 + tmpTime.tv_usec;
     
     // #1. send real packet
-    ssize_t ret = orgSend(fd, buf, len, flags);
+    sendBytes = orgSend(fd, buf, len, flags);
 
     // #2. Get elapse time and that's average value
     gettimeofday(&tmpTime, NULL);
@@ -138,10 +139,10 @@ ssize_t send(int fd, const void* buf, size_t len, int flags)
     postPkt.elapseTimeAvg /= TAGET_SECONDS;
 
     // #3. Get send bytes and that's average value
-    if (postPkt.maxSendBytes < ret)
-        postPkt.maxSendBytes = ret;
+    if (postPkt.maxSendBytes < sendBytes)
+        postPkt.maxSendBytes = sendBytes;
     sendBytesCnt[idx]++;
-    sendBytesAvg[idx] = ((sendBytesAvg[idx] * (sendBytesCnt[idx] - 1)) + ret) / sendBytesCnt[idx];
+    sendBytesAvg[idx] = ((sendBytesAvg[idx] * (sendBytesCnt[idx] - 1)) + sendBytes) / sendBytesCnt[idx];
     postPkt.sendBytesAvg = 0;
     for (int i = 0; i < TAGET_SECONDS; i++)
         postPkt.sendBytesAvg += sendBytesAvg[i];
@@ -150,8 +151,8 @@ ssize_t send(int fd, const void* buf, size_t len, int flags)
     // #4. send udp packet after send real packet
     sendto(sockFd, &postPkt, postPktSize, 0, (struct sockaddr*)&servAddr, sockLen);
     
-    printf("%d: elapse time: %lu us, avg: %.2f us\n", idx, elapseTime, postPkt.elapseTimeAvg);
-    printf("%d: send bytes: %ld, avg: %.2f\n", idx, ret, postPkt.sendBytesAvg);
+    printf("%d: elapse time: %lu us, max: %lu us, avg: %.2f us\n", idx, elapseTime, postPkt.maxElapseTime, postPkt.elapseTimeAvg);
+    printf("%d: send bytes: %ld, max: %d, avg: %.2f\n", idx, sendBytes, postPkt.maxSendBytes, postPkt.sendBytesAvg);
 
-    return ret;
+    return sendBytes;
 }
