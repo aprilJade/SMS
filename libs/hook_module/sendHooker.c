@@ -9,7 +9,11 @@
 #include <arpa/inet.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <sys/time.h>
+#include <assert.h>
 #include "udpPacket.h"
+
+#define MAX_SEND_COUNT 300
 
 static const char* defaultHostIp = "127.0.0.1";
 static const unsigned short defaultHostPort = 4343;
@@ -22,6 +26,17 @@ static struct SPrefixPkt prevPkt;
 static size_t prePktSize;
 static struct SPostfixPkt postPkt;
 static size_t postPktSize;
+
+static time_t loadTime;
+static float elapseAvg[60];
+static int elapseCnt[60];
+static ulong elapseTime;
+static ulong prevTime;
+static struct timeval tmpTime;
+static int prevIdx;
+static ulong sendBytesAvg[60];
+static int sendBytesCnt[60];
+
 
 static void InitializeUdpPacket(struct SPrefixPkt* prevPkt, struct SPostfixPkt* postPkt)
 {
@@ -65,6 +80,7 @@ static void InitializeUdpPacket(struct SPrefixPkt* prevPkt, struct SPostfixPkt* 
 __attribute__((constructor))
 static void InitializeHookingModule()
 {
+    loadTime = time(NULL);
     orgSend = (ssize_t (*)(int, const void*, size_t, int))dlsym(RTLD_NEXT, "send");
     sockFd = socket(PF_INET, SOCK_DGRAM, 0);
     if (sockFd == -1)
@@ -77,24 +93,65 @@ static void InitializeHookingModule()
     servAddr.sin_addr.s_addr = inet_addr(defaultHostIp);
     servAddr.sin_port = htons(defaultHostPort);
     sockLen = sizeof(servAddr);
+
+    memset(elapseAvg, 0, sizeof(float) * 60);
+    memset(elapseCnt, 0, sizeof(int) * 60);
+    memset(sendBytesAvg, 0, sizeof(float) * 60);
+    memset(sendBytesCnt, 0, sizeof(int) * 60);
+    
     InitializeUdpPacket(&prevPkt, &postPkt);
 }
 
+
 ssize_t send(int fd, const void* buf, size_t len, int flags)
 {   
-    static ssize_t sendBytes;
+    int idx = (time(NULL) - loadTime) % 60;
+    if (prevIdx != idx)
+    {
+        elapseAvg[idx] = 0.0;
+        elapseCnt[idx] = 0;
+        sendBytesAvg[idx] = 0.0;
+        sendBytesCnt[idx] = 0;
+        prevIdx = idx;
+    }
 
-    // send udp packet before send real packet
+    // #0. send udp packet before send real packet
     sendto(sockFd, &prevPkt, prePktSize, 0, (struct sockaddr*)&servAddr, sockLen);
     prevPkt.packetNo++;
+    
+    gettimeofday(&tmpTime, NULL);
+    prevTime = tmpTime.tv_sec * 1000000 + tmpTime.tv_usec;
+    
+    // #1. send real packet
+    ssize_t ret = orgSend(fd, buf, len, flags);
 
-    // send real packet
-    sendBytes = orgSend(fd, buf, len, flags);
+    // #2. Get elapse time and that's average value
+    gettimeofday(&tmpTime, NULL);
+    elapseTime = (tmpTime.tv_sec * 1000000 + tmpTime.tv_usec) - prevTime;
+    if (postPkt.maxElapseTime < elapseTime)
+        postPkt.maxElapseTime = elapseTime;
+    elapseCnt[idx]++;
+    elapseAvg[idx] = ((elapseAvg[idx] * (elapseCnt[idx] - 1)) + elapseTime) / elapseCnt[idx];
+    postPkt.elapseTimeAvg = 0;
+    for (int i = 0; i < 60; i++)
+        postPkt.elapseTimeAvg += elapseAvg[i];
+    postPkt.elapseTimeAvg /= 60.0;
 
-    // send udp packet after send real packet
-    postPkt.elapseTime = time(NULL) - prevPkt.beginTime;
-    postPkt.sendBytes = sendBytes;
+    // #3. Get send bytes and that's average value
+    if (postPkt.maxSendBytes < ret)
+        postPkt.maxSendBytes = ret;
+    sendBytesCnt[idx]++;
+    sendBytesAvg[idx] = ((sendBytesAvg[idx] * (sendBytesCnt[idx] - 1)) + ret) / sendBytesCnt[idx];
+    postPkt.sendBytesAvg = 0;
+    for (int i = 0; i < 60; i++)
+        postPkt.sendBytesAvg += sendBytesAvg[i];
+    postPkt.sendBytesAvg /= 60.0;
+
+    // #4. send udp packet after send real packet
     sendto(sockFd, &postPkt, postPktSize, 0, (struct sockaddr*)&servAddr, sockLen);
+    
+    printf("%d: elapse time: %lu, avg: %.2f\n", idx, elapseTime, postPkt.elapseTimeAvg);
+    printf("%d: send bytes: %ld, avg: %.2f\n", idx, ret, postPkt.sendBytesAvg);
 
-    return sendBytes;
+    return ret;
 }

@@ -18,8 +18,10 @@ typedef struct SPostfixPkt
     char agentId[16];
     char processName[32];
     unsigned int pid;
-    unsigned int sendBytes;
-    unsigned long elapseTime; 
+    unsigned int maxSendBytes;
+    float sendBytesAvg;
+    unsigned long maxElapseTime;
+    float elapseTimeAvg;
 } SPostfixPkt;
 #pragma pack(pop)
 
