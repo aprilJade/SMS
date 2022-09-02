@@ -71,7 +71,7 @@ static void InitializeHookingModule()
     {
         // TODO: handle error
         perror("agent");
-        return -1;
+        return ;
     }
     servAddr.sin_family = AF_INET;
     servAddr.sin_addr.s_addr = inet_addr(defaultHostIp);

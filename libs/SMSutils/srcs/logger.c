@@ -134,7 +134,7 @@ int Log(const Logger* handle, int logLevel, char* logMsg)
         g_currentDay = timeStruct->tm_mday;
     }
 
-    pthread_mutex_lock(&handle->fdLock);
+    pthread_mutex_lock((pthread_mutex_t*)&handle->fdLock);
     write(handle->logFd, msgBuf, strlen(msgBuf));
-    pthread_mutex_unlock(&handle->fdLock);
+    pthread_mutex_unlock((pthread_mutex_t*)&handle->fdLock);
 }
