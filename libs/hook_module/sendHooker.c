@@ -13,7 +13,7 @@
 #include <assert.h>
 #include "udpPacket.h"
 
-#define MAX_SEND_COUNT 300
+#define TAGET_SECONDS 60
 
 static const char* defaultHostIp = "127.0.0.1";
 static const unsigned short defaultHostPort = 4343;
@@ -28,14 +28,14 @@ static struct SPostfixPkt postPkt;
 static size_t postPktSize;
 
 static time_t loadTime;
-static float elapseAvg[60];
-static int elapseCnt[60];
+static float elapseAvg[TAGET_SECONDS];
+static int elapseCnt[TAGET_SECONDS];
 static ulong elapseTime;
 static ulong prevTime;
 static struct timeval tmpTime;
 static int prevIdx;
-static ulong sendBytesAvg[60];
-static int sendBytesCnt[60];
+static ulong sendBytesAvg[TAGET_SECONDS];
+static int sendBytesCnt[TAGET_SECONDS];
 
 
 static void InitializeUdpPacket(struct SPrefixPkt* prevPkt, struct SPostfixPkt* postPkt)
@@ -94,10 +94,10 @@ static void InitializeHookingModule()
     servAddr.sin_port = htons(defaultHostPort);
     sockLen = sizeof(servAddr);
 
-    memset(elapseAvg, 0, sizeof(float) * 60);
-    memset(elapseCnt, 0, sizeof(int) * 60);
-    memset(sendBytesAvg, 0, sizeof(float) * 60);
-    memset(sendBytesCnt, 0, sizeof(int) * 60);
+    memset(elapseAvg, 0, sizeof(float) * TAGET_SECONDS);
+    memset(elapseCnt, 0, sizeof(int) * TAGET_SECONDS);
+    memset(sendBytesAvg, 0, sizeof(float) * TAGET_SECONDS);
+    memset(sendBytesCnt, 0, sizeof(int) * TAGET_SECONDS);
     
     InitializeUdpPacket(&prevPkt, &postPkt);
 }
@@ -105,7 +105,7 @@ static void InitializeHookingModule()
 
 ssize_t send(int fd, const void* buf, size_t len, int flags)
 {   
-    int idx = (time(NULL) - loadTime) % 60;
+    int idx = (time(NULL) - loadTime) % TAGET_SECONDS;
     if (prevIdx != idx)
     {
         elapseAvg[idx] = 0.0;
@@ -133,9 +133,9 @@ ssize_t send(int fd, const void* buf, size_t len, int flags)
     elapseCnt[idx]++;
     elapseAvg[idx] = ((elapseAvg[idx] * (elapseCnt[idx] - 1)) + elapseTime) / elapseCnt[idx];
     postPkt.elapseTimeAvg = 0;
-    for (int i = 0; i < 60; i++)
+    for (int i = 0; i < TAGET_SECONDS; i++)
         postPkt.elapseTimeAvg += elapseAvg[i];
-    postPkt.elapseTimeAvg /= 60.0;
+    postPkt.elapseTimeAvg /= TAGET_SECONDS;
 
     // #3. Get send bytes and that's average value
     if (postPkt.maxSendBytes < ret)
@@ -143,14 +143,14 @@ ssize_t send(int fd, const void* buf, size_t len, int flags)
     sendBytesCnt[idx]++;
     sendBytesAvg[idx] = ((sendBytesAvg[idx] * (sendBytesCnt[idx] - 1)) + ret) / sendBytesCnt[idx];
     postPkt.sendBytesAvg = 0;
-    for (int i = 0; i < 60; i++)
+    for (int i = 0; i < TAGET_SECONDS; i++)
         postPkt.sendBytesAvg += sendBytesAvg[i];
-    postPkt.sendBytesAvg /= 60.0;
+    postPkt.sendBytesAvg /= TAGET_SECONDS;
 
     // #4. send udp packet after send real packet
     sendto(sockFd, &postPkt, postPktSize, 0, (struct sockaddr*)&servAddr, sockLen);
     
-    printf("%d: elapse time: %lu, avg: %.2f\n", idx, elapseTime, postPkt.elapseTimeAvg);
+    printf("%d: elapse time: %lu us, avg: %.2f us\n", idx, elapseTime, postPkt.elapseTimeAvg);
     printf("%d: send bytes: %ld, avg: %.2f\n", idx, ret, postPkt.sendBytesAvg);
 
     return ret;
