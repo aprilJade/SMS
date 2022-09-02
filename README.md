@@ -99,23 +99,12 @@ sh run-agent.sh
     - [ ] agent와 server간의 handshake 구현 (TCP handshake가 아니라 application level의 handshake를 뜻함)
       - [ ] 1. 상수 값 송신(메모리 총량, 디스크 총량, 네트워크 인터페이스 종류, CPU개수 등 시스템 기본 정보)
       - [ ] 2. 가능하다면 인증 기능 추가 => server는 agent 회원 목록을 들고있고 연결 시도하는 agent가 목록에 해당하는 agent인지 검증
-    - [x] ~delta값과 average값 계산~
-      - [x] ~delta값은 cpu 사용율, 메모리 사용율, 디스크 사용율, 네트워크 송수신 패킷수, 네트워크 송수신 바이트수를 계산 (모든 값은 초당 값으로 계산)~
-      - [x] ~average값은 1시간 단위의 delta값을 측정 (1시간 평균 cpu사용율 등)~
     - [ ] Lock을 사용하지 않고 동기화를 해보자
   - [ ] Logger 고도화
+    - [x] ~프로그램 실행 중 날짜가 바뀌었을 때 자동으로 파일 변경~
     - [ ] Logger 옵션 설정
       - [ ] 시간대 설정
         - [ ] 기본값(옵션 안주었을 때) 서울 표준시 (가능하다면 ip를 이용해 위도 + 경도 흭득 후 해당 위치 표준시로 설정)
-- [ ] Server
-  - [x] ~UDP 통신 스레드 생성~
-- [ ] LD-PRELOAD
-  - [x] ~학습 및 이해하기~
-  - [ ] 구현하기
-    - [x] ~송신하는 패킷 후킹하여 송신하기~
-    - [x] ~Before 패킷과 After 패킷 설계하기~
-    - [x] ~Before 패킷과 After 패킷 송수신하기~
-    - [ ] 서버에서 수신하여 별도의 테이블에 저장하기
 <details>
 <summary>Checked todo list</summary>
 <div>
@@ -137,6 +126,11 @@ sh run-agent.sh
       - [x] ~Network Routine~
       - [x] ~Process Routine~
   - [x] ~signature검증법 개선 (strncmp()말고 좀더 좋게...)~
+  - [x] ~고도화~
+    - [x] ~delta값과 average값 계산~
+      - [x] ~delta값은 cpu 사용율, 메모리 사용율, 디스크 사용율, 네트워크 송수신 패킷수, 네트워크 송수신 바이트수를 계산 (모든 값은 초당 값으로 계산)~
+      - [x] ~average값은 1시간 단위의 delta값을 측정 (1시간 평균 cpu사용율 등)~
+
 
 - [x] ~Agent~
   - [x] ~Deamon으로 전환~
@@ -199,5 +193,12 @@ sh run-agent.sh
     - [x] ~서버가 동작 중일 때 agent는 언제든 다시 연결 가능하게 한다.~
     - [x] ~표준 출력이나 에러 출력으로 출력하면 안되고 Log를 남긴다.~
       - [x] ~자체제작 Log라이브러리를 통해 Logging~
+  - [x] ~UDP 통신 스레드 생성~
+- [x] ~LD-PRELOAD~
+- [x] ~학습 및 이해하기~
+- [x] ~구현하기~
+  - [x] ~송신하는 패킷 후킹하여 송신하기~
+  - [x] ~Before 패킷과 After 패킷 설계하기~
+  - [x] ~Before 패킷과 After 패킷 송수신하기~
 <div>
 </details>
