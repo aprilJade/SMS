@@ -68,13 +68,7 @@ sh run-agent.sh
 # Feedback log
 
 ## 2022.08.30 3주차 Feedback
-- [ ] signal handler에서 최소한의 작업만 하며 종료
-  - [ ] agent가 비정상 종료될 때, handler에서 다시 살리기보단 sentinel을 두어 살리기
-  - [ ] sentinel
-    - [ ] Heartbeat 체크하고 비정상 종료 시 재실행 등의 조치
-  - [ ] Agent가 죽었을 때 (비정상 종료)
-    - [ ] 로그를 남기고 시스템의 사용자에게 종료가 되고 재실행되었음을 알림
-    - [ ] 로그는 프로그램 종료 직전 실행 중이던 스레드의 line 번호 등 정보를 남기자 
+- [x] ~signal handler에서 최소한의 작업만 하며 종료~
        
 ## 2022.08.23 2주차 Feedback
 - [x] ~Queuing을 위한 Queue접근 시 Lock 사용 비율을 줄이는 방향으로 개선~
@@ -100,6 +94,12 @@ sh run-agent.sh
       - [ ] 1. 상수 값 송신(메모리 총량, 디스크 총량, 네트워크 인터페이스 종류, CPU개수 등 시스템 기본 정보)
       - [ ] 2. 가능하다면 인증 기능 추가 => server는 agent 회원 목록을 들고있고 연결 시도하는 agent가 목록에 해당하는 agent인지 검증
     - [ ] Lock을 사용하지 않고 동기화를 해보자
+  - [ ] agent가 비정상 종료될 때, handler에서 다시 살리기보단 sentinel을 두어 살리기
+    - [ ] sentinel
+      - [ ] Heartbeat 체크하고 비정상 종료 시 재실행 등의 조치
+    - [ ] Agent가 죽었을 때 (비정상 종료)
+      - [ ] 로그를 남기고 시스템의 사용자에게 종료가 되고 재실행되었음을 알림
+      - [ ] 로그는 프로그램 종료 직전 실행 중이던 스레드의 line 번호 등 정보를 남기자 
 
 <details>
 <summary>Checked todo list</summary>

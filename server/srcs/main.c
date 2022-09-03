@@ -40,23 +40,20 @@ int g_stderrFd;
 void HandleSignal(int signo)
 {
 	char logMsg[512];
-	sprintf(logMsg, "Killed by %s", strSignal[signo]);
 
-	if (signo == SIGQUIT || signo == SIGKILL)
+	if (signo == SIGQUIT || signo == SIGTERM)
+	{
+		sprintf(logMsg, "Server is terminated");
 		Log(g_logger, LOG_INFO, logMsg);
+	}
 	else
 	{
+		sprintf(logMsg, "Server is aborted: %s", strSignal[signo]);
 		Log(g_logger, LOG_FATAL, logMsg);
-		// TODO: handle log path in agent.conf is absolute path...
-		char buf[128];
-		getcwd(buf, 128);
 		char logPathBuf[128];
 		GenLogFileFullPath(g_logger->logPath, logPathBuf);
-		int len = strlen(logPathBuf);
-		memmove(logPathBuf, logPathBuf + 1, len - 1);
-		logPathBuf[len - 1] = 0;
 
-		sprintf(logMsg, "SMS: Server is aborted. Check below log.\n%s%s\n", buf, logPathBuf);
+		sprintf(logMsg, "SMS: Server is aborted. Check below log.\n%s\n", logPathBuf);
 		write(g_stderrFd, logMsg, strlen(logMsg));
 	}
 
