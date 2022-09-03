@@ -1,14 +1,23 @@
 # SMS
-System Monitoring System의 약자입니다. 대상 OS를 모니터링하여 분석하는 어플리케이션입니다.
+System Monitoring System의 약자입니다. 대상 OS(시스템)의 여러가지 상태 데이터를 수집하고 가공하여 해당 정보를 DB에 저장합니다.
+DB에는 시스템 기동 시간별 CPU사용율, Memory 사용량, 초당 네트워크 통신량 등의 정보가 기록됩니다.
+ 
 
 ## Agent
-클라이언트입니다. OS의 자원 정보를 수집하여 서버에 전송합니다.
-CPU 정보, Network 정보, Memory 정보, Process 정보, Disk 정보를 수집합니다.
-옵션 파일을 수정하여 수집할 정보를 취사선택하거나 수집 주기를 설정하여 수집할 수 있습니다.
+- 클라이언트입니다. OS의 자원 정보를 수집하여 서버에 전송합니다.
+- CPU 정보, Network 정보, Memory 정보, Process 정보, Disk 정보를 수집합니다.
+- 수집한 데이터로 초당 사용율이나 사용량을 측정합니다.
+- 옵션 파일을 수정하여 수집할 정보를 취사선택하거나 수집 주기를 설정하여 수집 할 수 있습니다.
+### Hooking Module
+- Agent의 네트워크 통신상태를 알 수 있는 모듈입니다. 
+- 해당 모듈을 부착하여 Agent를 기동하면 Agent-Server간 통신상태를 모니터링 할 수 있습니다.
+- 송신하는데 소요되는 시간, 그 시간의 최근 1분간의 평균값, 송신하는 바이트 수, 그 바이트 수의 최근 1분간의 평균값을 측정하여 Server에 송신합니다. 
+
 
 ## Server
-Agent가 보내온 수집정보를 DB에 저장합니다. 
-DB는 PostgreSQL을 사용하였습니다.
+- 복수의 Agent가 보내온 수집정보를 DB에 저장합니다. 
+- DB는 PostgreSQL을 사용하였습니다.
+
 
 # 실행방법
 
@@ -20,22 +29,29 @@ DB는 PostgreSQL을 사용하였습니다.
 ```
 git clone https://github.com/aprilJade/SMS.git
 ```
-2. 빌드 후 서버를 실행해주세요.
+2. 빌드 후 server와 agent를 실행해주세요.
 ```
 cd SMS
 make
 sh run-server.sh
-```
-3. 이후 새로운 터미널을 켜고 agent를 실행해주세요. 
-```
 sh run-agent.sh
+```
+3. 이후 종료는 stop-agent.sh, stop-server.sh 스크립트를 실행시켜주시면 됩니다.
+```
+sh stop-agent.sh
+sh stop-server.sh
 ```
 
 # Options
-- 각 옵션은 SMS/include/confParser.h를 참고해주세요.
-- .conf파일에 어플리케이션의 옵션을 작성합니다. 각 옵션은 다음과 같은 의미입니다.
+- 각 옵션은 [confParser.h](https://github.com/aprilJade/SMS/blob/main/libs/SMSutils/includes/confParser.h)에 정의되어있습니다.
+- .conf파일에 어플리케이션의 옵션을 작성합니다. 각 옵션의 설명은 아래의 Option Table에 작성했습니다.
+- agent의 옵션은 [agent.conf](https://github.com/aprilJade/SMS/blob/main/agent.conf), server의 옵션은 [server.conf](https://github.com/aprilJade/SMS/blob/main/server.conf)를 참고해주세요.
 
-## agent options
+<details>
+<summary>Option Table</summary>
+<div>
+
+### agent options
 |옵션|설명|예시|
 |---|---|---|
 |ID|Agent의 ID|agent001|
@@ -55,7 +71,7 @@ sh run-agent.sh
 |RUN_DISK_COLLECTOR|Disk 정보 수집 여부|true / false|
 |DISK_COLLECTIONS_PERIOD|Disk 정보 수집 주기 (ms)|1000 (minimum 500)|
 
-## server options
+### server options
 |옵션|설명|예시|
 |---|---|---|
 |LISTEN_PORT|수신할 Port번호|4242|
@@ -65,21 +81,24 @@ sh run-agent.sh
 |LOG_LEVEL|로깅 레벨 설정|default / debug|
 |LOG_PATH|로그 저장 경로|/path/to/log|
 
+<div>
+</details>
+
 # Feedback log
 
-## 2022.08.30 3주차 Feedback
+### 2022.08.30 3주차 Feedback
 - [x] ~signal handler에서 최소한의 작업만 하며 종료~
        
-## 2022.08.23 2주차 Feedback
+### 2022.08.23 2주차 Feedback
 - [x] ~Queuing을 위한 Queue접근 시 Lock 사용 비율을 줄이는 방향으로 개선~
 
-## 2022.08.16 1주차 Feedback
+### 2022.08.16 1주차 Feedback
 - [x] ~Process 패킷을 하나로 만들어서 송신~
 - [x] ~Process 정보를 한번에 쿼리하기 (auto commit을 안하는 것으로 반복적인 commit을 최소화하는 것으로 해결)~
 - [x] ~Log level을 두고 Logging~
 - [x] ~Agent ID를 추가하여 Agent 식별하기~
 
-## 2022.08.09 0주차 Feedback
+### 2022.08.09 0주차 Feedback
 - [x] ~배열로 구현한 큐를 링크드 리스트로 구현하기(큐의 사이즈가 정적인 것이 큰 문제를 일으킬 수 있음)~
 - [x] ~서버 스레드 구조 개편~
   - [x] ~수신스레드를 하나로 만들고 Queuing (비즈니스 로직과 수신을 분리)~
