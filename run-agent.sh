@@ -8,4 +8,12 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/bin
 # process info every 3000ms, then start below command
 # ./agent/agent -c 500 -m 500 -n 500 -p 3000
 
-LD_PRELOAD=./bin/libhook_module.so ./bin/agent ./agent.conf
+CNT=$(command ps -aux | grep ./bin/agent | wc -l)
+if [ ${CNT} -eq 2 ]
+then
+    echo SMS: Agent is already working.
+else
+    echo SMS: Start SMS agent.
+    LD_PRELOAD=./bin/libhook_module.so ./bin/agent ./agent.conf
+fi
+
