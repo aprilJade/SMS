@@ -18,7 +18,7 @@
 static const char* defaultHostIp = "127.0.0.1";
 static const unsigned short defaultHostPort = 4343;
 
-static ssize_t (*orgSend)(int, const void*, size_t, int);
+static ssize_t (*RealSend)(int, const void*, size_t, int);
 static int sockFd;
 static struct sockaddr_in servAddr;
 static socklen_t sockLen;
@@ -65,7 +65,6 @@ static void InitializeUdpPacket(struct SPrefixPkt* prevPkt, struct SPostfixPkt* 
         close(fd);
     }
     strcpy(prevPkt->agentId, "udp-test");
-    prevPkt->beginTime = time(NULL);
     strcpy(prevPkt->hostIp, defaultHostIp);
     prevPkt->hostPort = defaultHostPort;
     prevPkt->packetNo = 0;
@@ -82,7 +81,7 @@ __attribute__((constructor))
 static void InitializeHookingModule()
 {
     loadTime = time(NULL);
-    orgSend = (ssize_t (*)(int, const void*, size_t, int))dlsym(RTLD_NEXT, "send");
+    RealSend = (ssize_t (*)(int, const void*, size_t, int))dlsym(RTLD_NEXT, "send");
     sockFd = socket(PF_INET, SOCK_DGRAM, 0);
     if (sockFd == -1)
     {
@@ -124,7 +123,7 @@ ssize_t send(int fd, const void* buf, size_t len, int flags)
     prevTime = tmpTime.tv_sec * 1000000 + tmpTime.tv_usec;
     
     // #1. send real packet
-    sendBytes = orgSend(fd, buf, len, flags);
+    sendBytes = RealSend(fd, buf, len, flags);
 
     // #2. Get elapse time and that's average value
     gettimeofday(&tmpTime, NULL);

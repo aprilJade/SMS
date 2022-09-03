@@ -9,7 +9,6 @@ typedef struct SPrefixPkt
     int pid;
     char hostIp[16];
     unsigned short hostPort;
-    time_t beginTime;
     unsigned long packetNo;
 } SPrefixPkt;
 
