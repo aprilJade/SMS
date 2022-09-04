@@ -46,7 +46,7 @@ void* ReceiveRoutine(void* param)
     {
         if ((readSize = recv(pParam->clientSock, buf, RECV_BUFFER_SIZE, 0)) == -1)
         {
-            sprintf(logMsg, "Failed to receive packet from %s:%d", pParam->host, pParam->port);
+            sprintf(logMsg, "Disconnect to agent %s:%d (Failed to receive packet)", pParam->host, pParam->port);
             Log(g_logger, LOG_ERROR, logMsg);
             close(pParam->clientSock);
             break;
@@ -62,16 +62,13 @@ void* ReceiveRoutine(void* param)
         }
         pb[readSize] = 0;
 
-        //printf("received %d\n", readSize);
-        //continue;
-
         while (readSize > 0)
         {
             //printf("%d\n", readSize);
             hHeader = (SHeader*)pb;
             if (!IsValidSignature(hHeader->signature))
             {
-                sprintf(logMsg, "Invalid packet signature from %s:%d - %x",
+                sprintf(logMsg, "Disconnect to agent %s:%d (Invalid packet signature)",
                     pParam->host,
                     pParam->port,
                     hHeader->signature);

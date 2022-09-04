@@ -57,7 +57,27 @@ void InsertCpuAvgInfo(void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodyAvgC* hBody = (SBodyAvgC*)(data + sizeof(SHeader));
+    struct tm* ts;
+    ts = localtime(&hHeader->collectTime);
 
+    char sql[512];
+    for (int i = 0; i < hHeader->bodyCount; i++)
+    {
+        sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', %d, %f, %f);",
+                    cpuInsertSql,
+                    hHeader->agentId,
+                    ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
+                    ts->tm_hour, ts->tm_min, ts->tm_sec,
+                    i,
+                    hBody[i].cpuUtilization,
+                    hBody[i].cpuUtilizationAvg);
+        if (Query(tools->dbWrapper, sql) == -1)
+        {
+            printf("%s\n", sql);
+            sprintf(sql, "%d: Failed to store in DB: CPU AVG", tools->workerId);
+            Log(g_logger, LOG_ERROR, sql);
+        }
+    }
     //for (int i = 0; i < hHeader->bodyCount; i++)
     //    printf("%d: utilization: %.2f avg: %.2f\n", i, hBody[i].cpuUtilization, hBody[i].cpuUtilizationAvg);
 }
@@ -90,7 +110,26 @@ void InsertMemInfo(void* data, SWorkTools* tools)
 
 void InsertMemAvgInfo(void* data, SWorkTools* tools)
 {
-    // Not implemented yet
+    SHeader* hHeader = (SHeader*)data;
+    SBodyAvgM* hBody = (SBodyAvgM*)(data + sizeof(SHeader));
+    struct tm* ts;
+
+    char sql[512];
+    ts = localtime(&hHeader->collectTime);
+    sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', %f, %f, %f, %f);",
+        memInsertSql,
+        hHeader->agentId,
+        ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
+        ts->tm_hour, ts->tm_min, ts->tm_sec,
+        hBody->memUsage,
+        hBody->swapUsage,
+        hBody->memUsageAvg,
+        hBody->swapUsageAvg);
+    if (Query(tools->dbWrapper, sql) == -1)
+    {
+        sprintf(sql, "%d: Failed to store in DB: Memory AVG", tools->workerId);
+        Log(g_logger, LOG_ERROR, sql);
+    }
 }
 
 void InsertNetInfo(void* data, SWorkTools* tools)
@@ -126,7 +165,37 @@ void InsertNetInfo(void* data, SWorkTools* tools)
 
 void InsertNetAvgInfo(void* data, SWorkTools* tools)
 {
-    // Not implemented yet
+    SHeader* hHeader = (SHeader*)data;
+    SBodyAvgN* hBody = (SBodyAvgN*)(data + sizeof(SHeader));
+    char nicName[16];
+    struct tm* ts;
+    ts = localtime(&hHeader->collectTime);
+
+    char sql[512];
+    for (int i = 0; i < hHeader->bodyCount; i++)
+    {
+        memcpy(nicName, hBody[i].name, hBody[i].nameLength);
+        nicName[hBody[i].nameLength] = 0;
+        sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', \'%s\', %f, %f, %f, %f, %f, %f, %f, %f);",
+            netInsertSql,
+            hHeader->agentId,
+            ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
+            ts->tm_hour, ts->tm_min, ts->tm_sec,
+            nicName,
+            hBody[i].recvBytesPerSec,
+            hBody[i].recvBytesPerSecAvg,
+            hBody[i].recvPacketsPerSec,
+            hBody[i].recvPacketsPerSecAvg,
+            hBody[i].sendBytesPerSec,
+            hBody[i].sendBytesPerSecAvg,
+            hBody[i].sendPacketsPerSec,
+            hBody[i].sendPacketsPerSecAvg);
+        if (Query(tools->dbWrapper, sql) == -1)
+        {
+            sprintf(sql, "%d: Failed to store in DB: Network", tools->workerId);
+            Log(g_logger, LOG_ERROR, sql);
+        }
+    }
 }
 
 void InsertProcInfo(void* data, SWorkTools* tools)

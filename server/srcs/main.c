@@ -65,10 +65,8 @@ int OpenSocket(short port)
     struct sockaddr_in servAddr;
     int servFd = socket(PF_INET, SOCK_STREAM, 0);
     if (servFd == -1)
-    {
-        // TODO: handle error
         return -1;
-    }
+
     memset(&servAddr, 0, sizeof(servAddr));
     servAddr.sin_addr.s_addr = htonl(INADDR_ANY);
     servAddr.sin_port = htons(port);
@@ -76,7 +74,6 @@ int OpenSocket(short port)
 
     if (bind(servFd, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1)
     {
-        // TODO: handle error
         close(servFd);
         return -1;
     }
@@ -88,6 +85,7 @@ void CreateWorker(int workerCount)
     SWorkerParam* param;
     pthread_t tid;
     SPgWrapper* db = NewPgWrapper("dbname = postgres");
+
     if (db == NULL)
     {
         Log(g_logger, LOG_FATAL, "PostgreSQL connection failed");
@@ -197,9 +195,8 @@ int main(int argc, char** argv)
     int ret;
 	if ((ret = ParseConf(argv[1], options)) != CONF_NO_ERROR)
 	{
-		// TODO: handle error
 		fprintf(stderr, "conf error: %d\n", ret);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
     char* tmp;
@@ -222,6 +219,7 @@ int main(int argc, char** argv)
 			signal(SIGHUP, SIG_IGN);
 			close(STDIN_FILENO);
 			close(STDOUT_FILENO);
+            dup2(STDERR_FILENO, g_stderrFd);
 			close(STDERR_FILENO);
 			chdir("/");
 			setsid();
@@ -256,7 +254,13 @@ int main(int argc, char** argv)
     struct sockaddr_in clientAddr;
     if ((servFd = OpenSocket(port)) == -1)
     {
-        // TODO: handle error
+        sprintf(logMsg, "Socket is not opened: %s", strerror(errno));
+        Log(g_logger, LOG_FATAL, "Socket is not opened.");
+
+        char logPath[128];
+		GenLogFileFullPath(g_logger->logPath, logPath);
+		sprintf(logMsg, "SMS: Socket is not opened. Check below log.\n%s\n", logPath);
+		write(g_stderrFd, logMsg, strlen(logMsg));
         exit(1);
     }
 
