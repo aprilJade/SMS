@@ -6,16 +6,23 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <signal.h>
 
 extern const Logger* g_logger;
 extern Queue* g_queue;
 
 const char* cpuInsertSql = 
     "INSERT INTO cpu_informations(agent_id, collect_time, core_id, usr_run_time, sys_run_time, idle_time, wait_time) VALUES";
+const char* cpuAvgInsertSql =
+    "INSERT INTO cpu_avg_informations(agent_id, collect_time, core_id, cpu_utilization, cpu_utilization_avg) VALUES";
 const char* memInsertSql = 
     "INSERT INTO memory_informations(agent_id, collect_time, total, free, avail, used, swap_total, swap_free) VALUES";
+const char* memAvgInsertSql =
+    "INSERT INTO memory_avg_informations(agent_id, collect_time, mem_usage, mem_usage_avg, swap_usage, swap_usage_avg) VALUES";
 const char* netInsertSql = 
     "INSERT INTO network_informations(agent_id, collect_time, interface_name, receive_bytes, receive_packets, send_bytes, send_packets) VALUES";
+const char* netAvgInsertSql = 
+    "INSERT INTO network_avg_informations(agent_id, collect_time, interface_name, receive_bytes_per_sec, receive_bytes_per_sec_avg, receive_packets_per_sec, receive_packets_per_sec_avg, send_bytes_per_sec, send_bytes_per_sec_avg, send_packets_per_sec, send_packets_per_sec_avg) VALUES";
 const char* procInsertSql =
     "INSERT INTO process_informations(agent_id, collect_time, pid, process_name, process_state, ppid, usr_run_time, sys_run_time, uname, cmdline) VALUES";
 const char* procInsertSqlNoCmd =
@@ -64,7 +71,7 @@ void InsertCpuAvgInfo(void* data, SWorkTools* tools)
     for (int i = 0; i < hHeader->bodyCount; i++)
     {
         sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', %d, %f, %f);",
-                    cpuInsertSql,
+                    cpuAvgInsertSql,
                     hHeader->agentId,
                     ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
                     ts->tm_hour, ts->tm_min, ts->tm_sec,
@@ -73,7 +80,7 @@ void InsertCpuAvgInfo(void* data, SWorkTools* tools)
                     hBody[i].cpuUtilizationAvg);
         if (Query(tools->dbWrapper, sql) == -1)
         {
-            printf("%s\n", sql);
+            //printf("%s\n", sql);
             sprintf(sql, "%d: Failed to store in DB: CPU AVG", tools->workerId);
             Log(g_logger, LOG_ERROR, sql);
         }
@@ -117,7 +124,7 @@ void InsertMemAvgInfo(void* data, SWorkTools* tools)
     char sql[512];
     ts = localtime(&hHeader->collectTime);
     sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', %f, %f, %f, %f);",
-        memInsertSql,
+        memAvgInsertSql,
         hHeader->agentId,
         ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
         ts->tm_hour, ts->tm_min, ts->tm_sec,
@@ -177,7 +184,7 @@ void InsertNetAvgInfo(void* data, SWorkTools* tools)
         memcpy(nicName, hBody[i].name, hBody[i].nameLength);
         nicName[hBody[i].nameLength] = 0;
         sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', \'%s\', %f, %f, %f, %f, %f, %f, %f, %f);",
-            netInsertSql,
+            netAvgInsertSql,
             hHeader->agentId,
             ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
             ts->tm_hour, ts->tm_min, ts->tm_sec,
@@ -192,7 +199,7 @@ void InsertNetAvgInfo(void* data, SWorkTools* tools)
             hBody[i].sendPacketsPerSecAvg);
         if (Query(tools->dbWrapper, sql) == -1)
         {
-            sprintf(sql, "%d: Failed to store in DB: Network", tools->workerId);
+            sprintf(sql, "%d: Failed to store in DB: Network AVG", tools->workerId);
             Log(g_logger, LOG_ERROR, sql);
         }
     }
@@ -321,8 +328,9 @@ void* WorkerRoutine(void* param)
     struct timeval timeVal;
     ulong prevTime, postTime, elapseTime, totalElapsed;
     int pktId;
-    workTools.dbWrapper = pParam->db;
     workTools.workerId = pParam->workerId;
+    workTools.dbWrapper = pParam->db;
+    
     
     sprintf(logMsg, "%d worker-created", pParam->workerId);
     Log(g_logger, LOG_INFO, logMsg);
@@ -331,6 +339,14 @@ void* WorkerRoutine(void* param)
 
     while (1)
     {
+        // if (!CheckPgStatus(pParam->db))
+        // {
+        //     printf("worker %d: sleep\n", pParam->workerId);
+        //     pthread_cond_wait(&pParam->db->cond, &pParam->db->lock);
+        //     printf("worker %d: wake up!\n", pParam->workerId);
+        //     continue;
+        // }
+
         if (IsEmpty(g_queue))
         {
             // TODO: Remove busy wait or change to the optimized set sleep time 

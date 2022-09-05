@@ -8,11 +8,12 @@
 #include <assert.h>
 #include <sys/socket.h>
 #include <signal.h>
+#include <stdbool.h>
 #include "routines.h"
 #include "collector.h"
 #include "avgCalculator.h"
 
-#define RECONNECT_PERIOD 6    // seconds
+#define RECONNECT_PERIOD 5    // seconds
 #define RECONNECT_MAX_TRY 100
 #define AVG_TARGET_TIME_AS_MS 3600000.0 // 1 hour => 60 * 60 * 1000ms
 
@@ -20,6 +21,7 @@ extern const Logger* g_logger;
 extern Queue* g_queue;
 extern const char g_serverIp[16];
 extern unsigned short g_serverPort;
+extern bool g_turnOff;
 static int g_servSockFd;
 
 
@@ -40,10 +42,12 @@ void* CpuInfoRoutine(void* param)
 
     SCData* avgData;
     SCData* collectedData;
-
     SBodyc* hBody;
+
     while (1)
     {
+        if (g_turnOff)
+            break;
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
         
@@ -64,9 +68,11 @@ void* CpuInfoRoutine(void* param)
         elapseTime = postTime - prevTime;
         sprintf(logmsgBuf, "Collected in %ldus: CPU", elapseTime);
         Log(g_logger, LOG_DEBUG, logmsgBuf);
-
+        
         usleep(collectPeriodUs - elapseTime);
     }
+    sprintf(logmsgBuf, "Terminate CPU collector");
+    Log(g_logger, LOG_INFO, logmsgBuf);
 }
 
 void* MemInfoRoutine(void* param)
@@ -89,6 +95,8 @@ void* MemInfoRoutine(void* param)
 
     while(1)
     {
+        if (g_turnOff)
+            break;
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
@@ -113,6 +121,8 @@ void* MemInfoRoutine(void* param)
 
         usleep(collectPeriodUs - elapseTime);
     }
+    sprintf(logmsgBuf, "Terminate MEM collector");
+    Log(g_logger, LOG_INFO, logmsgBuf);
 }
 
 int GetNicCount()
@@ -164,6 +174,8 @@ void* NetInfoRoutine(void* param)
    
     while(1)
     {
+        if (g_turnOff)
+            break;
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
@@ -186,6 +198,8 @@ void* NetInfoRoutine(void* param)
         Log(g_logger, LOG_DEBUG, logmsgBuf);
         usleep(collectPeriodUs - elapseTime);
     }
+    sprintf(logmsgBuf, "Terminate NET collector");
+    Log(g_logger, LOG_INFO, logmsgBuf);
 }
 
 void* ProcInfoRoutine(void* param)
@@ -205,6 +219,8 @@ void* ProcInfoRoutine(void* param)
     SCData* collectedData;
     while(1)
     {
+        if (g_turnOff)
+            break;
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
@@ -227,6 +243,8 @@ void* ProcInfoRoutine(void* param)
 
         usleep(collectPeriodUs - elapseTime);
     }
+    sprintf(logmsgBuf, "Terminate Proc collector");
+    Log(g_logger, LOG_INFO, logmsgBuf);
 }
 
 int GetDiskDeviceCount(char* buf)
@@ -280,6 +298,8 @@ void* DiskInfoRoutine(void* param)
 
     while(1)
     {
+        if (g_turnOff)
+            break;
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
@@ -297,6 +317,8 @@ void* DiskInfoRoutine(void* param)
         Log(g_logger, LOG_DEBUG, logmsgBuf);
         usleep(collectPeriodUs - elapseTime);
     }
+    sprintf(logmsgBuf, "Terminate DISK collector");
+    Log(g_logger, LOG_INFO, logmsgBuf);
 }
 
 void RecoverTcpConnection(int signo)
@@ -308,6 +330,12 @@ void RecoverTcpConnection(int signo)
     Log(g_logger, LOG_FATAL, logmsgBuf);
     while (1)
     {
+        if (g_turnOff)
+        {
+            sprintf(logmsgBuf, "Terminate Sender");
+            Log(g_logger, LOG_INFO, logmsgBuf);
+            return;
+        }
         sprintf(logmsgBuf, "Try to reconnect: %s:%d", g_serverIp, g_serverPort);
         Log(g_logger, LOG_DEBUG, logmsgBuf);
         close(g_servSockFd);
@@ -335,6 +363,12 @@ void* SendRoutine(void* param)
     
     while (1)
     {
+        if (g_turnOff)
+        {
+            sprintf(logmsgBuf, "Terminate Sender");
+            Log(g_logger, LOG_INFO, logmsgBuf);
+            return;
+        }
         Log(g_logger, LOG_DEBUG, logmsgBuf);
         if ((g_servSockFd = ConnectToServer(g_serverIp, g_serverPort)) != -1)
             break;
@@ -350,6 +384,8 @@ void* SendRoutine(void* param)
     int i = 0;
     while(1)
     {
+        if (g_turnOff)
+            break;
         if (colletecData == NULL)
         {
             if (IsEmpty(g_queue))
@@ -376,4 +412,6 @@ void* SendRoutine(void* param)
         free(colletecData);
         colletecData = NULL;
     }
+    sprintf(logmsgBuf, "Terminate Sender");
+    Log(g_logger, LOG_INFO, logmsgBuf);
 }

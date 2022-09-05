@@ -86,12 +86,12 @@ void CreateWorker(int workerCount)
     pthread_t tid;
     SPgWrapper* db = NewPgWrapper("dbname = postgres");
 
-    if (db == NULL)
-    {
-        Log(g_logger, LOG_FATAL, "PostgreSQL connection failed");
-        fprintf(stderr, "PostgreSQL connection failed. Check psql status running below commands.\nsudo service postgresql status\n");
-        exit(1);
-    }
+    // if (db == NULL)
+    // {
+    //     Log(g_logger, LOG_FATAL, "PostgreSQL connection failed");
+    //     fprintf(stderr, "PostgreSQL connection failed. Check psql status running below commands.\nsudo service postgresql status\n");
+    //     exit(1);
+    // }
 
     for (int i = 0; i < workerCount; i++)
     {

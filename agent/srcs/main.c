@@ -8,6 +8,7 @@
 #include <string.h>
 #include <errno.h>
 #include <limits.h>
+#include <stdbool.h>
 #include "routines.h"
 #include "collector.h"
 #include "confParser.h"
@@ -30,6 +31,8 @@ Queue* g_queue;
 const char g_serverIp[16];
 unsigned short g_serverPort;
 int g_stderrFd;
+pthread_t collectorId[5];
+bool g_turnOff = false;
 
 void HandleSignal(int signo)
 {
@@ -37,6 +40,13 @@ void HandleSignal(int signo)
 
 	if (signo == SIGQUIT || signo == SIGTERM)
 	{
+		g_turnOff = true;
+		for (int i = 0; i < 5; i++)
+		{
+			if (collectorId[i] == 0)
+				continue;
+			pthread_join(collectorId[i], NULL);
+		}
 		sprintf(logMsg, "Agent is terminated");
 		Log(g_logger, LOG_INFO, logMsg);
 	}
@@ -59,7 +69,7 @@ pthread_t RunCollector(void* (*collectRoutine)(void*), const char* keyRunOrNot,
 {
 	char* tmp;
 	char logmsgBuf[128];
-	pthread_t tid = -1;
+	pthread_t tid = 0;
 	SRoutineParam* param = (SRoutineParam*)malloc(sizeof(SRoutineParam));
 
 	if ((tmp = GetValueByKey(keyRunOrNot, options)) != NULL)
@@ -152,11 +162,11 @@ int main(int argc, char** argv)
 		
 	}
 
-	pthread_t cpuTid = RunCollector(CpuInfoRoutine, CONF_KEY_RUN_CPU_COLLECTOR, CONF_KEY_CPU_COLLECTION_PERIOD, options);
-	pthread_t memTid = RunCollector(MemInfoRoutine, CONF_KEY_RUN_MEM_COLLECTOR, CONF_KEY_MEM_COLLECTION_PERIOD, options);
-	pthread_t netTid = RunCollector(NetInfoRoutine, CONF_KEY_RUN_NET_COLLECTOR, CONF_KEY_NET_COLLECTION_PERIOD, options);
-	pthread_t procTid = RunCollector(ProcInfoRoutine, CONF_KEY_RUN_PROC_COLLECTOR, CONF_KEY_PROC_COLLECTION_PERIOD, options);
-	pthread_t diskTid = RunCollector(DiskInfoRoutine, CONF_KEY_RUN_DISK_COLLECTOR, CONF_KEY_DISK_COLLECTION_PERIOD, options);
+	collectorId[CPU_COLLECTOR_ID] = RunCollector(CpuInfoRoutine, CONF_KEY_RUN_CPU_COLLECTOR, CONF_KEY_CPU_COLLECTION_PERIOD, options);
+	collectorId[MEM_COLLECTOR_ID] = RunCollector(MemInfoRoutine, CONF_KEY_RUN_MEM_COLLECTOR, CONF_KEY_MEM_COLLECTION_PERIOD, options);
+	collectorId[NET_COLLECTOR_ID] = RunCollector(NetInfoRoutine, CONF_KEY_RUN_NET_COLLECTOR, CONF_KEY_NET_COLLECTION_PERIOD, options);
+	collectorId[PROC_COLLECTOR_ID] = RunCollector(ProcInfoRoutine, CONF_KEY_RUN_PROC_COLLECTOR, CONF_KEY_PROC_COLLECTION_PERIOD, options);
+	collectorId[DISK_COLLECTOR_ID] = RunCollector(DiskInfoRoutine, CONF_KEY_RUN_DISK_COLLECTOR, CONF_KEY_DISK_COLLECTION_PERIOD, options);
 	
 	
 	// handle below signal

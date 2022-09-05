@@ -7,6 +7,15 @@
 #include "Queue.h"
 #include "tcpCtrl.h"
 
+enum e_collectorIdx
+{
+    CPU_COLLECTOR_ID = 0,
+    MEM_COLLECTOR_ID,
+    NET_COLLECTOR_ID,
+    PROC_COLLECTOR_ID,
+    DISK_COLLECTOR_ID
+};
+
 typedef struct SRoutineParam
 {
     char agentId[16];
