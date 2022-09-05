@@ -122,8 +122,8 @@ void InsertMemAvgInfo(void* data, SWorkTools* tools)
         ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
         ts->tm_hour, ts->tm_min, ts->tm_sec,
         hBody->memUsage,
-        hBody->swapUsage,
         hBody->memUsageAvg,
+        hBody->swapUsage,
         hBody->swapUsageAvg);
     if (Query(tools->dbWrapper, sql) == -1)
     {

@@ -70,8 +70,7 @@ void* ReceiveRoutine(void* param)
             {
                 sprintf(logMsg, "Disconnect to agent %s:%d (Invalid packet signature)",
                     pParam->host,
-                    pParam->port,
-                    hHeader->signature);
+                    pParam->port);
                 Log(g_logger, LOG_FATAL, logMsg);
                 close(pParam->clientSock);
                 break;

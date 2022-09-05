@@ -242,7 +242,7 @@ int main(int argc, char** argv)
     if (tmp != NULL)
         port = (unsigned short)atoi(tmp);
 	g_logger = GenLogger(options);
-    char logMsg[128];
+    char logMsg[256];
 
     sprintf(logMsg, "Server loaded: %d", getpid());
     Log(g_logger, LOG_INFO, logMsg);
