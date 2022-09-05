@@ -7,7 +7,9 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <signal.h>
+#include <stdbool.h>
 
+extern bool g_turnOff;
 extern const Logger* g_logger;
 extern Queue* g_queue;
 
@@ -30,7 +32,7 @@ const char* procInsertSqlNoCmd =
 const char* diskInsertSql =
     "INSERT INTO disk_informations(agent_id, collect_time, device_name, read_success_count, read_sector_count, read_time, write_success_count, write_sector_count, write_time, current_io_count, doing_io_time, weighted_doing_io_time) VALUES";
 
-void InsertCpuInfo(void* data, SWorkTools* tools)
+int InsertCpuInfo(void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodyc* hBody;
@@ -53,14 +55,15 @@ void InsertCpuInfo(void* data, SWorkTools* tools)
                     hBody[i].waitTime);
         if (Query(tools->dbWrapper, sql) == -1)
         {
-            printf("%s\n", sql);
             sprintf(sql, "%d: Failed to store in DB: CPU", tools->workerId);
             Log(g_logger, LOG_ERROR, sql);
+            return -1;
         }
     }
+    return 0;
 }
 
-void InsertCpuAvgInfo(void* data, SWorkTools* tools)
+int InsertCpuAvgInfo(void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodyAvgC* hBody = (SBodyAvgC*)(data + sizeof(SHeader));
@@ -83,13 +86,15 @@ void InsertCpuAvgInfo(void* data, SWorkTools* tools)
             //printf("%s\n", sql);
             sprintf(sql, "%d: Failed to store in DB: CPU AVG", tools->workerId);
             Log(g_logger, LOG_ERROR, sql);
+            return -1;
         }
     }
+    return 0;
     //for (int i = 0; i < hHeader->bodyCount; i++)
     //    printf("%d: utilization: %.2f avg: %.2f\n", i, hBody[i].cpuUtilization, hBody[i].cpuUtilizationAvg);
 }
 
-void InsertMemInfo(void* data, SWorkTools* tools)
+int InsertMemInfo(void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodym* hBody = (SBodym*)(data + sizeof(SHeader));
@@ -112,10 +117,12 @@ void InsertMemInfo(void* data, SWorkTools* tools)
     {
         sprintf(sql, "%d: Failed to store in DB: Memory", tools->workerId);
         Log(g_logger, LOG_ERROR, sql);
+        return -1;
     }
+    return 0;
 }
 
-void InsertMemAvgInfo(void* data, SWorkTools* tools)
+int InsertMemAvgInfo(void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodyAvgM* hBody = (SBodyAvgM*)(data + sizeof(SHeader));
@@ -136,10 +143,12 @@ void InsertMemAvgInfo(void* data, SWorkTools* tools)
     {
         sprintf(sql, "%d: Failed to store in DB: Memory AVG", tools->workerId);
         Log(g_logger, LOG_ERROR, sql);
+        return -1;
     }
+    return 0;
 }
 
-void InsertNetInfo(void* data, SWorkTools* tools)
+int InsertNetInfo(void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodyn* hBody = (SBodyn*)(data + sizeof(SHeader));
@@ -166,11 +175,13 @@ void InsertNetInfo(void* data, SWorkTools* tools)
         {
             sprintf(sql, "%d: Failed to store in DB: Network", tools->workerId);
             Log(g_logger, LOG_ERROR, sql);
+            return -1;
         }
     }
+    return 0;
 }
 
-void InsertNetAvgInfo(void* data, SWorkTools* tools)
+int InsertNetAvgInfo(void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodyAvgN* hBody = (SBodyAvgN*)(data + sizeof(SHeader));
@@ -201,11 +212,13 @@ void InsertNetAvgInfo(void* data, SWorkTools* tools)
         {
             sprintf(sql, "%d: Failed to store in DB: Network AVG", tools->workerId);
             Log(g_logger, LOG_ERROR, sql);
+            return -1;
         }
     }
+    return 0;
 }
 
-void InsertProcInfo(void* data, SWorkTools* tools)
+int InsertProcInfo(void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     struct tm* ts;
@@ -268,17 +281,18 @@ void InsertProcInfo(void* data, SWorkTools* tools)
             sprintf(sql, "%d: Failed to store in DB: Process", tools->workerId);
             Log(g_logger, LOG_ERROR, sql);
         }
-
     }
 
     if (Query(tools->dbWrapper, "END") == -1)
     {
         sprintf(sql, "%d: Failed to END command: Process", tools->workerId);
         Log(g_logger, LOG_ERROR, sql);
+        return -1;
     }
+    return 0;
 }
 
-void InsertDiskInfo(void* data, SWorkTools* tools)
+int InsertDiskInfo(void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodyd* hBody = (SBodyd*)(data + sizeof(SHeader));
@@ -299,15 +313,16 @@ void InsertDiskInfo(void* data, SWorkTools* tools)
             hBody->currentIoCount, hBody->doingIoTime, hBody->weightedDoingIoTime);
         if (Query(tools->dbWrapper, sql) == -1)
         {
-            printf("%d: %s\n", hHeader->bodyCount, sql);
             sprintf(sql, "%d: Failed to store in DB: Disk", tools->workerId);
             Log(g_logger, LOG_ERROR, sql);
+            return -1;
         }
         hBody++;
     }
+    return 0;
 }
 
-static const void (*InsertFunc[])(void*, SWorkTools*) = {
+static const int (*InsertFunc[])(void*, SWorkTools*) = {
     ['c'] = InsertCpuInfo,
     ['C'] = InsertCpuAvgInfo,
     ['m'] = InsertMemInfo,
@@ -339,13 +354,18 @@ void* WorkerRoutine(void* param)
 
     while (1)
     {
-        // if (!CheckPgStatus(pParam->db))
-        // {
-        //     printf("worker %d: sleep\n", pParam->workerId);
-        //     pthread_cond_wait(&pParam->db->cond, &pParam->db->lock);
-        //     printf("worker %d: wake up!\n", pParam->workerId);
-        //     continue;
-        // }
+        if (g_turnOff)
+            break;
+        if (!pParam->db->connected)
+        {
+            sprintf(logMsg, "DB connection disconnected");
+            Log(g_logger, LOG_FATAL, logMsg);
+            pthread_mutex_lock(&pParam->db->lock);
+            pthread_cond_wait(&pParam->db->cond, &pParam->db->lock);
+            pthread_mutex_unlock(&pParam->db->lock);
+            sprintf(logMsg, "PostgreSQL is connected");
+            Log(g_logger, LOG_INFO, logMsg);
+        }
 
         if (IsEmpty(g_queue))
         {
@@ -370,9 +390,12 @@ void* WorkerRoutine(void* param)
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
         hHeader = (SHeader*)data;
-        InsertFunc[hHeader->signature & EXTRACT_SIGNATURE](data, &workTools);
+        if (InsertFunc[hHeader->signature & EXTRACT_SIGNATURE](data, &workTools) == -1)
+        {
+            pParam->db->connected = false;
+        }
         free(data);
-
+        data == NULL;
         gettimeofday(&timeVal, NULL);
         elapseTime = (timeVal.tv_sec * 1000000 + timeVal.tv_usec) - prevTime;
         sprintf(logMsg, "%d work-done in %ld us", pParam->workerId, elapseTime);
@@ -381,4 +404,7 @@ void* WorkerRoutine(void* param)
         sprintf(logMsg, "%d work-wait", pParam->workerId);
         Log(g_logger, LOG_DEBUG, logMsg);
     }
+    free(data);
+    sprintf(logMsg, "%d worker-destroied", pParam->workerId);
+    Log(g_logger, LOG_INFO, logMsg);
 }

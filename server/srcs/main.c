@@ -33,7 +33,11 @@ static const char* const strSignal[] = {
 	[SIGKILL] = "SIGKILL",
 };
 
+bool g_turnOff = false;
 const Logger* g_logger;
+int udpSockFd;
+pthread_t udpTid;
+pthread_t* workerId;
 Queue* g_queue;
 int g_stderrFd;
 
@@ -43,6 +47,13 @@ void HandleSignal(int signo)
 
 	if (signo == SIGQUIT || signo == SIGTERM)
 	{
+        g_turnOff = true;
+        close(udpSockFd);
+        pthread_kill(udpTid, SIGTERM);
+        pthread_join(udpTid, NULL);
+        for (int i = 0; i < 4; i++)
+            pthread_join(workerId[i], NULL);
+
 		sprintf(logMsg, "Server is terminated");
 		Log(g_logger, LOG_INFO, logMsg);
 	}
@@ -83,23 +94,19 @@ int OpenSocket(short port)
 void CreateWorker(int workerCount)
 {
     SWorkerParam* param;
-    pthread_t tid;
+    workerId = (pthread_t*)malloc(sizeof(pthread_t) * workerCount);
+
     SPgWrapper* db = NewPgWrapper("dbname = postgres");
 
-    // if (db == NULL)
-    // {
-    //     Log(g_logger, LOG_FATAL, "PostgreSQL connection failed");
-    //     fprintf(stderr, "PostgreSQL connection failed. Check psql status running below commands.\nsudo service postgresql status\n");
-    //     exit(1);
-    // }
+    if (db->connected == false)
+        Log(g_logger, LOG_FATAL, "PostgreSQL connection failed");
 
     for (int i = 0; i < workerCount; i++)
     {
         param = (SWorkerParam*)malloc(sizeof(SWorkerParam));
         param->workerId = i;
         param->db = db;
-        pthread_create(&tid, NULL, WorkerRoutine, param);
-        pthread_detach(tid);
+        pthread_create(&workerId[i], NULL, WorkerRoutine, param);
     }
 }
 
@@ -124,7 +131,7 @@ Logger* GenLogger(SHashTable* options)
 
 void* UdpRoutine(void* param)
 {
-    int udpSockFd = socket(PF_INET, SOCK_DGRAM, 0);
+    udpSockFd = socket(PF_INET, SOCK_DGRAM, 0);
     if (udpSockFd < 0)
         return 0;
     struct sockaddr_in udpAddr;
@@ -139,17 +146,22 @@ void* UdpRoutine(void* param)
     
     int readSize;
     char buf[1024];
+    char logMsg[256];
     struct sockaddr_in udpClientAddr;
     socklen_t len;
     SPrefixPkt* prevPkt;
     SPostfixPkt* postPkt;
 
+    sprintf(logMsg, "Start UDP receiver");
+    Log(g_logger, LOG_INFO, logMsg);
+
     while (1)
     {
         if ((readSize = recvfrom(udpSockFd, buf, sizeof(SPrefixPkt), 0, (struct sockaddr*)&udpClientAddr, &len)) < 0)
         {
-            printf("fail to receive udp packet\n");   
-            break;
+            sprintf(logMsg, "Fail to receive UDP packet");
+            Log(g_logger, LOG_ERROR, logMsg);
+            continue;
         }
         buf[readSize];
 
@@ -167,8 +179,9 @@ void* UdpRoutine(void* param)
 
         if ((readSize = recvfrom(udpSockFd, buf, sizeof(SPostfixPkt), 0, (struct sockaddr*)&udpClientAddr, &len)) < 0)
         {
-            printf("fail to receive udp packet\n");   
-            break;
+            sprintf(logMsg, "Fail to receive UDP packet");
+            Log(g_logger, LOG_ERROR, logMsg);  
+            continue;
         }
         buf[readSize];
 
@@ -182,6 +195,9 @@ void* UdpRoutine(void* param)
         //printf("<Postfix Packet Info>\n%lu: %s: %d (%s) sended: %d\n\n",
         //    postPkt->elapseTime, postPkt->agentId, postPkt->pid, postPkt->processName, postPkt->sendBytes);
     }
+
+    sprintf(logMsg, "End UDP receiver");
+    Log(g_logger, LOG_INFO, logMsg);
 }
 
 int main(int argc, char** argv)
@@ -247,9 +263,8 @@ int main(int argc, char** argv)
     sprintf(logMsg, "Server loaded: %d", getpid());
     Log(g_logger, LOG_INFO, logMsg);
     
-    pthread_t udpTid;
     pthread_create(&udpTid, NULL, UdpRoutine, NULL);
-
+    
     int servFd, clientFd;
     struct sockaddr_in clientAddr;
     if ((servFd = OpenSocket(port)) == -1)
@@ -304,7 +319,7 @@ int main(int argc, char** argv)
             continue;
         }
 
-        sprintf(logMsg, "Start receiver for %s:%d", param->host, param->port);
+        sprintf(logMsg, "Start TCP receiver for %s:%d", param->host, param->port);
         Log(g_logger, LOG_INFO, logMsg);
         pthread_detach(tid);
     }

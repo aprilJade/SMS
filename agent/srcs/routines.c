@@ -369,7 +369,6 @@ void* SendRoutine(void* param)
             Log(g_logger, LOG_INFO, logmsgBuf);
             return;
         }
-        Log(g_logger, LOG_DEBUG, logmsgBuf);
         if ((g_servSockFd = ConnectToServer(g_serverIp, g_serverPort)) != -1)
             break;
         sprintf(logmsgBuf, "Failed to connect %s:%d (%d)", g_serverIp, g_serverPort, connFailCount);
@@ -378,6 +377,7 @@ void* SendRoutine(void* param)
         sprintf(logmsgBuf, "Try to reconnect: %s:%d", g_serverIp, g_serverPort);
         sleep(RECONNECT_PERIOD);
     }
+
     sprintf(logmsgBuf, "Connected to %s:%d", g_serverIp, g_serverPort);
     Log(g_logger, LOG_INFO, logmsgBuf);
 
@@ -412,6 +412,7 @@ void* SendRoutine(void* param)
         free(colletecData);
         colletecData = NULL;
     }
+    
     sprintf(logmsgBuf, "Terminate Sender");
     Log(g_logger, LOG_INFO, logmsgBuf);
 }

@@ -5,11 +5,13 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <sys/socket.h>
+#include <stdbool.h>
 
 #define RECV_BUFFER_SIZE 1024 * 512
 
 extern const Logger* g_logger;
 extern Queue* g_queue;
+extern bool g_turnOff;
 
 int IsValidSignature(int signature)
 {
@@ -44,6 +46,8 @@ void* ReceiveRoutine(void* param)
     SHeader* hHeader;
     while (1)
     {
+        if (g_turnOff)
+            break;
         if ((readSize = recv(pParam->clientSock, buf, RECV_BUFFER_SIZE, 0)) == -1)
         {
             sprintf(logMsg, "Disconnect to agent %s:%d (Failed to receive packet)", pParam->host, pParam->port);
@@ -96,6 +100,7 @@ void* ReceiveRoutine(void* param)
             pthread_mutex_unlock(&g_queue->lock);
         }
     }
+    close(pParam->clientSock);
     sprintf(logMsg, "End receiver for %s:%d", pParam->host, pParam->port);
     Log(g_logger, LOG_INFO, logMsg);
 }

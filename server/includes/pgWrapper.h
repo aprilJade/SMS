@@ -8,6 +8,7 @@
 typedef struct SPgWrapper
 {
     PGconn* conn;
+    bool connected;
     char* connInfo;
     pthread_mutex_t lock;
     pthread_cond_t cond;

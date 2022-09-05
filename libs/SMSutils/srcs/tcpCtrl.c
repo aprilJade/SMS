@@ -22,7 +22,10 @@ int ConnectToServer(const char *host, short port)
     sockaddr.sin_addr.s_addr = inet_addr(host);
     sockaddr.sin_port = htons(port);
     if (connect(fd, (struct sockaddr *)&sockaddr, sizeof(sockaddr)) == -1)
+    {
+        close(fd);
         return -1;
+    }
     return fd;
 }
 

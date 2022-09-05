@@ -4,46 +4,48 @@
 #include <stdio.h>
 #include <signal.h>
 
-int pgsignal(int signo)
-{
-    puts("pipe broken");
-}
+extern bool g_turnOff;
 
 static void* PgManageRoutine(void* param)
 {
     SPgWrapper* wrapper = (SPgWrapper*)param;
-    signal(SIGPIPE, pgsignal);
 
     while (1)
     {
-        if (CheckPgStatus(wrapper) == true)
+        if (g_turnOff)
+            break;
+        if (wrapper->connected == true)
         {
-            puts("connect ok");
             sleep(1);
             continue;
         }
 
-        if (CheckPgStatus(wrapper) == false)
+        while (wrapper->connected == false)
         {
-            while (ConnectPg(wrapper) == false)
-            {
-                puts("try conn");
-                sleep(1);
-            }
-            puts("wake up!!!");
-            pthread_cond_signal(&wrapper->cond);
-            continue;
+            if (g_turnOff)
+                break;
+            PQreset(wrapper->conn);
+            wrapper->connected = CheckPgStatus(wrapper);
+            sleep(1);
         }
+        wrapper->connected = true;
+        pthread_mutex_lock(&wrapper->lock);
+        pthread_cond_broadcast(&wrapper->cond);
+        pthread_mutex_unlock(&wrapper->lock);
     }
+    pthread_mutex_lock(&wrapper->lock);
+    pthread_cond_broadcast(&wrapper->cond);
+    pthread_mutex_unlock(&wrapper->lock);
 }
 
 SPgWrapper* NewPgWrapper(const char* conninfo)
 {
     SPgWrapper* newWrapper = (SPgWrapper*)malloc(sizeof(SPgWrapper));
-
+    
     pthread_mutex_init(&newWrapper->lock, NULL);
     pthread_cond_init(&newWrapper->cond, NULL);
     newWrapper->connInfo = strdup(conninfo);
+    newWrapper->connected = ConnectPg(newWrapper);
     pthread_t tid;
     pthread_create(&tid, NULL, PgManageRoutine, newWrapper);
     return newWrapper;
