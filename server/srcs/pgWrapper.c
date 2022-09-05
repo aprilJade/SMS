@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <signal.h>
+#include <unistd.h>
 
 extern bool g_turnOff;
 
@@ -33,6 +34,8 @@ static void* PgManageRoutine(void* param)
         pthread_cond_broadcast(&wrapper->cond);
         pthread_mutex_unlock(&wrapper->lock);
     }
+
+    // when g_turnOff is true.
     pthread_mutex_lock(&wrapper->lock);
     pthread_cond_broadcast(&wrapper->cond);
     pthread_mutex_unlock(&wrapper->lock);

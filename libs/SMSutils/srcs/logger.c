@@ -138,3 +138,9 @@ int Log(const Logger* handle, int logLevel, char* logMsg)
     write(handle->logFd, msgBuf, strlen(msgBuf));
     pthread_mutex_unlock((pthread_mutex_t*)&handle->fdLock);
 }
+
+void DestroyLogger(Logger* logger)
+{
+    free(logger->logPath);
+    free(logger);
+}

@@ -367,7 +367,7 @@ void* SendRoutine(void* param)
         {
             sprintf(logmsgBuf, "Terminate Sender");
             Log(g_logger, LOG_INFO, logmsgBuf);
-            return;
+            return NULL;
         }
         if ((g_servSockFd = ConnectToServer(g_serverIp, g_serverPort)) != -1)
             break;
