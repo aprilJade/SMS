@@ -146,12 +146,9 @@ ssize_t send(int fd, const void* buf, size_t len, int flags)
     for (int i = 0; i < TAGET_SECONDS; i++)
         postPkt.sendBytesAvg += sendBytesAvg[i];
     postPkt.sendBytesAvg /= TAGET_SECONDS;
-
+    postPkt.measurementTime = time(NULL);
     // #4. send udp packet after send real packet
     sendto(sockFd, &postPkt, postPktSize, 0, (struct sockaddr*)&servAddr, sockLen);
     
-    printf("%d: elapse time: %lu us, max: %lu us, avg: %.2f us\n", idx, elapseTime, postPkt.maxElapseTime, postPkt.elapseTimeAvg);
-    printf("%d: send bytes: %ld, max: %d, avg: %.2f\n", idx, sendBytes, postPkt.maxSendBytes, postPkt.sendBytesAvg);
-
     return sendBytes;
 }

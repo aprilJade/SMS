@@ -16,6 +16,7 @@ typedef struct SPostfixPkt
 {
     char agentId[16];
     char processName[32];
+    unsigned long measurementTime;
     unsigned int pid;
     unsigned int maxSendBytes;
     float sendBytesAvg;
