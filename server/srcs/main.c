@@ -49,8 +49,6 @@ void HandleSignal(int signo)
 	{
         g_turnOff = true;
         close(udpSockFd);
-        pthread_kill(udpTid, SIGTERM);
-        pthread_join(udpTid, NULL);
         for (int i = 0; i < 4; i++)
             pthread_join(workerId[i], NULL);
 
@@ -91,12 +89,11 @@ int OpenSocket(short port)
     return servFd;
 }
 
-void CreateWorker(int workerCount)
+void CreateWorker(int workerCount, SPgWrapper* db)
 {
     SWorkerParam* param;
     workerId = (pthread_t*)malloc(sizeof(pthread_t) * workerCount);
 
-    SPgWrapper* db = NewPgWrapper("dbname = postgres");
 
     if (db->connected == false)
         Log(g_logger, LOG_FATAL, "PostgreSQL connection failed");
@@ -131,6 +128,7 @@ Logger* GenLogger(SHashTable* options)
 
 void* UdpRoutine(void* param)
 {
+    SPgWrapper* db = (SPgWrapper*)param;
     udpSockFd = socket(PF_INET, SOCK_DGRAM, 0);
     if (udpSockFd < 0)
         return 0;
@@ -154,9 +152,23 @@ void* UdpRoutine(void* param)
 
     sprintf(logMsg, "Start UDP receiver");
     Log(g_logger, LOG_INFO, logMsg);
-
+    char* strInsert = "INSERT INTO udp_informations (agent_id, measurement_time, process_name, pid, max_send_bytes, send_bytes_avg, max_elapse_time, elapse_time_avg) VALUES";
+    char sql[512];
     while (1)
     {
+        if (g_turnOff)
+            break;
+        if (!db->connected)
+        {
+            sprintf(logMsg, "Wait DB connection...");
+            Log(g_logger, LOG_INFO, logMsg);
+            pthread_mutex_lock(&db->lock);
+            pthread_cond_wait(&db->cond, &db->lock);
+            pthread_mutex_unlock(&db->lock);
+            sprintf(logMsg, "PostgreSQL is connected");
+            Log(g_logger, LOG_INFO, logMsg);
+        }
+
         if ((readSize = recvfrom(udpSockFd, buf, sizeof(SPrefixPkt), 0, (struct sockaddr*)&udpClientAddr, &len)) < 0)
         {
             sprintf(logMsg, "Fail to receive UDP packet");
@@ -192,6 +204,25 @@ void* UdpRoutine(void* param)
         }
 
         postPkt = (SPostfixPkt*)buf;
+        struct tm* ts;
+        ts = localtime(&postPkt->measurementTime);
+        sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', \'%s\', %u, %u, %f, %lu, %f);",
+            strInsert,
+            postPkt->agentId,
+            ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
+            ts->tm_hour, ts->tm_min, ts->tm_sec,
+            postPkt->processName,
+            postPkt->pid,
+            postPkt->maxSendBytes,
+            postPkt->sendBytesAvg,
+            postPkt->maxElapseTime,
+            postPkt->elapseTimeAvg);
+        if (Query(db, sql) == -1)
+        {
+            sprintf(sql, "Failed to store in DB: UDP");
+            Log(g_logger, LOG_ERROR, sql);
+            continue;
+        }
         //printf("<Postfix Packet Info>\n%lu: %s: %d (%s) sended: %d\n\n",
         //    postPkt->elapseTime, postPkt->agentId, postPkt->pid, postPkt->processName, postPkt->sendBytes);
     }
@@ -263,7 +294,8 @@ int main(int argc, char** argv)
     sprintf(logMsg, "Server loaded: %d", getpid());
     Log(g_logger, LOG_INFO, logMsg);
     
-    pthread_create(&udpTid, NULL, UdpRoutine, NULL);
+    SPgWrapper* db = NewPgWrapper("dbname = postgres");
+    pthread_create(&udpTid, NULL, UdpRoutine, db);
     
     int servFd, clientFd;
     struct sockaddr_in clientAddr;
@@ -287,7 +319,7 @@ int main(int argc, char** argv)
     int workerCount = 2;
     if (tmp != NULL)
         workerCount = atoi(tmp);
-    CreateWorker(workerCount);
+    CreateWorker(workerCount, db);
 
     while (1)
     {
