@@ -108,6 +108,8 @@ sh stop-server.sh
 
 
 # Todo List
+- [ ] agent
+  - [ ] 델타값과 평균값이 저장된 DB를 조회해보았을 때 최초에 송신하는 값은 음수임 (처리할 것...)
 - [ ] 공통
   - [ ] 고도화
     - [ ] agent와 server간의 handshake 구현 (TCP handshake가 아니라 application level의 handshake를 뜻함)
