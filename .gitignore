@@ -8,3 +8,4 @@ objs/
 */Log*
 *.sql
 bin/
+printer

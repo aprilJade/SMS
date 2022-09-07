@@ -39,4 +39,5 @@ collector:
 hook_module:
 	make fclean -C ./libs/hook_module
 	make -C ./libs/hook_module
+	
 .PHONY: all fclean clean re server agent SMSutils collector
