@@ -3,26 +3,19 @@ INCLUDES	=	-I./includes/ \
 				-I/usr/include/postgresql
 LIB			=	-lpthread -lpq
 LIB_DIR		=	-L../bin -L/usr/lib/postgresql/14/lib
-SRC_DIR		=	./srcs
-OBJ_DIR		=	./objs
-SRCS		=	$(notdir $(wildcard $(SRC_DIR)/*.c))
+SRCS		=	main.c
 OBJS		=	$(SRCS:.c=.o)
-OBJECTS		=	$(patsubst %.o, $(OBJ_DIR)/%.o, $(OBJS))
 
-ifeq (, $(wildcard $(OBJ_DIR)))
-$(shell mkdir $(OBJ_DIR))
-endif
+%.o	: %.c
+	cc -c main.c -o main.o $(INCLUDES) $(LIB_DIR) $(LIB) 
 
-$(OBJ_DIR)/%.o	: $(SRC_DIR)/%.c
-	cc -c $< -o $@ $(INCLUDES) $(LIB_DIR) $(LIB) 
-
-$(NAME): $(OBJECTS)
-	cc $(INCLUDES) -o $(NAME) $(OBJECTS) $(LIB_DIR) $(LIB)
+$(NAME): $(OBJS)
+	cc $(INCLUDES) -o $(NAME) $(OBJS) $(LIB_DIR) $(LIB)
 
 all: $(NAME)
 
 clean:
-	rm -rf $(OBJ_DIR)
+	rm -rf main.o
 
 fclean: clean
 	rm -rf $(NAME)

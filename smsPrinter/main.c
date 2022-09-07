@@ -163,5 +163,6 @@ int main(void)
     PrintTable((char*)tableNames[tableNameIdx], elapsedTime, result);
     
     PQclear(result);
+    PQfinish(pgConn);
     return 0;
 }
