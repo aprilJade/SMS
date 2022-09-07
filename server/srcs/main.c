@@ -40,6 +40,9 @@ pthread_t udpTid;
 pthread_t* workerId;
 Queue* g_queue;
 int g_stderrFd;
+pthread_mutex_t g_clientCntLock = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t g_clientCntCond = PTHREAD_COND_INITIALIZER;
+unsigned int g_clientCnt = 0;
 
 void HandleSignal(int signo)
 {
@@ -48,10 +51,11 @@ void HandleSignal(int signo)
 	if (signo == SIGQUIT || signo == SIGTERM)
 	{
         g_turnOff = true;
-        close(udpSockFd);
+        pthread_mutex_lock(&g_clientCntLock);
+        pthread_cond_broadcast(&g_clientCntCond);
+        pthread_mutex_unlock(&g_clientCntLock);
         for (int i = 0; i < 4; i++)
             pthread_join(workerId[i], NULL);
-
 		sprintf(logMsg, "Server is terminated");
 		Log(g_logger, LOG_INFO, logMsg);
 	}
@@ -64,6 +68,7 @@ void HandleSignal(int signo)
 
 		sprintf(logMsg, "SMS: Server is aborted. Check below log.\n%s\n", logPathBuf);
 		write(g_stderrFd, logMsg, strlen(logMsg));
+	    exit(signo);
 	}
 
 	exit(signo);
@@ -350,6 +355,12 @@ int main(int argc, char** argv)
             close(clientFd);
             continue;
         }
+        
+        pthread_mutex_lock(&g_clientCntLock);
+        g_clientCnt++;
+        pthread_cond_broadcast(&g_clientCntCond);
+        pthread_mutex_unlock(&g_clientCntLock);
+        
 
         sprintf(logMsg, "Start TCP receiver for %s:%d", param->host, param->port);
         Log(g_logger, LOG_INFO, logMsg);

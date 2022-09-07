@@ -12,6 +12,8 @@
 extern const Logger* g_logger;
 extern Queue* g_queue;
 extern bool g_turnOff;
+extern unsigned int g_clientCnt;
+extern pthread_mutex_t g_clientCntLock;
 
 int IsValidSignature(int signature)
 {
@@ -103,4 +105,8 @@ void* ReceiveRoutine(void* param)
     close(pParam->clientSock);
     sprintf(logMsg, "End receiver for %s:%d", pParam->host, pParam->port);
     Log(g_logger, LOG_INFO, logMsg);
+
+    pthread_mutex_lock(&g_clientCntLock);
+    g_clientCnt--;
+    pthread_mutex_lock(&g_clientCntLock);
 }

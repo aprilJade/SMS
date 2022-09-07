@@ -12,6 +12,9 @@
 extern bool g_turnOff;
 extern const Logger* g_logger;
 extern Queue* g_queue;
+extern unsigned int g_clientCnt;
+extern pthread_mutex_t g_clientCntLock;
+extern pthread_cond_t g_clientCntCond;
 
 const char* cpuInsertSql = 
     "INSERT INTO cpu_informations(agent_id, collect_time, core_id, usr_run_time, sys_run_time, idle_time, wait_time) VALUES";
@@ -365,12 +368,22 @@ void* WorkerRoutine(void* param)
             pthread_mutex_unlock(&pParam->db->lock);
             sprintf(logMsg, "PostgreSQL is connected");
             Log(g_logger, LOG_INFO, logMsg);
+            continue;
         }
 
         if (IsEmpty(g_queue))
         {
-            // TODO: Remove busy wait or change to the optimized set sleep time 
             usleep(500);
+            if (g_clientCnt == 0)
+            {
+                sprintf(logMsg, "%d: Go to sleep: No clients connected, No work remained", pParam->workerId);
+                Log(g_logger, LOG_INFO, logMsg);
+                pthread_mutex_lock(&g_clientCntLock);
+                pthread_cond_wait(&g_clientCntCond, &g_clientCntLock);
+                pthread_mutex_unlock(&g_clientCntLock);
+                sprintf(logMsg, "%d: Wakeup: New client connected", pParam->workerId);
+                Log(g_logger, LOG_INFO, logMsg);
+            }
             continue;
         }
         
