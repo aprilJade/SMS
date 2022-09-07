@@ -116,7 +116,7 @@ int main(void)
         puts("Input datetime as YYYY-MM-DD or YYYY-MM-DD HH:MM:SS format.");
         printf("datetime: ");
         scanf("%s", datetime[0]);
-        sprintf(buf, "SELECT * FROM %s WHERE collect_time \'%s\';", tableNames[tableNameIdx], datetime[0]);
+        sprintf(buf, "SELECT * FROM %s WHERE collect_time > \'%s\';", tableNames[tableNameIdx], datetime[0]);
         break;
     case SELECT_DATETIME_RANGE:
         puts("Input start datetime as YYYY-MM-DD or YYYY-MM-DD HH:MM:SS format.");
