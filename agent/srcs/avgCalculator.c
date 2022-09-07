@@ -58,8 +58,6 @@ SCData* CalcCpuUtilizationAvg(uchar* collectedData, int cpuCnt, int maxCount, fl
             avg += cpuUtilizations[i][j];
         hAvgBody[i].cpuUtilizationAvg = RoundingOff(avg / (float)curCount);
         hAvgBody[i].cpuUtilization = cpuUtilizations[i][idx];
-        //printf("%d: Cpu utilization average: %.2f%%\n", i, hAvgBody[i].cpuUtilizationAvg);
-        //printf("%d: CPU Usage: %.2f%%\n", i, hAvgBody[i].cpuUtilization);
     }
     if (curCount)
     {
@@ -113,11 +111,6 @@ SCData* CalcMemAvg(uchar* collectedData, int maxCount)
     }
     hAvgBody->memUsageAvg = RoundingOff(memAvg / (float)curCount);
     hAvgBody->swapUsageAvg = RoundingOff(swapAvg / (float)curCount);
-
-    // printf("Memory usage: %.2f%%\n", hAvgBody->memUsage);
-    // printf("Memory avg: %.2f%%\n", hAvgBody->memUsageAvg);
-    // printf("Swap usage: %.2f%%\n", hAvgBody->swapUsage);
-    // printf("Swap avg: %.2f%%\n", hAvgBody->swapUsageAvg);
 
     if (curCount)
     {
@@ -213,20 +206,6 @@ SCData* CalcNetThroughputAvg(uchar* collectedData, int nicCount, int maxCount, i
         for (int j = 0; j < curCount; j++)
             sum += deltaVal[SEND_PACKETS][i][j];
         hAvgBody[i].sendPacketsPerSecAvg = sum / curCount;
-
-        // printf("<=== %s information ===>\n", hAvgBody[i].name);
-
-        // printf("Received bytes: %.2f B/s\t", hAvgBody[i].recvBytesPerSec);
-        // printf("Avg: %.2f B/s\n", hAvgBody[i].recvBytesPerSecAvg);
-
-        // printf("Received packets: %.2f per s\t", hAvgBody[i].recvPacketsPerSec);
-        // printf("Avg: %.2f per s\n", hAvgBody[i].recvPacketsPerSecAvg);
-
-        // printf("Send bytes: %.2f B/s\t\t", hAvgBody[i].sendBytesPerSec);
-        // printf("Avg: %.2f B/s\n", hAvgBody[i].sendBytesPerSecAvg);
-
-        // printf("Send packets: %.2f per s\t", hAvgBody[i].sendPacketsPerSec);
-        // printf("Avg: %.2f per s\n", hAvgBody[i].sendPacketsPerSecAvg);
     }
     
     if (curCount)
