@@ -1,7 +1,7 @@
 NAME		=	printer
-INCLUDES	=	-I./includes/ -I../libs/SMSutils/includes \
+INCLUDES	=	-I./includes/ \
 				-I/usr/include/postgresql
-LIB			=	-lpthread -lSMSutils -lpq
+LIB			=	-lpthread -lpq
 LIB_DIR		=	-L../bin -L/usr/lib/postgresql/14/lib
 SRC_DIR		=	./srcs
 OBJ_DIR		=	./objs
