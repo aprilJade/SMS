@@ -24,6 +24,9 @@ extern unsigned short g_serverPort;
 extern bool g_turnOff;
 static int g_servSockFd;
 
+static bool g_connected = false;
+static pthread_mutex_t g_condLock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t g_cond = PTHREAD_COND_INITIALIZER;
 
 void* CpuInfoRoutine(void* param)
 {
@@ -37,8 +40,22 @@ void* CpuInfoRoutine(void* param)
     ulong collectPeriodUs = pParam->collectPeriod * 1000;
     int maxCount = (int)(AVG_TARGET_TIME_AS_MS / (float)pParam->collectPeriod);
 
-    sprintf(logmsgBuf, "Start CPU information collection routine in %d ms cycle", pParam->collectPeriod);
+    sprintf(logmsgBuf, "Ready CPU information collection routine in %d ms cycle", pParam->collectPeriod);
     Log(g_logger, LOG_INFO, logmsgBuf);
+    
+    if (g_connected == false)
+    {
+        Log(g_logger, LOG_INFO, "Wait CPU collector: Wait TCP connection");
+        pthread_mutex_lock(&g_condLock);
+        pthread_cond_wait(&g_cond, &g_condLock);
+        pthread_mutex_unlock(&g_condLock);
+    }
+    if (g_turnOff == true)
+    {
+        sprintf(logmsgBuf, "Terminate CPU collector");
+        Log(g_logger, LOG_INFO, logmsgBuf);
+    }
+    Log(g_logger, LOG_INFO, "Run CPU collector: Connected to TCP server");
 
     SCData* avgData;
     SCData* collectedData;
@@ -46,8 +63,17 @@ void* CpuInfoRoutine(void* param)
 
     while (1)
     {
-        if (g_turnOff)
+        if (g_turnOff == true)
             break;
+        if (g_connected == false)
+        {
+            Log(g_logger, LOG_ERROR, "Pause CPU collector: TCP connection BAD");
+            pthread_mutex_lock(&g_condLock);
+            pthread_cond_wait(&g_cond, &g_condLock);
+            pthread_mutex_unlock(&g_condLock);
+            Log(g_logger, LOG_INFO, "Resume CPU collector: TCP connection recovered");
+            continue;
+        }
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
         
@@ -86,8 +112,23 @@ void* MemInfoRoutine(void* param)
     ulong collectPeriodUs = pParam->collectPeriod * 1000;
     SCData* avgData;
 
-    sprintf(logmsgBuf, "Start memory information collection routine in %d ms cycle", pParam->collectPeriod);
+    
+    sprintf(logmsgBuf, "Ready memory information collection routine in %d ms cycle", pParam->collectPeriod);
     Log(g_logger, LOG_INFO, logmsgBuf);
+    
+    if (g_connected == false)
+    {
+        Log(g_logger, LOG_INFO, "Wait memory collector: Wait TCP connection");
+        pthread_mutex_lock(&g_condLock);
+        pthread_cond_wait(&g_cond, &g_condLock);
+        pthread_mutex_unlock(&g_condLock);
+    }
+    if (g_turnOff == true)
+    {
+        sprintf(logmsgBuf, "Terminate memory collector");
+        Log(g_logger, LOG_INFO, logmsgBuf);
+    }
+    Log(g_logger, LOG_INFO, "Run memory collector: Connected to TCP server");
 
     int maxCount = (int)(AVG_TARGET_TIME_AS_MS / (float)pParam->collectPeriod);
     
@@ -95,8 +136,18 @@ void* MemInfoRoutine(void* param)
 
     while(1)
     {
-        if (g_turnOff)
+        if (g_turnOff == true)
             break;
+        if (g_connected == false)
+        {
+            Log(g_logger, LOG_ERROR, "Pause memory collector: TCP connection BAD");
+            pthread_mutex_lock(&g_condLock);
+            pthread_cond_wait(&g_cond, &g_condLock);
+            pthread_mutex_unlock(&g_condLock);
+            Log(g_logger, LOG_INFO, "Resume memory collector: TCP connection recovered");
+            continue;
+        }
+
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
@@ -121,7 +172,7 @@ void* MemInfoRoutine(void* param)
 
         usleep(collectPeriodUs - elapseTime);
     }
-    sprintf(logmsgBuf, "Terminate MEM collector");
+    sprintf(logmsgBuf, "Terminate memory collector");
     Log(g_logger, LOG_INFO, logmsgBuf);
 }
 
@@ -165,8 +216,22 @@ void* NetInfoRoutine(void* param)
     int nicCount = GetNicCount();
     ulong collectPeriodUs = pParam->collectPeriod * 1000;
 
-    sprintf(logmsgBuf, "Start network information collection routine in %d ms cycle", pParam->collectPeriod);
+    sprintf(logmsgBuf, "Ready network information collection routine in %d ms cycle", pParam->collectPeriod);
     Log(g_logger, LOG_INFO, logmsgBuf);
+    
+    if (g_connected == false)
+    {
+        Log(g_logger, LOG_INFO, "Wait network collector: Wait TCP connection");
+        pthread_mutex_lock(&g_condLock);
+        pthread_cond_wait(&g_cond, &g_condLock);
+        pthread_mutex_unlock(&g_condLock);
+    }
+    if (g_turnOff == true)
+    {
+        sprintf(logmsgBuf, "Terminate network collector");
+        Log(g_logger, LOG_INFO, logmsgBuf);
+    }
+    Log(g_logger, LOG_INFO, "Run network collector: Connected to TCP server");
 
     SCData* collectedData;
     SCData* avgData;
@@ -174,8 +239,17 @@ void* NetInfoRoutine(void* param)
    
     while(1)
     {
-        if (g_turnOff)
+        if (g_turnOff == true)
             break;
+        if (g_connected == false)
+        {
+            Log(g_logger, LOG_ERROR, "Pause network collector: TCP connection BAD");
+            pthread_mutex_lock(&g_condLock);
+            pthread_cond_wait(&g_cond, &g_condLock);
+            pthread_mutex_unlock(&g_condLock);
+            Log(g_logger, LOG_INFO, "Resume network collector: TCP connection recovered");
+            continue;
+        }
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
@@ -198,7 +272,7 @@ void* NetInfoRoutine(void* param)
         Log(g_logger, LOG_DEBUG, logmsgBuf);
         usleep(collectPeriodUs - elapseTime);
     }
-    sprintf(logmsgBuf, "Terminate NET collector");
+    sprintf(logmsgBuf, "Terminate network collector");
     Log(g_logger, LOG_INFO, logmsgBuf);
 }
 
@@ -211,8 +285,22 @@ void* ProcInfoRoutine(void* param)
     char logmsgBuf[128];
     ulong collectPeriodUs = pParam->collectPeriod * 1000;
     
-    sprintf(logmsgBuf, "Start process information collection routine in %d ms cycle", pParam->collectPeriod);
+    sprintf(logmsgBuf, "Ready process information collection routine in %d ms cycle", pParam->collectPeriod);
     Log(g_logger, LOG_INFO, logmsgBuf);
+    
+    if (g_connected == false)
+    {
+        Log(g_logger, LOG_INFO, "Wait process collector: Wait TCP connection");
+        pthread_mutex_lock(&g_condLock);
+        pthread_cond_wait(&g_cond, &g_condLock);
+        pthread_mutex_unlock(&g_condLock);
+    }
+    if (g_turnOff == true)
+    {
+        sprintf(logmsgBuf, "Terminate process collector");
+        Log(g_logger, LOG_INFO, logmsgBuf);
+    }
+    Log(g_logger, LOG_INFO, "Run process collector: Connected to TCP server");
 
     // TODO: change dynamic dataBuf size
     uchar dataBuf[1024 * 1024] = { 0, };
@@ -221,6 +309,15 @@ void* ProcInfoRoutine(void* param)
     {
         if (g_turnOff)
             break;
+        if (g_connected == false)
+        {
+            Log(g_logger, LOG_ERROR, "Pause process collector: TCP connection BAD");
+            pthread_mutex_lock(&g_condLock);
+            pthread_cond_wait(&g_cond, &g_condLock);
+            pthread_mutex_unlock(&g_condLock);
+            Log(g_logger, LOG_INFO, "Resume process collector: TCP connection recovered");
+            continue;
+        }
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
@@ -243,7 +340,7 @@ void* ProcInfoRoutine(void* param)
 
         usleep(collectPeriodUs - elapseTime);
     }
-    sprintf(logmsgBuf, "Terminate Proc collector");
+    sprintf(logmsgBuf, "Terminate process collector");
     Log(g_logger, LOG_INFO, logmsgBuf);
 }
 
@@ -290,16 +387,38 @@ void* DiskInfoRoutine(void* param)
     int diskDevCnt = GetDiskDeviceCount(buf);
     ulong collectPeriodUs = pParam->collectPeriod * 1000;
     
-    sprintf(logmsgBuf, "Start disk information collection routine in %d ms cycle",
-        pParam->collectPeriod);
+    sprintf(logmsgBuf, "Ready disk information collection routine in %d ms cycle", pParam->collectPeriod);
     Log(g_logger, LOG_INFO, logmsgBuf);
+    
+    if (g_connected == false)
+    {
+        Log(g_logger, LOG_INFO, "Wait disk collector: Wait TCP connection");
+        pthread_mutex_lock(&g_condLock);
+        pthread_cond_wait(&g_cond, &g_condLock);
+        pthread_mutex_unlock(&g_condLock);
+    }
+    if (g_turnOff == true)
+    {
+        sprintf(logmsgBuf, "Terminate disk collector");
+        Log(g_logger, LOG_INFO, logmsgBuf);
+    }
+    Log(g_logger, LOG_INFO, "Run disk collector: Connected to TCP server");
 
     SCData* collectedData;
 
     while(1)
     {
-        if (g_turnOff)
+        if (g_turnOff == true)
             break;
+        if (g_connected == false)
+        {
+            Log(g_logger, LOG_ERROR, "Pause disk collector: TCP connection BAD");
+            pthread_mutex_lock(&g_condLock);
+            pthread_cond_wait(&g_cond, &g_condLock);
+            pthread_mutex_unlock(&g_condLock);
+            Log(g_logger, LOG_INFO, "Resume disk collector: TCP connection recovered");
+            continue;
+        }
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
@@ -324,6 +443,8 @@ void* DiskInfoRoutine(void* param)
 void RecoverTcpConnection(int signo)
 {
     assert(signo == SIGPIPE);
+    g_connected = false;
+
     int connFailCount = 0;
     char logmsgBuf[128];
     sprintf(logmsgBuf, "Disconnected to server: %s:%d", g_serverIp, g_serverPort);
@@ -332,6 +453,9 @@ void RecoverTcpConnection(int signo)
     {
         if (g_turnOff)
         {
+            pthread_mutex_lock(&g_condLock);
+            pthread_cond_broadcast(&g_cond);
+            pthread_mutex_unlock(&g_condLock);
             sprintf(logmsgBuf, "Terminate Sender");
             Log(g_logger, LOG_INFO, logmsgBuf);
             return;
@@ -346,9 +470,12 @@ void RecoverTcpConnection(int signo)
         Log(g_logger, LOG_ERROR, logmsgBuf);
         sleep(RECONNECT_PERIOD);
     }
-
     sprintf(logmsgBuf, "Connected to %s:%d", g_serverIp, g_serverPort);
     Log(g_logger, LOG_INFO, logmsgBuf);
+    g_connected = true;
+    pthread_mutex_lock(&g_condLock);
+    pthread_cond_broadcast(&g_cond);
+    pthread_mutex_unlock(&g_condLock);
 }
 
 void* SendRoutine(void* param)
@@ -360,11 +487,15 @@ void* SendRoutine(void* param)
 
 	signal(SIGPIPE, RecoverTcpConnection);
     Log(g_logger, LOG_INFO, "Start sender routine");
-    
+
+    g_connected = false;
     while (1)
     {
         if (g_turnOff)
         {
+            pthread_mutex_lock(&g_condLock);
+            pthread_cond_broadcast(&g_cond);
+            pthread_mutex_unlock(&g_condLock);
             sprintf(logmsgBuf, "Terminate Sender");
             Log(g_logger, LOG_INFO, logmsgBuf);
             return NULL;
@@ -380,6 +511,10 @@ void* SendRoutine(void* param)
 
     sprintf(logmsgBuf, "Connected to %s:%d", g_serverIp, g_serverPort);
     Log(g_logger, LOG_INFO, logmsgBuf);
+    g_connected = true;
+    pthread_mutex_lock(&g_condLock);
+    pthread_cond_broadcast(&g_cond);
+    pthread_mutex_unlock(&g_condLock);
 
     int i = 0;
     while(1)
