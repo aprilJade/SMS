@@ -509,8 +509,7 @@ void* SendRoutine(void* param)
         {
             if (IsEmpty(g_queue))
             {
-                // TODO: Remove busy wait or change to the optimized set sleep time 
-                usleep(500);
+                usleep(500000);
                 continue;
             }
             
@@ -521,7 +520,7 @@ void* SendRoutine(void* param)
         
         if ((sendBytes = send(g_servSockFd, colletecData->data, colletecData->dataSize, 0)) == -1)
         {
-            usleep(1000);
+            usleep(500000);
             continue;
         }
         
