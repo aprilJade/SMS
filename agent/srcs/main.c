@@ -34,6 +34,8 @@ int g_stderrFd;
 pthread_t collectorId[5];
 bool g_turnOff = false;
 
+void WakeupEveryCollector(void);
+
 void HandleSignal(int signo)
 {
 	char logMsg[512];
@@ -41,6 +43,7 @@ void HandleSignal(int signo)
 	if (signo == SIGQUIT || signo == SIGTERM)
 	{
 		g_turnOff = true;
+		WakeupEveryCollector();
 		for (int i = 0; i < 5; i++)
 		{
 			if (collectorId[i] == 0)
