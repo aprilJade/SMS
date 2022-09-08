@@ -41,45 +41,13 @@ static ssize_t sendBytes;
 
 static void InitializeUdpPacket(struct SPrefixPkt* prevPkt, struct SPostfixPkt* postPkt)
 {
-    /* Initialize Prefix Packet */
-    prevPkt->pid = getpid();
-    char buf[128];
-    sprintf(buf, "/proc/%d/stat", prevPkt->pid);
-    int fd = open(buf, O_RDONLY);
-    if (fd == -1)
-        strcpy(prevPkt->processName, "unknown");
-    else
-    {
-        int readSize = read(fd, buf, 128);
-        if (readSize < 1)
-            strcpy(prevPkt->processName, "unknown");
-        else
-        {
-            buf[readSize] = 0; 
-            int i = 0, j = 0;
-            while (buf[i++] != ' ');
-            i++;
-            for (; buf[i] != ')'; i++)
-                prevPkt->processName[j++] = buf[i];            
-        }
-        close(fd);
-    }
-    strcpy(prevPkt->agentId, "udp-test");
-    strcpy(prevPkt->hostIp, defaultHostIp);
-    prevPkt->hostPort = defaultHostPort;
-    prevPkt->packetNo = 0;
-    prePktSize = sizeof(SPrefixPkt);
-
-    /* Initialize Postfix Packet */
-    strcpy(postPkt->agentId, prevPkt->agentId);
-    strcpy(postPkt->processName, prevPkt->processName);
-    postPkt->pid = prevPkt->pid;
-    postPktSize = sizeof(SPostfixPkt);
+    
 }
 
 __attribute__((constructor))
 static void InitializeHookingModule()
 {
+    // #00. Initialize variables that used in module
     loadTime = time(NULL);
     RealSend = (ssize_t (*)(int, const void*, size_t, int))dlsym(RTLD_NEXT, "send");
     sockFd = socket(PF_INET, SOCK_DGRAM, 0);
@@ -98,8 +66,41 @@ static void InitializeHookingModule()
     memset(elapseCnt, 0, sizeof(int) * TAGET_SECONDS);
     memset(sendBytesAvg, 0, sizeof(float) * TAGET_SECONDS);
     memset(sendBytesCnt, 0, sizeof(int) * TAGET_SECONDS);
-    
-    InitializeUdpPacket(&prevPkt, &postPkt);
+
+    // #01. Initialize packet data that befor sending real packet declared struct SPrevPkt
+    prevPkt.pid = getpid();
+    char buf[128];
+    sprintf(buf, "/proc/%d/stat", prevPkt.pid);
+    int fd = open(buf, O_RDONLY);
+    if (fd == -1)
+        strcpy(prevPkt.processName, "unknown");
+    else
+    {
+        int readSize = read(fd, buf, 128);
+        if (readSize < 1)
+            strcpy(prevPkt.processName, "unknown");
+        else
+        {
+            buf[readSize] = 0; 
+            int i = 0, j = 0;
+            while (buf[i++] != ' ');
+            i++;
+            for (; buf[i] != ')'; i++)
+                prevPkt.processName[j++] = buf[i];            
+        }
+        close(fd);
+    }
+    strcpy(prevPkt.agentId, "udp-test");
+    strcpy(prevPkt.hostIp, defaultHostIp);
+    prevPkt.hostPort = defaultHostPort;
+    prevPkt.packetNo = 0;
+    prePktSize = sizeof(SPrefixPkt);
+
+    // #02. Initialize packet data that after sending real packet declared struct SPostPkt
+    strcpy(postPkt.agentId, prevPkt.agentId);
+    strcpy(postPkt.processName, prevPkt.processName);
+    postPkt.pid = prevPkt.pid;
+    postPktSize = sizeof(SPostfixPkt);
 }
 
 
@@ -115,17 +116,17 @@ ssize_t send(int fd, const void* buf, size_t len, int flags)
         prevIdx = idx;
     }
 
-    // #0. send udp packet before send real packet
+    // #00. send udp packet before sending real packet
     sendto(sockFd, &prevPkt, prePktSize, 0, (struct sockaddr*)&servAddr, sockLen);
     prevPkt.packetNo++;
     
     gettimeofday(&tmpTime, NULL);
     prevTime = tmpTime.tv_sec * 1000000 + tmpTime.tv_usec;
     
-    // #1. send real packet
+    // #01. send real packet
     sendBytes = RealSend(fd, buf, len, flags);
 
-    // #2. Get elapse time and that's average value
+    // #02. Get elapse time and that's average value
     gettimeofday(&tmpTime, NULL);
     elapseTime = (tmpTime.tv_sec * 1000000 + tmpTime.tv_usec) - prevTime;
     if (postPkt.maxElapseTime < elapseTime)
@@ -137,7 +138,7 @@ ssize_t send(int fd, const void* buf, size_t len, int flags)
         postPkt.elapseTimeAvg += elapseAvg[i];
     postPkt.elapseTimeAvg /= TAGET_SECONDS;
 
-    // #3. Get send bytes and that's average value
+    // #03. Get send bytes and that's average value
     if (postPkt.maxSendBytes < sendBytes)
         postPkt.maxSendBytes = sendBytes;
     sendBytesCnt[idx]++;
@@ -147,7 +148,8 @@ ssize_t send(int fd, const void* buf, size_t len, int flags)
         postPkt.sendBytesAvg += sendBytesAvg[i];
     postPkt.sendBytesAvg /= TAGET_SECONDS;
     postPkt.measurementTime = time(NULL);
-    // #4. send udp packet after send real packet
+    
+    // #04. send udp packet after sending real packet
     sendto(sockFd, &postPkt, postPktSize, 0, (struct sockaddr*)&servAddr, sockLen);
     
     return sendBytes;

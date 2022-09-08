@@ -129,8 +129,7 @@ int main(int argc, char** argv)
 	SHashTable* options = NewHashTable();
 	if (ParseConf(argv[1], options) != CONF_NO_ERROR)
 	{
-		// TODO: handle error
-		fprintf(stderr, "ERROR: conf error\n");
+		fprintf(stderr, "ERROR: ParseConf failed\n");
 		exit(EXIT_FAILURE);
 	}
 	char* value;
@@ -140,13 +139,13 @@ int main(int argc, char** argv)
 	
 	if ((value = GetValueByKey(CONF_KEY_RUN_AS_DAEMON, options)) != NULL)
 	{
+		Log(g_logger, LOG_INFO, "Agent run as daemon");
 		if (strcmp(value, "true") == 0)
 		{
 			pid_t pid = fork();
 
 			if (pid == -1)
 			{
-				// TODO: handle error
 				fprintf(stderr, "ERROR: failed to fork: %s\n", strerror(errno));
 				exit(EXIT_FAILURE);
 			}
@@ -162,7 +161,6 @@ int main(int argc, char** argv)
 			chdir("/");
 			setsid();
 		}
-		
 	}
 	// handle below signal
 	signal(SIGBUS, HandleSignal);	// bus error
@@ -176,9 +174,7 @@ int main(int argc, char** argv)
 	signal(SIGTERM, HandleSignal);	// terminate signalr
 	signal(SIGKILL, HandleSignal);	// terminate signal
 
-
 	pthread_t senderTid;
-
 	if ((value = GetValueByKey(CONF_KEY_HOST_ADDRESS, options)) != NULL)
 		strcpy((char*)g_serverIp, value);
 	else

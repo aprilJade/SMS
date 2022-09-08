@@ -56,8 +56,7 @@ void HandleSignal(int signo)
         pthread_mutex_unlock(&g_clientCntLock);
         for (int i = 0; i < 4; i++)
             pthread_join(workerId[i], NULL);
-		sprintf(logMsg, "Server is terminated");
-		Log(g_logger, LOG_INFO, logMsg);
+		Log(g_logger, LOG_INFO, "Server is terminated");
 	}
 	else
 	{
@@ -99,7 +98,6 @@ void CreateWorker(int workerCount, SPgWrapper* db)
     SWorkerParam* param;
     workerId = (pthread_t*)malloc(sizeof(pthread_t) * workerCount);
 
-
     if (db->connected == false)
         Log(g_logger, LOG_FATAL, "PostgreSQL connection failed");
 
@@ -117,14 +115,13 @@ Logger* GenLogger(SHashTable* options)
 	char* logPath;
 	char* logLevel;
 	Logger* logger;
+
 	if ((logPath = GetValueByKey(CONF_KEY_LOG_PATH, options)) == NULL)
 		logPath = "./server";
 	if ((logLevel = GetValueByKey(CONF_KEY_LOG_LEVEL, options)) != NULL)
 	{
 		if (strcmp(logLevel, "default") == 0)
 			logger = NewLogger(logPath, LOG_INFO);
-		else if (strcmp(logLevel, "debug") == 0)	// doesn't necessary..
-			logger = NewLogger(logPath, LOG_DEBUG);
 		return logger;
 	}
 	logger = NewLogger(logPath, LOG_DEBUG);
@@ -134,6 +131,7 @@ Logger* GenLogger(SHashTable* options)
 void* UdpRoutine(void* param)
 {
     SPgWrapper* db = (SPgWrapper*)param;
+
     udpSockFd = socket(PF_INET, SOCK_DGRAM, 0);
     if (udpSockFd < 0)
         return 0;
@@ -184,15 +182,12 @@ void* UdpRoutine(void* param)
 
         if (readSize != sizeof(SPrefixPkt))
         {
-            // packet loss..
+            // TODO: handle packet loss..
             continue;
         }
         
         prevPkt = (SPrefixPkt*)buf;
-        //printf("<Prefix Packet Info>\nno.%lu: %lu: %s: %d (%s) addr: %s:%u\n",
-        //    prevPkt->packetNo ,prevPkt->beginTime, prevPkt->agentId, prevPkt->pid, prevPkt->processName,
-        //    prevPkt->hostIp, prevPkt->hostPort);
-
+        // TODO: handle prevPkt...
 
         if ((readSize = recvfrom(udpSockFd, buf, sizeof(SPostfixPkt), 0, (struct sockaddr*)&udpClientAddr, &len)) < 0)
         {
@@ -204,7 +199,7 @@ void* UdpRoutine(void* param)
 
         if (readSize != sizeof(SPostfixPkt))
         {
-            // packet loss...
+            // TODO: handle packet loss...
             continue;
         }
 
@@ -222,14 +217,13 @@ void* UdpRoutine(void* param)
             postPkt->sendBytesAvg,
             postPkt->maxElapseTime,
             postPkt->elapseTimeAvg);
+
         if (Query(db, sql) == -1)
         {
             sprintf(sql, "Failed to store in DB: UDP");
             Log(g_logger, LOG_ERROR, sql);
             continue;
         }
-        //printf("<Postfix Packet Info>\n%lu: %s: %d (%s) sended: %d\n\n",
-        //    postPkt->elapseTime, postPkt->agentId, postPkt->pid, postPkt->processName, postPkt->sendBytes);
     }
 
     sprintf(logMsg, "End UDP receiver");
@@ -243,8 +237,10 @@ int main(int argc, char** argv)
 		fprintf(stderr, "ERROR: you must input conf file path\n");
 		return EXIT_FAILURE;
 	}
+
 	SHashTable* options = NewHashTable();
     int ret;
+    
 	if ((ret = ParseConf(argv[1], options)) != CONF_NO_ERROR)
 	{
 		fprintf(stderr, "conf error: %d\n", ret);
@@ -260,7 +256,6 @@ int main(int argc, char** argv)
 
 			if (pid == -1)
 			{
-				// TODO: handle error
 				fprintf(stderr, "ERROR: failed to fork: %s\n", strerror(errno));
 				exit(EXIT_FAILURE);
 			}
@@ -313,7 +308,7 @@ int main(int argc, char** argv)
 		GenLogFileFullPath(g_logger->logPath, logPath);
 		sprintf(logMsg, "SMS: Socket is not opened. Check below log.\n%s\n", logPath);
 		write(g_stderrFd, logMsg, strlen(logMsg));
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     socklen_t len = sizeof(clientAddr);
@@ -331,7 +326,7 @@ int main(int argc, char** argv)
         if (listen(servFd, CONNECTION_COUNT) == -1)
         {
             Log(g_logger, LOG_FATAL, "Failed listening");
-            exit(1);
+            exit(EXIT_FAILURE);
         }
 
         sprintf(logMsg, "Wait for connection from client at %d", port);
@@ -341,7 +336,7 @@ int main(int argc, char** argv)
         if (clientFd == -1)
         {
             Log(g_logger, LOG_FATAL, "Failed to accept connection");
-            exit(1);
+            exit(EXIT_FAILURE);
         }
 
         param = (SReceiveParam*)malloc(sizeof(SReceiveParam));

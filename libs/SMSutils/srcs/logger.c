@@ -125,10 +125,8 @@ int Log(const Logger* handle, int logLevel, char* logMsg)
     {
         int fd = OpenLogFile(handle->logPath);
         if (fd == -1)
-        {
-            // TODO: handle error
-            
-        }
+            return -1;
+
         dup2(handle->logFd, fd);
         close(fd);
         g_currentDay = timeStruct->tm_mday;
@@ -137,6 +135,7 @@ int Log(const Logger* handle, int logLevel, char* logMsg)
     pthread_mutex_lock((pthread_mutex_t*)&handle->fdLock);
     write(handle->logFd, msgBuf, strlen(msgBuf));
     pthread_mutex_unlock((pthread_mutex_t*)&handle->fdLock);
+    return 0;
 }
 
 void DestroyLogger(Logger* logger)

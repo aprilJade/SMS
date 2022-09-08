@@ -17,6 +17,7 @@ extern pthread_mutex_t g_clientCntLock;
 
 int IsValidSignature(int signature)
 {
+    // TODO: remove if-else
     if (signature == SIGNATURE_CPU)
         return 1;
     else if (signature == SIGNATURE_MEM)
@@ -70,7 +71,6 @@ void* ReceiveRoutine(void* param)
 
         while (readSize > 0)
         {
-            //printf("%d\n", readSize);
             hHeader = (SHeader*)pb;
             if (!IsValidSignature(hHeader->signature))
             {

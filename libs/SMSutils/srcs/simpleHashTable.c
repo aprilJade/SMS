@@ -8,12 +8,8 @@ static unsigned int hash65599(const char* key)
     unsigned int result = 0;
     int len = strlen(key);
 
-    // unsigned int poly = 0xEDB88320;
     for (int i = 0; i < len; i++)
-    {
-        // poly = (poly << 1) | (poly >> 31);
         result = 65599 * result + key[i];
-    }
     return result;
 }
 

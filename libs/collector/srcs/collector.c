@@ -11,18 +11,6 @@
 #include "collector.h"
 #include "packets.h"
 
-// TODO: Calculate CPU usage about OS....
-// Formula: Cpu usage = (CPU running time) / (Logical CPU core count) / (Wall time)
-// CPU running time: get from /proc/stat
-// Logical CPU: get using sysconf()
-// Wall time: get using gettimeofday()
-//
-// TODO: Calculate CPU usage per process...
-// Formula: same as upper one
-// CPU running time: get from /proc/[pid]/stat utime + stime
-// Logical CPU: get using sysconf()
-// Wall time: get using gettimeofday()
-
 SCData* CollectEachCpuInfo(ushort cpuCnt, long timeConversion, char* rdBuf, int collectPeriod, char* agentId)
 {
 	int	fd;
@@ -30,29 +18,20 @@ SCData* CollectEachCpuInfo(ushort cpuCnt, long timeConversion, char* rdBuf, int 
 
 	fd = open("/proc/stat", O_RDONLY);
 	if (fd == -1)
-	{
-		// TODO: Handling open error
-		perror("agent");
 		return NULL;
-	}
+
 	readSize = read(fd, rdBuf, BUFFER_SIZE);
 	if (readSize == -1)
-	{
-		// TODO: Handling read error
-		perror("agent");
 		return NULL;
-	}
 	rdBuf[readSize] = 0;
+	close(fd);
 
 
 	SCData* result = (SCData*)malloc(sizeof(SCData));
 	result->dataSize = cpuCnt * sizeof(SBodyc) + sizeof(SHeader);
 	result->data = (uchar*)malloc(result->dataSize);
 	if (result == NULL)
-	{
-		// TODO: Handling malloc error
 		return NULL;
-	}
 
 	SHeader* hh = (SHeader*)result->data;
 	hh->signature = SIGNATURE_CPU;
@@ -84,7 +63,6 @@ SCData* CollectEachCpuInfo(ushort cpuCnt, long timeConversion, char* rdBuf, int 
 		while (*rdBuf++ != '\n');
 		handle++;
 	}
-	close(fd);
 	return result;
 }
 
@@ -94,28 +72,19 @@ SCData* CollectMemInfo(char* buf, int collectPeriod, char* agentId)
 	int readSize;
 
 	if (fd == -1)
-	{
-		// TODO: handling open error
-		perror("agent");
 		return NULL;
-	}
+
 	readSize = read(fd, buf, BUFFER_SIZE);
 	if (readSize == -1)
-	{
-		// TODO: handling read error
-		perror("agent");
 		return NULL;
-	}
 	buf[readSize] = 0;
+	close(fd);
 	
 	SCData* result = (SCData*)malloc(sizeof(SCData));
 	result->dataSize = sizeof(SHeader) + sizeof(SBodym);
 	result->data = (uchar*)malloc(result->dataSize);
 	if (result == NULL)
-	{
-		// TODO: handling malloc error
 		return NULL;
-	}
 
 	SHeader* hh = (SHeader*)result->data;
 	hh->signature = SIGNATURE_MEM;
@@ -158,7 +127,6 @@ SCData* CollectMemInfo(char* buf, int collectPeriod, char* agentId)
 	while (*buf++ != ' ');
 	handle->swapFree = atoi(buf);
 
-	close(fd);
 	return result;
 }
 
@@ -166,28 +134,20 @@ SCData* CollectNetInfo(char* buf, int nicCount, int collectPeriod, char* agentId
 {
 	int fd = open("/proc/net/dev", O_RDONLY);
 	if (fd == -1)
-	{
-		// TODO: handling open error
-		perror("agent");
 		return NULL;
-	}
+
 	int readSize = read(fd, buf, BUFFER_SIZE);
 	if (readSize == -1)
-	{
-		// TODO: handling read error
-		perror("agent");
 		return NULL;
-	}
 	buf[readSize] = 0;
+	close(fd);
 
 	SCData* result = (SCData*)malloc(sizeof(SCData));
 	result->dataSize = sizeof(SHeader) + sizeof(SBodyn) * nicCount;
 	result->data = (uchar*)malloc(result->dataSize);
 	if (result == NULL)
-	{
-		// TODO: handle malloc error
 		return NULL;
-	}
+
 	SHeader* hh = (SHeader*)result->data;
 	hh->signature = SIGNATURE_NET;
 	hh->bodyCount = nicCount;
@@ -234,7 +194,6 @@ SCData* CollectNetInfo(char* buf, int nicCount, int collectPeriod, char* agentId
 		while (*buf++ != '\n');
 		handle++;
 	}
-	close(fd);
 	return result;
 }
 
@@ -258,10 +217,7 @@ SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod, char* agen
 
 	dir = opendir("/proc");
 	if (dir == NULL)
-	{
-		// TODO: handle error
 		return NULL;
-	}
 	while ((entry = readdir(dir)) != NULL)
 	{
 		if (entry->d_type == DT_DIR)
@@ -277,19 +233,12 @@ SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod, char* agen
 			snprintf(filePath, 272, "%s/stat", path);
 			fd = open(filePath, O_RDONLY);
 			if (fd == -1)
-			{
-				// TODO: handling open error
-				perror("agent");
 				return NULL;
-			}
 			pbuf = buf;
 			readSize = read(fd, buf, BUFFER_SIZE);
+
 			if (readSize == -1)
-			{
-				// TODO: handling read error
-				perror("agent");
 				return NULL;
-			}
 			pbuf[readSize] = 0;
 
 			hBody->pid = atoi(pbuf);
@@ -311,7 +260,6 @@ SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod, char* agen
 			while (*pbuf++ != ' ');
 			hBody->stime = atoi(pbuf);
 			close(fd);
-			
 
 			int fileNameLen = strlen(filePath);
 			filePath[fileNameLen++] = 'u';
@@ -319,18 +267,11 @@ SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod, char* agen
 			filePath[fileNameLen] = '\0';
 			fd = open(filePath, O_RDONLY);
 			if (fd == -1)
-			{
-				// TODO: handling open error
-				perror("agent");
 				return NULL;
-			}
+
 			readSize = read(fd, buf, BUFFER_SIZE);
 			if (readSize == -1)
-			{
-				// TODO: handling read error
-				perror("agent");
 				return NULL;
-			}
 			buf[readSize] = 0;
 
 			pbuf = buf;
@@ -344,21 +285,12 @@ SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod, char* agen
 
 			handle += sizeof(SBodyp);
 
-			// Parse cmdline information
 			snprintf(filePath, 272, "%s/cmdline", path);
 			if ((fd = open(filePath, O_RDONLY)) == -1)
-			{
-				// TODO: handling open error
-				perror("agent");
 				return NULL;
-			}
 
 			if ((readSize = read(fd, buf, BUFFER_SIZE)) == -1)
-			{
-				// TODO: handling read error
-				perror("agent");
 				return NULL;
-			}
 			buf[readSize] = 0;
 			close(fd);
 
@@ -397,18 +329,10 @@ SCData* CollectDiskInfo(char *buf, int diskDevCnt, int collectPeriod, char* agen
 
 	fd = open("/proc/diskstats", O_RDONLY);
 	if (fd == -1)
-	{
-		// TODO: Handling open error
-		perror("agent");
 		return NULL;
-	}
 	readSize = read(fd, buf, BUFFER_SIZE);
 	if (readSize == -1)
-	{
-		// TODO: Handling read error
-		perror("agent");
 		return NULL;
-	}
 	buf[readSize] = 0;
 	close(fd);
 
@@ -416,10 +340,7 @@ SCData* CollectDiskInfo(char *buf, int diskDevCnt, int collectPeriod, char* agen
 	result->dataSize = diskDevCnt * sizeof(SBodyd) + sizeof(SHeader);
 	result->data = (uchar*)malloc(result->dataSize);
 	if (result == NULL)
-	{
-		// TODO: Handling malloc error
 		return NULL;
-	}
 
 	SHeader* hh = (SHeader*)result->data;
 	hh->signature = SIGNATURE_DISK;

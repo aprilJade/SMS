@@ -1,7 +1,6 @@
 #include "Queue.h"
 #include <stdlib.h>
 
-
 Queue* NewQueue()
 {
     Queue* ret = (Queue*)malloc(sizeof(Queue));
@@ -35,10 +34,8 @@ int Push(void* data, Queue* queue)
 {
     Queue* tmp = (Queue*)malloc(sizeof(Queue));
     if (tmp == NULL)
-    {
-        // TODO: handle malloc error
         return 1;
-    }
+
     tmp->data = data;
     tmp->next = NULL;
     while (queue->next)

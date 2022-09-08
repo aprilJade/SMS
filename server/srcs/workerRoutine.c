@@ -361,12 +361,12 @@ void* WorkerRoutine(void* param)
             break;
         if (!pParam->db->connected)
         {
-            sprintf(logMsg, "DB connection disconnected");
+            sprintf(logMsg, "%d Go to sleep: DB connection is bad", pParam->workerId);
             Log(g_logger, LOG_FATAL, logMsg);
             pthread_mutex_lock(&pParam->db->lock);
             pthread_cond_wait(&pParam->db->cond, &pParam->db->lock);
             pthread_mutex_unlock(&pParam->db->lock);
-            sprintf(logMsg, "PostgreSQL is connected");
+            sprintf(logMsg, "%d Ready to work: DB connection recovered", pParam->workerId);
             Log(g_logger, LOG_INFO, logMsg);
             continue;
         }
@@ -376,12 +376,12 @@ void* WorkerRoutine(void* param)
             usleep(500);
             if (g_clientCnt == 0)
             {
-                sprintf(logMsg, "%d: Go to sleep: No clients connected, No work remained", pParam->workerId);
+                sprintf(logMsg, "%d Go to sleep: No clients connected, No work remained", pParam->workerId);
                 Log(g_logger, LOG_INFO, logMsg);
                 pthread_mutex_lock(&g_clientCntLock);
                 pthread_cond_wait(&g_clientCntCond, &g_clientCntLock);
                 pthread_mutex_unlock(&g_clientCntLock);
-                sprintf(logMsg, "%d: Wakeup: New client connected", pParam->workerId);
+                sprintf(logMsg, "%d Wakeup: New client connected", pParam->workerId);
                 Log(g_logger, LOG_INFO, logMsg);
             }
             continue;
@@ -404,11 +404,10 @@ void* WorkerRoutine(void* param)
 
         hHeader = (SHeader*)data;
         if (InsertFunc[hHeader->signature & EXTRACT_SIGNATURE](data, &workTools) == -1)
-        {
             pParam->db->connected = false;
-        }
+
         free(data);
-        data == NULL;
+
         gettimeofday(&timeVal, NULL);
         elapseTime = (timeVal.tv_sec * 1000000 + timeVal.tv_usec) - prevTime;
         sprintf(logMsg, "%d work-done in %ld us", pParam->workerId, elapseTime);
@@ -417,6 +416,7 @@ void* WorkerRoutine(void* param)
         sprintf(logMsg, "%d work-wait", pParam->workerId);
         Log(g_logger, LOG_DEBUG, logMsg);
     }
+
     free(data);
     sprintf(logMsg, "%d worker-destroied", pParam->workerId);
     Log(g_logger, LOG_INFO, logMsg);

@@ -35,12 +35,12 @@ void GoToSleep(char* collectorName, bool isError)
     
     if (isError)
     {
-        sprintf(buf, "Pause %s collector: TCP connection BAD", collectorName);
+        sprintf(buf, "%s: pause collector: TCP connection BAD", collectorName);
         Log(g_logger, LOG_ERROR, buf);
     }
     else
     {
-        sprintf(buf, "Wait %s collector: Wait TCP connection", collectorName);
+        sprintf(buf, "%s: wait collector: wait TCP connection", collectorName);
         Log(g_logger, LOG_INFO, buf);
     }
 
@@ -50,7 +50,7 @@ void GoToSleep(char* collectorName, bool isError)
 
     if (isError)
     {
-        sprintf(buf, "Resume %s collector: TCP connection recovered", collectorName);
+        sprintf(buf, "%s: resume collector: TCP connection recovered", collectorName);
         Log(g_logger, LOG_INFO, buf);
     }
 }
@@ -74,7 +74,7 @@ void* CpuInfoRoutine(void* param)
         GoToSleep("CPU", false);
     if (g_turnOff == true)
     {
-        sprintf(logmsgBuf, "Terminate CPU collector");
+        sprintf(logmsgBuf, "CPU: terminate collector");
         Log(g_logger, LOG_INFO, logmsgBuf);
     }
 
@@ -96,7 +96,16 @@ void* CpuInfoRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
         
-        collectedData = CollectEachCpuInfo(cpuCnt, toMs, buf, pParam->collectPeriod, pParam->agentId);
+        if ((collectedData = CollectEachCpuInfo(cpuCnt, toMs, buf, pParam->collectPeriod, pParam->agentId)) == NULL)
+        {
+            sprintf(logmsgBuf, "CPU: failed to collect");
+            Log(g_logger, LOG_ERROR, logmsgBuf);
+            gettimeofday(&timeVal, NULL);
+            postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
+            elapseTime = postTime - prevTime;
+            usleep(collectPeriodUs - elapseTime);
+            continue;
+        }
 
         pthread_mutex_lock(&g_queue->lock);
         Push(collectedData, g_queue);
@@ -111,12 +120,12 @@ void* CpuInfoRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
-        sprintf(logmsgBuf, "Collected in %ldus: CPU", elapseTime);
+        sprintf(logmsgBuf, "CPU: Collected in %ldus", elapseTime);
         Log(g_logger, LOG_DEBUG, logmsgBuf);
         
         usleep(collectPeriodUs - elapseTime);
     }
-    sprintf(logmsgBuf, "Terminate CPU collector");
+    sprintf(logmsgBuf, "CPU: terminate collector");
     Log(g_logger, LOG_INFO, logmsgBuf);
 }
 
@@ -139,7 +148,7 @@ void* MemInfoRoutine(void* param)
         GoToSleep("memory", false);
     if (g_turnOff == true)
     {
-        sprintf(logmsgBuf, "Terminate memory collector");
+        sprintf(logmsgBuf, "memory: terminate collector");
         Log(g_logger, LOG_INFO, logmsgBuf);
     }
     Log(g_logger, LOG_INFO, "Run memory collector: Connected to TCP server");
@@ -161,7 +170,17 @@ void* MemInfoRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
-        collectedData = CollectMemInfo(buf, pParam->collectPeriod, pParam->agentId);
+        if ((collectedData = CollectMemInfo(buf, pParam->collectPeriod, pParam->agentId)) == NULL)
+        {
+            sprintf(logmsgBuf, "memory: failed to collect");
+            Log(g_logger, LOG_ERROR, logmsgBuf);
+            gettimeofday(&timeVal, NULL);
+            postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
+            elapseTime = postTime - prevTime;
+            usleep(collectPeriodUs - elapseTime);
+            continue;
+        }
+        
         
         pthread_mutex_lock(&g_queue->lock);
         Push(collectedData, g_queue);
@@ -177,12 +196,12 @@ void* MemInfoRoutine(void* param)
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 
-        sprintf(logmsgBuf, "Collected in %ldus: Memory", elapseTime);
+        sprintf(logmsgBuf, "memory: collected in %ldus", elapseTime);
         Log(g_logger, LOG_DEBUG, logmsgBuf);
 
         usleep(collectPeriodUs - elapseTime);
     }
-    sprintf(logmsgBuf, "Terminate memory collector");
+    sprintf(logmsgBuf, "memory: terminate collector");
     Log(g_logger, LOG_INFO, logmsgBuf);
 }
 
@@ -234,7 +253,7 @@ void* NetInfoRoutine(void* param)
 
     if (g_turnOff == true)
     {
-        sprintf(logmsgBuf, "Terminate network collector");
+        sprintf(logmsgBuf, "network: terminate collector");
         Log(g_logger, LOG_INFO, logmsgBuf);
     }
     Log(g_logger, LOG_INFO, "Run network collector: Connected to TCP server");
@@ -255,7 +274,17 @@ void* NetInfoRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
-        collectedData = CollectNetInfo(buf, nicCount, pParam->collectPeriod, pParam->agentId);
+        if ((collectedData = CollectNetInfo(buf, nicCount, pParam->collectPeriod, pParam->agentId)) == NULL)
+        {
+            sprintf(logmsgBuf, "network: failed to collect");
+            Log(g_logger, LOG_ERROR, logmsgBuf);
+            gettimeofday(&timeVal, NULL);
+            postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
+            elapseTime = postTime - prevTime;
+            usleep(collectPeriodUs - elapseTime);
+            continue;
+        }
+
         pthread_mutex_lock(&g_queue->lock);
         Push(collectedData, g_queue);
         pthread_mutex_unlock(&g_queue->lock);
@@ -270,11 +299,11 @@ void* NetInfoRoutine(void* param)
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 
-        sprintf(logmsgBuf, "Collected in %ldus: Network", elapseTime);
+        sprintf(logmsgBuf, "network: collected in %ldus", elapseTime);
         Log(g_logger, LOG_DEBUG, logmsgBuf);
         usleep(collectPeriodUs - elapseTime);
     }
-    sprintf(logmsgBuf, "Terminate network collector");
+    sprintf(logmsgBuf, "network: terminate collector");
     Log(g_logger, LOG_INFO, logmsgBuf);
 }
 
@@ -294,12 +323,11 @@ void* ProcInfoRoutine(void* param)
         GoToSleep("process", false);
     if (g_turnOff == true)
     {
-        sprintf(logmsgBuf, "Terminate process collector");
+        sprintf(logmsgBuf, "process: terminate collector");
         Log(g_logger, LOG_INFO, logmsgBuf);
     }
     Log(g_logger, LOG_INFO, "Run process collector: Connected to TCP server");
 
-    // TODO: change dynamic dataBuf size
     uchar dataBuf[1024 * 1024] = { 0, };
     SCData* collectedData;
     while(1)
@@ -315,7 +343,16 @@ void* ProcInfoRoutine(void* param)
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
         memset(dataBuf, 0, 1024 * 1024);
-        collectedData = CollectProcInfo(buf, dataBuf, pParam->collectPeriod, pParam->agentId);
+        if ((collectedData = CollectProcInfo(buf, dataBuf, pParam->collectPeriod, pParam->agentId)) == NULL)
+        {
+            sprintf(logmsgBuf, "process: failed to collect");
+            Log(g_logger, LOG_ERROR, logmsgBuf);
+            gettimeofday(&timeVal, NULL);
+            postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
+            elapseTime = postTime - prevTime;
+            usleep(collectPeriodUs - elapseTime);
+            continue;
+        }
 
         pthread_mutex_lock(&g_queue->lock);
         Push(collectedData, g_queue);
@@ -328,12 +365,12 @@ void* ProcInfoRoutine(void* param)
         uchar* pData = collectedData->data;
         SHeader* hHeader = (SHeader*)pData;
 
-        sprintf(logmsgBuf, "Collected in %ldus: %d Process", elapseTime, hHeader->bodyCount);
+        sprintf(logmsgBuf, "process: collected in %ldus, count %d ", elapseTime, hHeader->bodyCount);
         Log(g_logger, LOG_DEBUG, logmsgBuf);
 
         usleep(collectPeriodUs - elapseTime);
     }
-    sprintf(logmsgBuf, "Terminate process collector");
+    sprintf(logmsgBuf, "process: terminate collector");
     Log(g_logger, LOG_INFO, logmsgBuf);
 }
 
@@ -387,7 +424,7 @@ void* DiskInfoRoutine(void* param)
         GoToSleep("disk", false);
     if (g_turnOff == true)
     {
-        sprintf(logmsgBuf, "Terminate disk collector");
+        sprintf(logmsgBuf, "disk: terminate collector");
         Log(g_logger, LOG_INFO, logmsgBuf);
     }
     Log(g_logger, LOG_INFO, "Run disk collector: Connected to TCP server");
@@ -406,7 +443,16 @@ void* DiskInfoRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
-        collectedData = CollectDiskInfo(buf, diskDevCnt, pParam->collectPeriod, pParam->agentId);
+        if ((collectedData = CollectDiskInfo(buf, diskDevCnt, pParam->collectPeriod, pParam->agentId)) == NULL)
+        {
+            sprintf(logmsgBuf, "disk: failed to collect");
+            Log(g_logger, LOG_ERROR, logmsgBuf);
+            gettimeofday(&timeVal, NULL);
+            postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
+            elapseTime = postTime - prevTime;
+            usleep(collectPeriodUs - elapseTime);
+            continue;
+        }
 
         pthread_mutex_lock(&g_queue->lock);
         Push(collectedData, g_queue);
@@ -416,16 +462,17 @@ void* DiskInfoRoutine(void* param)
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 
-        sprintf(logmsgBuf, "Collected in %ldus: Disk", elapseTime);
+        sprintf(logmsgBuf, "disk: collected in %ldus", elapseTime);
         Log(g_logger, LOG_DEBUG, logmsgBuf);
         usleep(collectPeriodUs - elapseTime);
     }
-    sprintf(logmsgBuf, "Terminate DISK collector");
+    sprintf(logmsgBuf, "disk terminate collector");
     Log(g_logger, LOG_INFO, logmsgBuf);
 }
 
 void WakeupEveryCollector()
 {
+    Log(g_logger, LOG_DEBUG, "Wakeup every collector");
     pthread_mutex_lock(&g_condLock);
     pthread_cond_broadcast(&g_cond);
     pthread_mutex_unlock(&g_condLock);
@@ -481,7 +528,7 @@ void* SendRoutine(void* param)
         if (g_turnOff)
         {
             WakeupEveryCollector();
-            sprintf(logmsgBuf, "Terminate Sender");
+            sprintf(logmsgBuf, "Terminate sender");
             Log(g_logger, LOG_INFO, logmsgBuf);
             return NULL;
         }
@@ -519,10 +566,7 @@ void* SendRoutine(void* param)
         }
         
         if ((sendBytes = send(g_servSockFd, colletecData->data, colletecData->dataSize, 0)) == -1)
-        {
-            usleep(500000);
             continue;
-        }
         
         sprintf(logmsgBuf, "Send %d bytes to %s:%d ", sendBytes, g_serverIp, g_serverPort);
         Log(g_logger, LOG_DEBUG, logmsgBuf);
@@ -531,6 +575,6 @@ void* SendRoutine(void* param)
         colletecData = NULL;
     }
     
-    sprintf(logmsgBuf, "Terminate Sender");
+    sprintf(logmsgBuf, "Terminate sender");
     Log(g_logger, LOG_INFO, logmsgBuf);
 }

@@ -22,8 +22,6 @@ typedef struct SRoutineParam
     uint collectPeriod;
 } SRoutineParam;
 
-int GetNicCount();  // ?? Move to appropriate file
-
 void* CpuInfoRoutine(void* param);
 void* MemInfoRoutine(void* param);
 void* NetInfoRoutine(void* param);

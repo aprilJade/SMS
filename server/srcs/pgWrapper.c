@@ -10,7 +10,6 @@ extern bool g_turnOff;
 static void* PgManageRoutine(void* param)
 {
     SPgWrapper* wrapper = (SPgWrapper*)param;
-    // printf("%d\n", wrapper->connected);
 
     while (1)
     {
