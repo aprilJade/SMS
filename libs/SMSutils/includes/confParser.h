@@ -42,6 +42,11 @@
 #define CONF_KEY_MAX_CONNECTION         "MAX_CONN"
 #define CONF_KEY_WORKER_COUNT           "WORKER_COUNT"
 
+#define CONF_KEY_CPU_UTILIAZATION_LIMIT "CPU_UTILIZATION_LIMIT"
+#define CONF_KEY_NET_THROUGHPUT_LIMIT   "NETWORK_THROUGHPUT_LIMIT"
+#define CONF_KEY_MEM_USAGE_LIMIT        "MEMORY_USAGE_LIMIT"
+#define CONF_KET_SWAP_USAGE_LIMIT       "SWAP_USAGE_LIMIT"
+
 enum eConfError // If you want see specific error message, use functions handling errno variable such as "perror"
 {
     CONF_NO_ERROR = 0,

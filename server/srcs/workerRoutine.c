@@ -346,7 +346,6 @@ void* WorkerRoutine(void* param)
     workTools.workerId = pParam->workerId;
     workTools.dbWrapper = pParam->db;
     
-    
     sprintf(logMsg, "%d worker-created", pParam->workerId);
     Log(g_logger, LOG_INFO, logMsg);
     sprintf(logMsg, "%d work-wait", pParam->workerId);
