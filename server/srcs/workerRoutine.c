@@ -86,15 +86,12 @@ int InsertCpuAvgInfo(void* data, SWorkTools* tools)
                     hBody[i].cpuUtilizationAvg);
         if (Query(tools->dbWrapper, sql) == -1)
         {
-            //printf("%s\n", sql);
             sprintf(sql, "%d: Failed to store in DB: CPU AVG", tools->workerId);
             Log(g_logger, LOG_ERROR, sql);
             return -1;
         }
     }
     return 0;
-    //for (int i = 0; i < hHeader->bodyCount; i++)
-    //    printf("%d: utilization: %.2f avg: %.2f\n", i, hBody[i].cpuUtilization, hBody[i].cpuUtilizationAvg);
 }
 
 int InsertMemInfo(void* data, SWorkTools* tools)
