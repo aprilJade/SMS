@@ -1,5 +1,6 @@
 #ifndef PACKETS_H
 #define PACKETS_H
+#include <stdbool.h>
 
 #define SIGNATURE_CPU        0x534D5363   // SMSc
 #define SIGNATURE_AVG_CPU    0x534D5343   // SMSC

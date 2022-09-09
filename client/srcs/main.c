@@ -64,6 +64,45 @@ int main(int argc, char** argv)
             exit(EXIT_FAILURE);
         }
 
+        printf("Request to update configuration to agent with the following values\n");
+        printf("RUN_CPU_COLLECTOR: %s\n", (pkt.bRunCpuCollector ? "true" : "false"));
+        if (pkt.bRunCpuCollector)
+            printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt.cpuPeriod);
+
+        printf("RUN_MEM_COLLECTOR: %s\n", (pkt.bRunCpuCollector ? "true" : "false"));
+        if (pkt.bRunCpuCollector)
+            printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt.cpuPeriod);
+
+        printf("RUN_NET_COLLECTOR: %s\n", (pkt.bRunCpuCollector ? "true" : "false"));
+        if (pkt.bRunCpuCollector)
+            printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt.cpuPeriod);
+
+        printf("RUN_PROC_COLLECTOR: %s\n", (pkt.bRunCpuCollector ? "true" : "false"));
+        if (pkt.bRunCpuCollector)
+            printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt.cpuPeriod);
+
+        printf("RUN_DISK_COLLECTOR: %s\n", (pkt.bRunCpuCollector ? "true" : "false"));
+        if (pkt.bRunCpuCollector)
+            printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt.cpuPeriod);
+
+        char c;
+        
+        while (1)
+        {
+            printf("Are you sure you want to request it?(Y/N): ");
+            c = getchar();
+            if (c == 'n' || c == 'N')
+            {
+                printf("Update agent's configuration has been cancled.\n");
+                exit(EXIT_SUCCESS);
+            }
+            else if (c == 'y' || c == 'Y')
+            {
+                printf("Request to update...");
+                break;
+            }
+        }
+
         int uds = socket(AF_UNIX, SOCK_DGRAM, 0);
         if (uds == -1)
         {
@@ -82,7 +121,7 @@ int main(int argc, char** argv)
         }
         char buf[128] = { 0, };
         socklen_t remoteLen = sizeof(remoteInfo);
-        ssize_t recvSize = recvfrom(uds, buf, 128, 0, (struct sockaddr*)&remoteInfo, remoteLen);
+        ssize_t recvSize = recvfrom(uds, buf, 128, 0, (struct sockaddr*)&remoteInfo, &remoteLen);
         if (recvSize < 0)
         {
             fprintf(stderr, "ERROR: agent is not responding\n");
@@ -92,7 +131,7 @@ int main(int argc, char** argv)
         if (strcmp(buf, "update complete") == 0)
             printf("Agent configuration is updated.\n");
         else
-            printf(stderr, "Failed to update agent's configuraion\n");
+            fprintf(stderr, "Failed to update agent's configuraion\n");
     }
     else if (strcmp(argv[1], "status") == 0)
     {
