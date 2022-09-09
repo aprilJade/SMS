@@ -9,3 +9,4 @@ objs/
 *.sql
 bin/
 printer
+sms

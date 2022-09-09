@@ -111,4 +111,18 @@ typedef struct SBodyAvgN
 
 #pragma pack(pop)
 
+typedef struct SUpdatePacket
+{
+    bool bRunCpuCollector;
+    unsigned long cpuPeriod;
+    bool bRunMemCollector;
+    unsigned long memPeriod;
+    bool bRunNetCollector;
+    unsigned long netPeriod;
+    bool bRunProcCollector;
+    unsigned long procPeriod;
+    bool bRunDiskCOllector;
+    unsigned long diskPeriod;
+} SUpdatePacket;
+
 #endif

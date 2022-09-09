@@ -1,6 +1,7 @@
 NAME		=	sms
 INCLUDES	=	-I./includes/ -I../libs/SMSutils/includes \
-				-I/usr/include/postgresql/ -I../libs/hook_module
+				-I../libs/collector/includes -I/usr/include/postgresql/ \
+				-I../libs/hook_module
 LIB			=	-lpthread -lSMSutils -lpq
 LIB_DIR		=	-L../bin -L/usr/lib/postgresql/14/lib
 SRC_DIR		=	./srcs
