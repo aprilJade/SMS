@@ -94,10 +94,10 @@ int InsertCpuAvgInfo(void* data, SWorkTools* tools)
         }
     }
     totalCpuUtilization /= (float)hHeader->bodyCount;
-    printf("%f, %f\n", tools->threshold.cpuUtilization, totalCpuUtilization);
     if (tools->threshold.cpuUtilization < totalCpuUtilization)
     {
-        printf("warning cpu utilization: %f\n", totalCpuUtilization);
+        // TODO: save to DB
+        printf("warning cpu utilization: %f%%\n", totalCpuUtilization);
     }
     return 0;
 }
@@ -152,6 +152,18 @@ int InsertMemAvgInfo(void* data, SWorkTools* tools)
         sprintf(sql, "%d: Failed to store in DB: Memory AVG", tools->workerId);
         Log(g_logger, LOG_ERROR, sql);
         return -1;
+    }
+
+    if (hBody->memUsage > tools->threshold.memUsage)
+    {
+        // TODO: save to DB
+        printf("warning memory usage: %f%%", hBody->memUsage);
+    }
+
+    if (hBody->swapUsage > tools->threshold.swapUsage)
+    {
+        // TODO: save to DB
+        printf("warning memory usage: %f%%", hBody->swapUsage);
     }
     return 0;
 }
@@ -221,6 +233,14 @@ int InsertNetAvgInfo(void* data, SWorkTools* tools)
             sprintf(sql, "%d: Failed to store in DB: Network AVG", tools->workerId);
             Log(g_logger, LOG_ERROR, sql);
             return -1;
+        }
+        if (hBody[i].recvBytesPerSec > tools->threshold.netThroughput)
+        {
+            // TODO: save to DB
+        }
+        if (hBody[i].sendBytesPerSec > tools->threshold.netThroughput)
+        {
+            // TODO: save to DB
         }
     }
     return 0;
