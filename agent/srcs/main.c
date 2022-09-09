@@ -195,7 +195,7 @@ int main(int argc, char** argv)
 	collectorId[NET_COLLECTOR_ID] = RunCollector(NetInfoRoutine, CONF_KEY_RUN_NET_COLLECTOR, CONF_KEY_NET_COLLECTION_PERIOD, options);
 	collectorId[PROC_COLLECTOR_ID] = RunCollector(ProcInfoRoutine, CONF_KEY_RUN_PROC_COLLECTOR, CONF_KEY_PROC_COLLECTION_PERIOD, options);
 	collectorId[DISK_COLLECTOR_ID] = RunCollector(DiskInfoRoutine, CONF_KEY_RUN_DISK_COLLECTOR, CONF_KEY_DISK_COLLECTION_PERIOD, options);
-
+	
 	pthread_join(senderTid, NULL);
 		
 	exit(EXIT_SUCCESS);
