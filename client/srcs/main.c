@@ -94,7 +94,7 @@ int main(int argc, char** argv)
             exit(EXIT_FAILURE);
         }
 
-        SUpdatePacket pkt;
+        SUpdatePacket pkt = { 0, };
         if (CreateUpdatePacket(options, &pkt) != 0)
         {
             fprintf(stderr, "ERROR: failed to create udpate packet\n");
