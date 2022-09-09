@@ -98,8 +98,6 @@ int InsertCpuAvgInfo(void* data, SWorkTools* tools)
     totalCpuUtilization /= (float)hHeader->bodyCount;
     if (tools->threshold.cpuUtilization < totalCpuUtilization)
     {
-        // TODO: save to DB
-        printf("warning cpu utilization: %f%%\n", totalCpuUtilization);
         sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', \'CPU\', %f, %f);",
             thresholdInsertSql,
             hHeader->agentId,
@@ -107,7 +105,6 @@ int InsertCpuAvgInfo(void* data, SWorkTools* tools)
             ts->tm_hour, ts->tm_min, ts->tm_sec,
             tools->threshold.cpuUtilization,
             totalCpuUtilization);
-        
         if (Query(tools->dbWrapper, sql) == -1)
         {
             sprintf(sql, "%d: Failed to store in DB: CPU Threshold", tools->workerId);
@@ -172,14 +169,36 @@ int InsertMemAvgInfo(void* data, SWorkTools* tools)
 
     if (hBody->memUsage > tools->threshold.memUsage)
     {
-        // TODO: save to DB
-        printf("warning memory usage: %f%%", hBody->memUsage);
+        sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', \'MEM\', %f, %f);",
+            thresholdInsertSql,
+            hHeader->agentId,
+            ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
+            ts->tm_hour, ts->tm_min, ts->tm_sec,
+            tools->threshold.memUsage,
+            hBody->memUsage);
+        if (Query(tools->dbWrapper, sql) == -1)
+        {
+            sprintf(sql, "%d: Failed to store in DB: Mem usage Threshold", tools->workerId);
+            Log(g_logger, LOG_ERROR, sql);
+            return -1;
+        }
     }
 
     if (hBody->swapUsage > tools->threshold.swapUsage)
     {
-        // TODO: save to DB
-        printf("warning memory usage: %f%%", hBody->swapUsage);
+        sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', \'SWAP\', %f, %f);",
+            thresholdInsertSql,
+            hHeader->agentId,
+            ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
+            ts->tm_hour, ts->tm_min, ts->tm_sec,
+            tools->threshold.swapUsage,
+            hBody->swapUsage);
+        if (Query(tools->dbWrapper, sql) == -1)
+        {
+            sprintf(sql, "%d: Failed to store in DB: swap usage Threshold", tools->workerId);
+            Log(g_logger, LOG_ERROR, sql);
+            return -1;
+        }
     }
     return 0;
 }
