@@ -112,6 +112,9 @@ typedef struct SBodyAvgN
 
 #pragma pack(pop)
 
+#define UDS_UPDATE_PACKET 0x55445300 // UDS0
+#define UDS_STATUS_PACKET 0x55445301 // UDS1
+
 typedef struct SUpdatePacket
 {
     char udsPath[108];

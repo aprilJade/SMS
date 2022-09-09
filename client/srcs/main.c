@@ -23,14 +23,37 @@ void PrintUsage()
     fprintf(stderr, "Not implemented yet: PrintUsage()\n");
 }
 
+void PrintPacketContent(SUpdatePacket* pkt)
+{
+    printf("client UDS socket path: %s\n", pkt->udsPath);
+    printf("RUN_CPU_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
+    if (pkt->bRunCpuCollector)
+        printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+
+    printf("RUN_MEM_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
+    if (pkt->bRunCpuCollector)
+        printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+
+    printf("RUN_NET_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
+    if (pkt->bRunCpuCollector)
+        printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+
+    printf("RUN_PROC_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
+    if (pkt->bRunCpuCollector)
+        printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+
+    printf("RUN_DISK_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
+    if (pkt->bRunCpuCollector)
+        printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+}
+
 static struct sockaddr_un clientInfo;
 
-int Some()
+int CreateUDS()
 {
     int fd = open(UDS_CLIENT_PATH, O_CREAT | O_RDWR, 0777);
 	if (fd == -1)
 	{
-		// TODO: handle error
 		fprintf(stderr, "failed to create uds file: %s\n", strerror(errno));
 		exit(EXIT_FAILURE);
 	}
@@ -39,7 +62,6 @@ int Some()
 	int uds;
 	if ((uds = socket(AF_UNIX, SOCK_DGRAM, 0)) == -1)
 	{
-		// TODO: handle error
 		fprintf(stderr, "failed to uds socket: %s\n", strerror(errno));
 		exit(EXIT_FAILURE);
 	}
@@ -49,8 +71,8 @@ int Some()
 
 	if (bind(uds, (struct sockaddr*)&clientInfo, sizeof(clientInfo)) == -1)
 	{
-		// TODO: handle error
 		close(uds);
+        remove(UDS_CLIENT_PATH);
 		fprintf(stderr, "failed to bind uds socket: %s\n", strerror(errno));
 		exit(EXIT_FAILURE);
 	}
@@ -74,7 +96,6 @@ int main(int argc, char** argv)
 
     if (strcmp(argv[1], "update") == 0)
     {
-        // TODO: check agent is really not exist. like ps -aux | grep agent
         if (access(UDS_AGENT_PATH, F_OK) != 0)
         {
             printf("Agent is not working!\n");
@@ -102,28 +123,9 @@ int main(int argc, char** argv)
         }
 
         printf("Request to update configuration to agent with the following values\n");
-        printf("RUN_CPU_COLLECTOR: %s\n", (pkt.bRunCpuCollector ? "true" : "false"));
-        if (pkt.bRunCpuCollector)
-            printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt.cpuPeriod);
-
-        printf("RUN_MEM_COLLECTOR: %s\n", (pkt.bRunCpuCollector ? "true" : "false"));
-        if (pkt.bRunCpuCollector)
-            printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt.cpuPeriod);
-
-        printf("RUN_NET_COLLECTOR: %s\n", (pkt.bRunCpuCollector ? "true" : "false"));
-        if (pkt.bRunCpuCollector)
-            printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt.cpuPeriod);
-
-        printf("RUN_PROC_COLLECTOR: %s\n", (pkt.bRunCpuCollector ? "true" : "false"));
-        if (pkt.bRunCpuCollector)
-            printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt.cpuPeriod);
-
-        printf("RUN_DISK_COLLECTOR: %s\n", (pkt.bRunCpuCollector ? "true" : "false"));
-        if (pkt.bRunCpuCollector)
-            printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt.cpuPeriod);
+        PrintPacketContent(&pkt);
 
         char c;
-        
         while (1)
         {
             printf("Are you sure you want to request it?(Y/N): ");
@@ -139,7 +141,7 @@ int main(int argc, char** argv)
                 break;
             }
         }
-        int recvFd = Some();
+        int recvFd = CreateUDS();
 
         int uds = socket(AF_UNIX, SOCK_DGRAM, 0);
         if (uds == -1)
@@ -153,6 +155,16 @@ int main(int argc, char** argv)
         struct sockaddr_un remoteInfo = { 0, };
         remoteInfo.sun_family = AF_UNIX;
         strcpy(remoteInfo.sun_path, UDS_AGENT_PATH);
+        uint helloPkt = UDS_UPDATE_PACKET;
+        if (sendto(uds, &helloPkt, sizeof(uint), 0, (struct sockaddr*)&remoteInfo, sizeof(remoteInfo)) == -1)
+        {
+            fprintf(stderr, "ERROR: failed to send update packet: %s\n", strerror(errno));
+            close(uds);
+            close(recvFd);
+            remove(UDS_CLIENT_PATH);
+            exit(EXIT_FAILURE);
+        }
+
         if (sendto(uds, &pkt, sizeof(SUpdatePacket), 0, (struct sockaddr*)&remoteInfo, sizeof(remoteInfo)) == -1)
         {
             fprintf(stderr, "ERROR: failed to send update packet: %s\n", strerror(errno));

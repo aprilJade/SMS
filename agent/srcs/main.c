@@ -127,7 +127,7 @@ Logger* GenLogger(SHashTable* options)
 	return NewLogger(logPath, LOG_DEBUG);
 }
 
-void ResponseToClientUDS(const char* path)
+void ResponseToClientUDS(const char* path, char* data)
 {
 	int uds = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (uds == -1)
@@ -139,7 +139,7 @@ void ResponseToClientUDS(const char* path)
 	struct sockaddr_un remoteInfo = { 0, };
 	remoteInfo.sun_family = AF_UNIX;
 	strcpy(remoteInfo.sun_path, path);
-	if (sendto(uds, "update complete", 15, 0, (struct sockaddr*)&remoteInfo, sizeof(remoteInfo)) == -1)
+	if (sendto(uds, data, strlen(data), 0, (struct sockaddr*)&remoteInfo, sizeof(remoteInfo)) == -1)
 	{
 		fprintf(stderr, "ERROR: failed to send update packet: %s\n", strerror(errno));
 		close(uds);
@@ -150,6 +150,7 @@ void ResponseToClientUDS(const char* path)
 
 void ManageAgentRoutine(void)
 {
+	// TODO: printf for testing. remove follow printfs..
 	int fd = open(UDS_SOCKET_PATH, O_CREAT | O_RDWR, 0777);
 	if (fd == -1)
 	{
@@ -183,46 +184,60 @@ void ManageAgentRoutine(void)
 	socklen_t sockLen = sizeof(sockInfo);
 	SUpdatePacket* pkt;
 	char buf[256] = { 0, };
+	int* npTmp;
 	while (1)
 	{
 		printf("Wait to receive update request...\n");
-		if ((recvSize = recvfrom(uds, buf, 256, 0, (struct sockaddr*)&sockInfo, &sockLen)) == -1)
+		if ((recvSize = recvfrom(uds, buf, 4, 0, (struct sockaddr*)&sockInfo, &sockLen)) == -1)
 		{
 			// TODO: handle error
 			fprintf(stderr, "uds receive error: %s\n", strerror(errno));
 			continue;
 		}
-		if (recvSize == 0)
+		npTmp = (int*)buf;
+		if (*npTmp == UDS_UPDATE_PACKET)
 		{
-			printf("uds: EOF\n");
-			close(uds);
-			return ;
+			if ((recvSize = recvfrom(uds, buf, 256, 0, (struct sockaddr*)&sockInfo, &sockLen)) == -1)
+			{
+				// TODO: handle error
+				fprintf(stderr, "uds receive error: %s\n", strerror(errno));
+				continue;
+			}
+			if (recvSize == 0)
+			{
+				printf("uds: EOF\n");
+				close(uds);
+				return ;
+			}
+			buf[recvSize] = 0;
+			pkt = (SUpdatePacket*)buf;
+
+			// TODO: update configuration using values in pkt. not print
+			printf("Received informations\n");
+			printf("RUN_CPU_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
+			if (pkt->bRunCpuCollector)
+				printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+			printf("RUN_MEM_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
+			if (pkt->bRunCpuCollector)
+				printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+			printf("RUN_NET_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
+			if (pkt->bRunCpuCollector)
+				printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+			printf("RUN_PROC_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
+			if (pkt->bRunCpuCollector)
+				printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+			printf("RUN_DISK_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
+			if (pkt->bRunCpuCollector)
+				printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+
+			ResponseToClientUDS(pkt->udsPath, "update complete");
 		}
-		buf[recvSize] = 0;
-		pkt = (SUpdatePacket*)buf;
-
-		printf("Received informations\n");
-        printf("RUN_CPU_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
-        if (pkt->bRunCpuCollector)
-            printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
-
-        printf("RUN_MEM_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
-        if (pkt->bRunCpuCollector)
-            printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
-
-        printf("RUN_NET_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
-        if (pkt->bRunCpuCollector)
-            printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
-
-        printf("RUN_PROC_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
-        if (pkt->bRunCpuCollector)
-            printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
-
-        printf("RUN_DISK_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
-        if (pkt->bRunCpuCollector)
-            printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
-
-		ResponseToClientUDS(pkt->udsPath);
+		else if (*npTmp == UDS_STATUS_PACKET)
+		{
+			// not implemented yet
+			// #00. Generate status data packet
+			// #01. send to client! like ResponseToClientUDS(pkt->udsPath, statusPacket);
+		}
 	}
 }
 
