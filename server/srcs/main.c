@@ -39,7 +39,7 @@ int udpSockFd;
 pthread_t udpTid;
 pthread_t* workerId;
 Queue* g_queue;
-int g_stderrFd;
+int g_stderrFd = 2;
 pthread_mutex_t g_clientCntLock = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t g_clientCntCond = PTHREAD_COND_INITIALIZER;
 unsigned int g_clientCnt = 0;
@@ -66,7 +66,7 @@ void HandleSignal(int signo)
 		GenLogFileFullPath(g_logger->logPath, logPathBuf);
 
 		sprintf(logMsg, "SMS: Server is aborted. Check below log.\n%s\n", logPathBuf);
-		write(0, logMsg, strlen(logMsg));
+		write(g_stderrFd, logMsg, strlen(logMsg));
 	    exit(signo);
 	}
 
