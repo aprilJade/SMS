@@ -62,6 +62,9 @@ void HandleSignal(int signo)
 	{
 		sprintf(logMsg, "Server is aborted: %s", strSignal[signo]);
 		Log(g_logger, LOG_FATAL, logMsg);
+        pthread_mutex_lock(&g_clientCntLock);
+        pthread_cond_broadcast(&g_clientCntCond);
+        pthread_mutex_unlock(&g_clientCntLock);
 		char logPathBuf[128];
 		GenLogFileFullPath(g_logger->logPath, logPathBuf);
 
@@ -102,11 +105,7 @@ static ulong ConvertToBytesFromLargeUnit(char* str)
     
     if (i == strlen(str))
         return result;
-    i++;
-    while (str[i] == ' ')
-        i++;
-    char* unit = strdup(&str[i]);
-    switch (unit[i])
+    switch (str[i])
     {
     case 'k':
         result *= 1024;
@@ -118,7 +117,6 @@ static ulong ConvertToBytesFromLargeUnit(char* str)
         result *= 1024 * 1024 * 1024;
         break;
     }
-    free(unit);
     return result;
 }
 
@@ -162,7 +160,6 @@ static SThreshold GetThresholds(SHashTable* options)
             ret.recvBytes = ConvertToBytesFromLargeUnit(value);   
     }
 
-    printf("%lu, %lu\n", ret.recvBytes, ret.sendBytes);
     return ret;
 }
 

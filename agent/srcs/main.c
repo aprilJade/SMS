@@ -132,7 +132,7 @@ void ResponseToClientUDS(const char* path, char* data)
 	int uds = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (uds == -1)
 	{
-		fprintf(stderr, "ERROR: failed to open uds: %s\n", strerror(errno));
+		//fprintf(stderr, "ERROR: failed to open uds: %s\n", strerror(errno));
 		return ;
 	}
 
@@ -141,21 +141,21 @@ void ResponseToClientUDS(const char* path, char* data)
 	strcpy(remoteInfo.sun_path, path);
 	if (sendto(uds, data, strlen(data), 0, (struct sockaddr*)&remoteInfo, sizeof(remoteInfo)) == -1)
 	{
-		fprintf(stderr, "ERROR: failed to send update packet: %s\n", strerror(errno));
+		//fprintf(stderr, "ERROR: failed to send update packet: %s\n", strerror(errno));
 		close(uds);
 		return ;
 	}
 	close(uds);
 }
 
-void ManageAgentRoutine(void)
+void ManageAgentConfiguration(void)
 {
 	// TODO: printf for testing. remove follow printfs..
 	int fd = open(UDS_SOCKET_PATH, O_CREAT | O_RDWR, 0777);
 	if (fd == -1)
 	{
 		// TODO: handle error
-		fprintf(stderr, "failed to create uds file: %s\n", strerror(errno));
+		//fprintf(stderr, "failed to create uds file: %s\n", strerror(errno));
 		return;
 	}
 	close(fd);
@@ -164,7 +164,7 @@ void ManageAgentRoutine(void)
 	if ((uds = socket(AF_UNIX, SOCK_DGRAM, 0)) == -1)
 	{
 		// TODO: handle error
-		fprintf(stderr, "failed to uds socket: %s\n", strerror(errno));
+		//fprintf(stderr, "failed to uds socket: %s\n", strerror(errno));
 		return;
 	}
 	struct sockaddr_un sockInfo = { 0, };
@@ -176,7 +176,7 @@ void ManageAgentRoutine(void)
 	{
 		// TODO: handle error
 		close(uds);
-		fprintf(stderr, "failed to bind uds socket: %s\n", strerror(errno));
+		//fprintf(stderr, "failed to bind uds socket: %s\n", strerror(errno));
 		return;
 	}
 
@@ -187,11 +187,11 @@ void ManageAgentRoutine(void)
 	int* npTmp;
 	while (1)
 	{
-		printf("Wait to receive update request...\n");
+		//printf("Wait to receive update request...\n");
 		if ((recvSize = recvfrom(uds, buf, 4, 0, (struct sockaddr*)&sockInfo, &sockLen)) == -1)
 		{
 			// TODO: handle error
-			fprintf(stderr, "uds receive error: %s\n", strerror(errno));
+			//fprintf(stderr, "uds receive error: %s\n", strerror(errno));
 			continue;
 		}
 		npTmp = (int*)buf;
@@ -200,12 +200,12 @@ void ManageAgentRoutine(void)
 			if ((recvSize = recvfrom(uds, buf, 256, 0, (struct sockaddr*)&sockInfo, &sockLen)) == -1)
 			{
 				// TODO: handle error
-				fprintf(stderr, "uds receive error: %s\n", strerror(errno));
+				//fprintf(stderr, "uds receive error: %s\n", strerror(errno));
 				continue;
 			}
 			if (recvSize == 0)
 			{
-				printf("uds: EOF\n");
+				//printf("uds: EOF\n");
 				close(uds);
 				return ;
 			}
@@ -213,22 +213,22 @@ void ManageAgentRoutine(void)
 			pkt = (SUpdatePacket*)buf;
 
 			// TODO: update configuration using values in pkt. not print
-			printf("Received informations\n");
-			printf("RUN_CPU_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
-			if (pkt->bRunCpuCollector)
-				printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
-			printf("RUN_MEM_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
-			if (pkt->bRunCpuCollector)
-				printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
-			printf("RUN_NET_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
-			if (pkt->bRunCpuCollector)
-				printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
-			printf("RUN_PROC_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
-			if (pkt->bRunCpuCollector)
-				printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
-			printf("RUN_DISK_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
-			if (pkt->bRunCpuCollector)
-				printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+			// printf("Received informations\n");
+			// printf("RUN_CPU_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
+			// if (pkt->bRunCpuCollector)
+			// 	printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+			// printf("RUN_MEM_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
+			// if (pkt->bRunCpuCollector)
+			// 	printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+			// printf("RUN_NET_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
+			// if (pkt->bRunCpuCollector)
+			// 	printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+			// printf("RUN_PROC_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
+			// if (pkt->bRunCpuCollector)
+			// 	printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+			// printf("RUN_DISK_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
+			// if (pkt->bRunCpuCollector)
+			// 	printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
 
 			ResponseToClientUDS(pkt->udsPath, "update complete");
 		}
@@ -318,7 +318,7 @@ int main(int argc, char** argv)
 	collectorId[PROC_COLLECTOR_ID] = RunCollector(ProcInfoRoutine, CONF_KEY_RUN_PROC_COLLECTOR, CONF_KEY_PROC_COLLECTION_PERIOD, options);
 	collectorId[DISK_COLLECTOR_ID] = RunCollector(DiskInfoRoutine, CONF_KEY_RUN_DISK_COLLECTOR, CONF_KEY_DISK_COLLECTION_PERIOD, options);
 	
-	ManageAgentRoutine();
+	ManageAgentConfiguration();
 		
 	exit(EXIT_SUCCESS);
 }
