@@ -72,6 +72,7 @@ int InsertCpuAvgInfo(void* data, SWorkTools* tools)
     SBodyAvgC* hBody = (SBodyAvgC*)(data + sizeof(SHeader));
     struct tm* ts;
     ts = localtime(&hHeader->collectTime);
+    float totalCpuUtilization = 0;
 
     char sql[512];
     for (int i = 0; i < hHeader->bodyCount; i++)
@@ -84,12 +85,19 @@ int InsertCpuAvgInfo(void* data, SWorkTools* tools)
                     i,
                     hBody[i].cpuUtilization,
                     hBody[i].cpuUtilizationAvg);
+        totalCpuUtilization += hBody[i].cpuUtilization;
         if (Query(tools->dbWrapper, sql) == -1)
         {
             sprintf(sql, "%d: Failed to store in DB: CPU AVG", tools->workerId);
             Log(g_logger, LOG_ERROR, sql);
             return -1;
         }
+    }
+    totalCpuUtilization /= (float)hHeader->bodyCount;
+    printf("%f, %f\n", tools->threshold.cpuUtilization, totalCpuUtilization);
+    if (tools->threshold.cpuUtilization < totalCpuUtilization)
+    {
+        printf("warning cpu utilization: %f\n", totalCpuUtilization);
     }
     return 0;
 }
@@ -345,7 +353,8 @@ void* WorkerRoutine(void* param)
     int pktId;
     workTools.workerId = pParam->workerId;
     workTools.dbWrapper = pParam->db;
-    
+    workTools.threshold = pParam->threshold;
+
     sprintf(logMsg, "%d worker-created", pParam->workerId);
     Log(g_logger, LOG_INFO, logMsg);
     sprintf(logMsg, "%d work-wait", pParam->workerId);
@@ -413,7 +422,6 @@ void* WorkerRoutine(void* param)
         Log(g_logger, LOG_DEBUG, logMsg);
     }
 
-    free(data);
     sprintf(logMsg, "%d worker-destroied", pParam->workerId);
     Log(g_logger, LOG_INFO, logMsg);
 }

@@ -66,7 +66,7 @@ void HandleSignal(int signo)
 		GenLogFileFullPath(g_logger->logPath, logPathBuf);
 
 		sprintf(logMsg, "SMS: Server is aborted. Check below log.\n%s\n", logPathBuf);
-		write(g_stderrFd, logMsg, strlen(logMsg));
+		write(0, logMsg, strlen(logMsg));
 	    exit(signo);
 	}
 
@@ -93,19 +93,59 @@ int OpenSocket(short port)
     return servFd;
 }
 
-void CreateWorker(int workerCount, SPgWrapper* db)
+static SThreshold GetThresholds(SHashTable* options)
+{
+    char* value;
+    float fTmp;
+    uint uTmp;
+    SThreshold ret = { 100, 100, 100, 3000 };
+
+    if ((value = GetValueByKey(CONF_KEY_CPU_UTILIAZATION_THRESHOLD, options)) != NULL)
+    {
+        fTmp = atof(value);
+        if (fTmp >= 5.0 && fTmp <= 100.0)
+            ret.cpuUtilization = fTmp;    
+    }
+
+    if ((value = GetValueByKey(CONF_KEY_MEM_USAGE_THRESHOLD, options)) != NULL)
+    {  
+        fTmp = atof(value);
+        if (fTmp >= 20.0 && fTmp <= 100.0)
+            ret.memUsage = fTmp;   
+    }
+
+    if ((value = GetValueByKey(CONF_KEY_SWAP_USAGE_THRESHOLD, options)) != NULL)
+    {  
+        fTmp = atof(value);
+        if (fTmp >= 20.0 && fTmp <= 100.0)
+            ret.swapUsage = fTmp;   
+    }
+
+    if ((value = GetValueByKey(CONF_KEY_NET_THROUGHPUT_THRESHOLD, options)) != NULL)
+    {  
+        uTmp = atof(value);
+        if (uTmp >= 0)
+            ret.swapUsage = uTmp;   
+    }
+
+    return ret;
+}
+
+void CreateWorker(int workerCount, SPgWrapper* db, SHashTable* options)
 {
     SWorkerParam* param;
+    SThreshold threshold = GetThresholds(options);
     workerId = (pthread_t*)malloc(sizeof(pthread_t) * workerCount);
 
     if (db->connected == false)
         Log(g_logger, LOG_FATAL, "PostgreSQL connection failed");
-
+    
     for (int i = 0; i < workerCount; i++)
     {
         param = (SWorkerParam*)malloc(sizeof(SWorkerParam));
         param->workerId = i;
         param->db = db;
+        param->threshold = threshold;
         pthread_create(&workerId[i], NULL, WorkerRoutine, param);
     }
 }
@@ -319,7 +359,7 @@ int main(int argc, char** argv)
     int workerCount = 2;
     if (tmp != NULL)
         workerCount = atoi(tmp);
-    CreateWorker(workerCount, db);
+    CreateWorker(workerCount, db, options);
 
     while (1)
     {
