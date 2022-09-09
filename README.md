@@ -53,24 +53,24 @@ sh stop-server.sh
 <div>
 
 ### agent options
-|옵션|설명|예시|
+| 옵션 | 설명 | 예시 |
 |---|---|---|
-|ID|Agent의 ID|agent001|
-|HOST_ADDRESS|연결할 서버의 IP주소|127.0.0.1|
-|HOST_PORT|연결할 서버의 Port번호|4242|
-|RUN_AS_DAEMON|Daemon으로 실행할지 여부|true / false|
-|LOG_LEVEL|로깅 레벨 설정|default / debug|
-|LOG_PATH|로그 저장 경로|/path/to/log|
-|RUN_CPU_COLLECTOR|CPU 정보 수집 여부|true / false|
-|CPU_COLLECTION_PERIOD|CPU 정보 수집 주기 (ms)|1000 (minimum 500)|
-|RUN_MEM_COLLECTOR|Memory 정보 수집 여부|true / false|
-|MEM_COLLECTION_PERIOD|Memory 정보 수집 주기 (ms)|1000 (minimum 500)|
-|RUN_NET_COLLECTOR|Network 정보 수집 여부|true / false|
-|NET_COLLECTION_PERIOD|Network 정보 수집 주기 (ms)|1000 (minimum 500)|
-|RUN_PROC_COLLECTOR|Process 정보 수집 여부|true / false|
-|PROC_COLLECTION_PERIOD|Process 정보 수집 주기 (ms)|1000 (minimum 500)|
-|RUN_DISK_COLLECTOR|Disk 정보 수집 여부|true / false|
-|DISK_COLLECTIONS_PERIOD|Disk 정보 수집 주기 (ms)|1000 (minimum 500)|
+| ID | Agent의 ID | agent001 |
+| HOST_ADDRESS | 연결할 서버의 IP주소 | 127.0.0.1 |
+| HOST_PORT | 연결할 서버의 Port번호 | 4242 |
+| RUN_AS_DAEMON | Daemon으로 실행할지 여부 | true / false |
+| LOG_LEVEL | 로깅 레벨 설정 | default / debug |
+| LOG_PATH | 로그 저장 경로 | /path/to/log |
+| RUN_CPU_COLLECTOR | CPU 정보 수집 여부 | true / false |
+| CPU_COLLECTION_PERIOD | CPU 정보 수집 주기 (ms) | 1000 (minimum 500) |
+| RUN_MEM_COLLECTOR | Memory 정보 수집 여부 | true / false |
+| MEM_COLLECTION_PERIOD | Memory 정보 수집 주기 (ms) | 1000 (minimum 500) |
+| RUN_NET_COLLECTOR | Network 정보 수집 여부 | true / false |
+| NET_COLLECTION_PERIOD | Network 정보 수집 주기 (ms) | 1000 (minimum 500) |
+| RUN_PROC_COLLECTOR | Process 정보 수집 여부 | true / false |
+| PROC_COLLECTION_PERIOD | Process 정보 수집 주기 (ms) | 1000 (minimum 500) |
+| RUN_DISK_COLLECTOR | Disk 정보 수집 여부 | true / false |
+| DISK_COLLECTIONS_PERIOD | Disk 정보 수집 주기 (ms) | 1000 (minimum 500) |
 
 ### server options
 | 옵션 | 설명 | 예시 |
@@ -113,7 +113,8 @@ sh stop-server.sh
 
 
 # Todo List
-- [ ] 임계치 설정하기
+- [x] ~임계치 설정하기~
+- [ ] 런타임에 설정 값 변경기능 추가
 - [ ] agent
   - [ ] 델타값과 평균값이 저장된 DB를 조회해보았을 때 최초에 송신하는 값은 음수임 (처리할 것...)
 - [ ] 공통

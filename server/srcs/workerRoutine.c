@@ -271,7 +271,7 @@ int InsertNetAvgInfo(void* data, SWorkTools* tools)
         }
         if (hBody[i].recvBytesPerSec > tools->threshold.recvBytes)
         {
-            sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', \'RECV\', %f, %f);",
+            sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', \'RECV\', %lu, %f);",
             thresholdInsertSql,
             hHeader->agentId,
             ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
@@ -287,7 +287,7 @@ int InsertNetAvgInfo(void* data, SWorkTools* tools)
         }
         if (hBody[i].sendBytesPerSec > tools->threshold.sendBytes)
         {
-            sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', \'SEND\', %f, %f);",
+            sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', \'SEND\', %lu, %f);",
             thresholdInsertSql,
             hHeader->agentId,
             ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,

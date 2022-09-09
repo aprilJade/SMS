@@ -162,6 +162,7 @@ static SThreshold GetThresholds(SHashTable* options)
             ret.recvBytes = ConvertToBytesFromLargeUnit(value);   
     }
 
+    printf("%lu, %lu\n", ret.recvBytes, ret.sendBytes);
     return ret;
 }
 
