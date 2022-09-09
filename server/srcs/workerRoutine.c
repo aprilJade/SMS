@@ -34,6 +34,8 @@ const char* procInsertSqlNoCmd =
     "INSERT INTO process_informations(agent_id, collect_time, pid, process_name, process_state, ppid, usr_run_time, sys_run_time, uname) VALUES";
 const char* diskInsertSql =
     "INSERT INTO disk_informations(agent_id, collect_time, device_name, read_success_count, read_sector_count, read_time, write_success_count, write_sector_count, write_time, current_io_count, doing_io_time, weighted_doing_io_time) VALUES";
+const char* thresholdInsertSql =
+    "INSERT INTO threshold_exceeded_record(agent_id, exceeded_time, threshold_type, threshold_value, exceeded_value) VALUES";
 
 int InsertCpuInfo(void* data, SWorkTools* tools)
 {
@@ -98,6 +100,20 @@ int InsertCpuAvgInfo(void* data, SWorkTools* tools)
     {
         // TODO: save to DB
         printf("warning cpu utilization: %f%%\n", totalCpuUtilization);
+        sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', \'CPU\', %f, %f);",
+            thresholdInsertSql,
+            hHeader->agentId,
+            ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
+            ts->tm_hour, ts->tm_min, ts->tm_sec,
+            tools->threshold.cpuUtilization,
+            totalCpuUtilization);
+        
+        if (Query(tools->dbWrapper, sql) == -1)
+        {
+            sprintf(sql, "%d: Failed to store in DB: CPU Threshold", tools->workerId);
+            Log(g_logger, LOG_ERROR, sql);
+            return -1;
+        }
     }
     return 0;
 }
