@@ -114,6 +114,7 @@ typedef struct SBodyAvgN
 
 typedef struct SUpdatePacket
 {
+    char udsPath[108];
     bool bRunCpuCollector;
     unsigned long cpuPeriod;
     bool bRunMemCollector;

@@ -9,21 +9,58 @@
 #include <stdbool.h>
 #include <errno.h>
 #include <sys/un.h>
+#include <fcntl.h>
 
 #include "packets.h"
 #include "confParser.h"
 
 // CHECK: modify below path when deploy SMS
-#define UDS_SOCKET_PATH "./bin/.agent.sock"
+#define UDS_AGENT_PATH "./bin/.agent.sock"
+#define UDS_CLIENT_PATH "./bin/.client.sock"
 
 void PrintUsage()
 {
     fprintf(stderr, "Not implemented yet: PrintUsage()\n");
 }
 
+static struct sockaddr_un clientInfo;
+
+int Some()
+{
+    int fd = open(UDS_CLIENT_PATH, O_CREAT | O_RDWR, 0777);
+	if (fd == -1)
+	{
+		// TODO: handle error
+		fprintf(stderr, "failed to create uds file: %s\n", strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+	close(fd);
+
+	int uds;
+	if ((uds = socket(AF_UNIX, SOCK_DGRAM, 0)) == -1)
+	{
+		// TODO: handle error
+		fprintf(stderr, "failed to uds socket: %s\n", strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+	clientInfo.sun_family = AF_UNIX;
+	strcpy(clientInfo.sun_path, UDS_CLIENT_PATH);
+	unlink(UDS_CLIENT_PATH);
+
+	if (bind(uds, (struct sockaddr*)&clientInfo, sizeof(clientInfo)) == -1)
+	{
+		// TODO: handle error
+		close(uds);
+		fprintf(stderr, "failed to bind uds socket: %s\n", strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+    return uds;
+}
+
 int CreateUpdatePacket(SHashTable* options, SUpdatePacket* out)
 {
     // Not implemented yet
+    strcpy(out->udsPath, UDS_CLIENT_PATH);
     return 0;
 }
 
@@ -38,7 +75,7 @@ int main(int argc, char** argv)
     if (strcmp(argv[1], "update") == 0)
     {
         // TODO: check agent is really not exist. like ps -aux | grep agent
-        if (access(UDS_SOCKET_PATH, F_OK) != 0)
+        if (access(UDS_AGENT_PATH, F_OK) != 0)
         {
             printf("Agent is not working!\n");
             exit(EXIT_SUCCESS);
@@ -98,40 +135,54 @@ int main(int argc, char** argv)
             }
             else if (c == 'y' || c == 'Y')
             {
-                printf("Request to update...");
+                printf("Request to update...\n");
                 break;
             }
         }
+        int recvFd = Some();
 
         int uds = socket(AF_UNIX, SOCK_DGRAM, 0);
         if (uds == -1)
         {
             fprintf(stderr, "ERROR: failed to open uds: %s\n", strerror(errno));
+            close(recvFd);
+            remove(UDS_CLIENT_PATH);
             exit(EXIT_FAILURE);
         }
 
         struct sockaddr_un remoteInfo = { 0, };
         remoteInfo.sun_family = AF_UNIX;
-        strcpy(remoteInfo.sun_path, UDS_SOCKET_PATH);
+        strcpy(remoteInfo.sun_path, UDS_AGENT_PATH);
         if (sendto(uds, &pkt, sizeof(SUpdatePacket), 0, (struct sockaddr*)&remoteInfo, sizeof(remoteInfo)) == -1)
         {
             fprintf(stderr, "ERROR: failed to send update packet: %s\n", strerror(errno));
             close(uds);
+            close(recvFd);
+            remove(UDS_CLIENT_PATH);
             exit(EXIT_FAILURE);
         }
+        close(uds);
+        
         char buf[128] = { 0, };
-        socklen_t remoteLen = sizeof(remoteInfo);
-        ssize_t recvSize = recvfrom(uds, buf, 128, 0, (struct sockaddr*)&remoteInfo, &remoteLen);
+        socklen_t remoteLen = sizeof(clientInfo);
+        printf("wait agnet response\n");
+        ssize_t recvSize = recvfrom(recvFd, buf, 128, 0, (struct sockaddr*)&clientInfo, &remoteLen);
         if (recvSize < 0)
         {
             fprintf(stderr, "ERROR: agent is not responding\n");
+            close(recvFd);
+            remove(UDS_CLIENT_PATH);
             exit(EXIT_FAILURE);
         }
         buf[recvSize] = 0;
         if (strcmp(buf, "update complete") == 0)
             printf("Agent configuration is updated.\n");
         else
-            fprintf(stderr, "Failed to update agent's configuraion\n");
+            fprintf(stderr, "Failed to update agent's configuraion: %s\n", buf);
+        
+        close(recvFd);
+        remove(UDS_CLIENT_PATH);
+        exit(EXIT_SUCCESS);
     }
     else if (strcmp(argv[1], "status") == 0)
     {

@@ -1,4 +1,5 @@
 #include <unistd.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <getopt.h>
@@ -6,12 +7,19 @@
 #include <signal.h>
 #include <sys/time.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <arpa/inet.h>
 #include <errno.h>
 #include <limits.h>
 #include <stdbool.h>
+
 #include "routines.h"
 #include "collector.h"
 #include "confParser.h"
+
+// CHECK: modify below path when deploy SMS
+#define UDS_SOCKET_PATH "./bin/.agent.sock"
 
 static const char* const strSignal[] = {
 	[SIGBUS] = "SIGBUS",
@@ -63,7 +71,7 @@ void HandleSignal(int signo)
 		sprintf(logMsg, "SMS: Agent is aborted. Check below log.\n%s\n", logPathBuf);
 		write(g_stderrFd, logMsg, strlen(logMsg));
 	}
-
+	remove(UDS_SOCKET_PATH);
 	exit(signo);
 }
 
@@ -117,6 +125,105 @@ Logger* GenLogger(SHashTable* options)
 			return NewLogger(logPath, LOG_INFO);
 	}
 	return NewLogger(logPath, LOG_DEBUG);
+}
+
+void ResponseToClientUDS(const char* path)
+{
+	int uds = socket(AF_UNIX, SOCK_DGRAM, 0);
+	if (uds == -1)
+	{
+		fprintf(stderr, "ERROR: failed to open uds: %s\n", strerror(errno));
+		return ;
+	}
+
+	struct sockaddr_un remoteInfo = { 0, };
+	remoteInfo.sun_family = AF_UNIX;
+	strcpy(remoteInfo.sun_path, path);
+	if (sendto(uds, "update complete", 15, 0, (struct sockaddr*)&remoteInfo, sizeof(remoteInfo)) == -1)
+	{
+		fprintf(stderr, "ERROR: failed to send update packet: %s\n", strerror(errno));
+		close(uds);
+		return ;
+	}
+	close(uds);
+}
+
+void ManageAgentRoutine(void)
+{
+	int fd = open(UDS_SOCKET_PATH, O_CREAT | O_RDWR, 0777);
+	if (fd == -1)
+	{
+		// TODO: handle error
+		fprintf(stderr, "failed to create uds file: %s\n", strerror(errno));
+		return;
+	}
+	close(fd);
+
+	int uds;
+	if ((uds = socket(AF_UNIX, SOCK_DGRAM, 0)) == -1)
+	{
+		// TODO: handle error
+		fprintf(stderr, "failed to uds socket: %s\n", strerror(errno));
+		return;
+	}
+	struct sockaddr_un sockInfo = { 0, };
+	sockInfo.sun_family = AF_UNIX;
+	strcpy(sockInfo.sun_path, UDS_SOCKET_PATH);
+	unlink(UDS_SOCKET_PATH);
+
+	if (bind(uds, (struct sockaddr*)&sockInfo, sizeof(sockInfo)) == -1)
+	{
+		// TODO: handle error
+		close(uds);
+		fprintf(stderr, "failed to bind uds socket: %s\n", strerror(errno));
+		return;
+	}
+
+	ssize_t recvSize;
+	socklen_t sockLen = sizeof(sockInfo);
+	SUpdatePacket* pkt;
+	char buf[256] = { 0, };
+	while (1)
+	{
+		printf("Wait to receive update request...\n");
+		if ((recvSize = recvfrom(uds, buf, 256, 0, (struct sockaddr*)&sockInfo, &sockLen)) == -1)
+		{
+			// TODO: handle error
+			fprintf(stderr, "uds receive error: %s\n", strerror(errno));
+			continue;
+		}
+		if (recvSize == 0)
+		{
+			printf("uds: EOF\n");
+			close(uds);
+			return ;
+		}
+		buf[recvSize] = 0;
+		pkt = (SUpdatePacket*)buf;
+
+		printf("Received informations\n");
+        printf("RUN_CPU_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
+        if (pkt->bRunCpuCollector)
+            printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+
+        printf("RUN_MEM_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
+        if (pkt->bRunCpuCollector)
+            printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+
+        printf("RUN_NET_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
+        if (pkt->bRunCpuCollector)
+            printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+
+        printf("RUN_PROC_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
+        if (pkt->bRunCpuCollector)
+            printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+
+        printf("RUN_DISK_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
+        if (pkt->bRunCpuCollector)
+            printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+
+		ResponseToClientUDS(pkt->udsPath);
+	}
 }
 
 int main(int argc, char** argv)
@@ -196,7 +303,7 @@ int main(int argc, char** argv)
 	collectorId[PROC_COLLECTOR_ID] = RunCollector(ProcInfoRoutine, CONF_KEY_RUN_PROC_COLLECTOR, CONF_KEY_PROC_COLLECTION_PERIOD, options);
 	collectorId[DISK_COLLECTOR_ID] = RunCollector(DiskInfoRoutine, CONF_KEY_RUN_DISK_COLLECTOR, CONF_KEY_DISK_COLLECTION_PERIOD, options);
 	
-	pthread_join(senderTid, NULL);
+	ManageAgentRoutine();
 		
 	exit(EXIT_SUCCESS);
 }
