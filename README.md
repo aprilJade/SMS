@@ -73,14 +73,19 @@ sh stop-server.sh
 |DISK_COLLECTIONS_PERIOD|Disk 정보 수집 주기 (ms)|1000 (minimum 500)|
 
 ### server options
-|옵션|설명|예시|
+| 옵션 | 설명 | 예시 |
 |---|---|---|
-|LISTEN_PORT|수신할 Port번호|4242|
-|MAX_CONN|연결가능한 agent 최대 개수|128|
-|WORKER_COUNT|패킷을 처리할 Worker 스레드 개수|4 (maximum 16)|
-|RUN_AS_DAEMON|Daemon으로 실행할지 여부|true / false|
-|LOG_LEVEL|로깅 레벨 설정|default / debug|
-|LOG_PATH|로그 저장 경로|/path/to/log|
+| LISTEN_PORT | 수신할 Port번호 | 4242 |
+| MAX_CONN | 연결가능한 agent 최대 개수 | 128 |
+| WORKER_COUNT | 패킷을 처리할 Worker 스레드 개수 | 4 (maximum 16) |
+| RUN_AS_DAEMON | Daemon으로 실행할지 여부 | true / false |
+| LOG_LEVEL | 로깅 레벨 설정 | default / debug |
+| LOG_PATH | 로그 저장 경로 | /path/to/log |
+| CPU_UTILIZATION_THRESHOLD | CPU 사용율 임계값 | 75.5% |
+| MEMORY_USAGE_THRESHOLD | 메모리 사용율 임계값 | 50% |
+| SWAP_USAGE_THRESHOLD | 스왑 공간 사용율 임계값 | 50% |
+| SEND_BYTES_THRESHOLD | 초당 송신 바이트 수 임계값 | 128 kB (B, kB, MB, GB) |
+| RECEIVE_BYTES_THRESHOLD | 초당 수신 바이트 수 임계값 | 128 kB (B, kB, MB, GB) |
 
 <div>
 </details>
