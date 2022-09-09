@@ -269,13 +269,37 @@ int InsertNetAvgInfo(void* data, SWorkTools* tools)
             Log(g_logger, LOG_ERROR, sql);
             return -1;
         }
-        if (hBody[i].recvBytesPerSec > tools->threshold.netThroughput)
+        if (hBody[i].recvBytesPerSec > tools->threshold.recvBytes)
         {
-            // TODO: save to DB
+            sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', \'RECV\', %f, %f);",
+            thresholdInsertSql,
+            hHeader->agentId,
+            ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
+            ts->tm_hour, ts->tm_min, ts->tm_sec,
+            tools->threshold.recvBytes,
+            hBody->recvBytesPerSec);
+            if (Query(tools->dbWrapper, sql) == -1)
+            {
+                sprintf(sql, "%d: Failed to store in DB: send bytes threshold", tools->workerId);
+                Log(g_logger, LOG_ERROR, sql);
+                return -1;
+            }
         }
-        if (hBody[i].sendBytesPerSec > tools->threshold.netThroughput)
+        if (hBody[i].sendBytesPerSec > tools->threshold.sendBytes)
         {
-            // TODO: save to DB
+            sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', \'SEND\', %f, %f);",
+            thresholdInsertSql,
+            hHeader->agentId,
+            ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
+            ts->tm_hour, ts->tm_min, ts->tm_sec,
+            tools->threshold.sendBytes,
+            hBody->sendBytesPerSec);
+            if (Query(tools->dbWrapper, sql) == -1)
+            {
+                sprintf(sql, "%d: Failed to store in DB: recv bytes threshold", tools->workerId);
+                Log(g_logger, LOG_ERROR, sql);
+                return -1;
+            }
         }
     }
     return 0;

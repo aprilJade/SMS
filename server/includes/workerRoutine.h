@@ -11,7 +11,8 @@ typedef struct SThreshold
     float cpuUtilization;
     float memUsage;
     float swapUsage;
-    uint netThroughput;
+    ulong sendBytes;
+    ulong recvBytes;
 } SThreshold;
 
 typedef struct SWorkerParam

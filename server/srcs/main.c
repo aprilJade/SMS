@@ -93,39 +93,73 @@ int OpenSocket(short port)
     return servFd;
 }
 
+static ulong ConvertToBytesFromLargeUnit(char* str)
+{
+    ulong result = atol(str);
+    int i = 0;
+    while(str[i] >= '0' && str[i] <= '9')
+        i++;
+    
+    if (i == strlen(str))
+        return result;
+    i++;
+    while (str[i] == ' ')
+        i++;
+    char* unit = strdup(&str[i]);
+    switch (unit[i])
+    {
+    case 'k':
+        result *= 1024;
+        break;
+    case 'M':
+        result *= 1024 * 1024;
+        break;
+    case 'G':
+        result *= 1024 * 1024 * 1024;
+        break;
+    }
+    free(unit);
+    return result;
+}
+
 static SThreshold GetThresholds(SHashTable* options)
 {
     char* value;
     float fTmp;
     uint uTmp;
-    SThreshold ret = { 100, 100, 100, 3000 };
+    SThreshold ret = { 100, 100, 100, 3000, 3000 };
 
     if ((value = GetValueByKey(CONF_KEY_CPU_UTILIAZATION_THRESHOLD, options)) != NULL)
     {
         fTmp = atof(value);
-        if (fTmp >= 5.0 && fTmp <= 100.0)
+        if (fTmp >= 0 && fTmp <= 100.0)
             ret.cpuUtilization = fTmp;    
     }
 
     if ((value = GetValueByKey(CONF_KEY_MEM_USAGE_THRESHOLD, options)) != NULL)
     {  
         fTmp = atof(value);
-        if (fTmp >= 20.0 && fTmp <= 100.0)
+        if (fTmp >= 0 && fTmp <= 100.0)
             ret.memUsage = fTmp;   
     }
 
     if ((value = GetValueByKey(CONF_KEY_SWAP_USAGE_THRESHOLD, options)) != NULL)
     {  
         fTmp = atof(value);
-        if (fTmp >= 20.0 && fTmp <= 100.0)
+        if (fTmp >= 0 && fTmp <= 100.0)
             ret.swapUsage = fTmp;   
     }
 
-    if ((value = GetValueByKey(CONF_KEY_NET_THROUGHPUT_THRESHOLD, options)) != NULL)
+    if ((value = GetValueByKey(CONF_KEY_SEND_BYTES_THRESHOLD, options)) != NULL)
     {  
-        uTmp = atof(value);
-        if (uTmp >= 0)
-            ret.swapUsage = uTmp;   
+        if (atoi(value) >= 0)
+            ret.sendBytes = ConvertToBytesFromLargeUnit(value);   
+    }
+
+    if ((value = GetValueByKey(CONF_KEY_RECV_BYTES_THRESHOLD, options)) != NULL)
+    {  
+        if (atoi(value) >= 0)
+            ret.recvBytes = ConvertToBytesFromLargeUnit(value);   
     }
 
     return ret;
