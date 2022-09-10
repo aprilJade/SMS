@@ -166,17 +166,17 @@ int main(int argc, char** argv)
 			setsid();
 		}
 	}
-	// handle below signal
-	signal(SIGBUS, HandleSignal);	// bus error
-	signal(SIGABRT, HandleSignal);	// abort signal
-	signal(SIGFPE, HandleSignal);	// floating point error
-	signal(SIGQUIT, HandleSignal);	// quit signal
-	signal(SIGSEGV, HandleSignal);  // segmentation fault
-	signal(SIGINT, HandleSignal);	// interrupted
-	signal(SIGILL, HandleSignal);	// illegal instruction
-	signal(SIGSYS, HandleSignal);	// system call error
-	signal(SIGTERM, HandleSignal);	// terminate signalr
-	signal(SIGKILL, HandleSignal);	// terminate signal
+
+	signal(SIGBUS, HandleSignal);
+	signal(SIGABRT, HandleSignal);
+	signal(SIGFPE, HandleSignal);
+	signal(SIGQUIT, HandleSignal);
+	signal(SIGSEGV, HandleSignal); 
+	signal(SIGINT, HandleSignal);
+	signal(SIGILL, HandleSignal);
+	signal(SIGSYS, HandleSignal);
+	signal(SIGTERM, HandleSignal);
+	signal(SIGKILL, HandleSignal);
 
 	pthread_t senderTid;
 	if ((value = GetValueByKey(CONF_KEY_HOST_ADDRESS, options)) != NULL)
@@ -186,7 +186,6 @@ int main(int argc, char** argv)
 	value = GetValueByKey(CONF_KEY_HOST_PORT, options);
 	g_serverPort = value != NULL ? atoi(value) : 4242;
 
-	// why did you make sender thread...?
 	if (pthread_create(&senderTid, NULL, SendRoutine, NULL) == -1)
 	{
 		sprintf(logmsgBuf, "Fail to start sender");
