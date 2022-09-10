@@ -9,7 +9,7 @@
 #include <sys/socket.h>
 #include <signal.h>
 #include <stdbool.h>
-#include "agentUtils.h"
+#include "globalResource.h"
 #include "avgCalculator.h"
 
 #define RECONNECT_PERIOD 5    // seconds

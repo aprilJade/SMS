@@ -8,7 +8,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <stdbool.h>
-#include "agentUtils.h"
+#include "globalResource.h"
 
 // CHECK: modify below path when deploy SMS
 #define UDS_SOCKET_PATH "/home/apriljade/repo/SMS/bin/.agent.sock"
