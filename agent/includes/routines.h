@@ -16,12 +16,6 @@ enum e_collectorIdx
     DISK_COLLECTOR_ID
 };
 
-typedef struct SRoutineParam
-{
-    char agentId[16];
-    uint collectPeriod;
-} SRoutineParam;
-
 void* CpuInfoRoutine(void* param);
 void* MemInfoRoutine(void* param);
 void* NetInfoRoutine(void* param);

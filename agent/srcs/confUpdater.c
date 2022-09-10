@@ -1,6 +1,4 @@
-#include "confUpdater.h"
-#include "logger.h"
-#include "packets.h"
+#include "agentUtils.h"
 
 #include <stdio.h>
 #include <sys/socket.h>
@@ -9,14 +7,14 @@
 #include <sys/un.h>
 #include <arpa/inet.h>
 
-extern Logger* g_logger;
+extern SGlobResource globResource;
 
 e_UdsError ResponseToClientUDS(const char* path, char* data)
 {
 	int uds = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (uds == -1)
 	{
-		Log(g_logger, LOG_FATAL, "Failed to open UDS socket for");
+		Log(globResource.logger, LOG_FATAL, "Failed to open UDS socket for");
 		return UDS_SOCKET_OPEN_ERROR;
 	}
 
@@ -25,7 +23,7 @@ e_UdsError ResponseToClientUDS(const char* path, char* data)
 	strcpy(remoteInfo.sun_path, path);
 	if (sendto(uds, data, strlen(data), 0, (struct sockaddr*)&remoteInfo, sizeof(remoteInfo)) == -1)
 	{
-		Log(g_logger, LOG_ERROR, "Failed to send UDS");
+		Log(globResource.logger, LOG_ERROR, "Failed to send UDS");
 		close(uds);
 		return UDS_RESPONSE_ERROR;
 	}
@@ -36,6 +34,10 @@ e_UdsError ResponseToClientUDS(const char* path, char* data)
 void CreateStatusPacket(SAgentStatusPacket* pkt)
 {
 	// not implemented yet
+	pkt->pid = getpid();
+	strcpy(pkt->peerIP, globResource.peerIP);
+	pkt->peerPort = globResource.peerPort;
+	
 }
 
 void ManageAgentConfiguration(void)
@@ -79,21 +81,21 @@ void ManageAgentConfiguration(void)
 		//printf("Wait to receive update request...\n");
 		if ((recvSize = recvfrom(uds, buf, 4, 0, (struct sockaddr*)&sockInfo, &sockLen)) == -1)
 		{
-			Log(g_logger, LOG_FATAL, "Failed to receive UDS packet");
+			Log(globResource.logger, LOG_FATAL, "Failed to receive UDS packet");
 			continue;
 		}
 		npTmp = (int*)buf;
 		if (*npTmp == UDS_UPDATE_PACKET)
 		{
-			Log(g_logger, LOG_DEBUG, "UDS: received update configuration request");
+			Log(globResource.logger, LOG_DEBUG, "UDS: received update configuration request");
 			if ((recvSize = recvfrom(uds, buf, 256, 0, (struct sockaddr*)&sockInfo, &sockLen)) == -1)
 			{
-				Log(g_logger, LOG_FATAL, "Failed to receive UDS packet");
+				Log(globResource.logger, LOG_FATAL, "Failed to receive UDS packet");
 				continue;
 			}
 			if (recvSize == 0)
 			{
-				Log(g_logger, LOG_INFO, "UDS: EOF");
+				Log(globResource.logger, LOG_INFO, "UDS: EOF");
 				close(uds);
 				return ;
 			}
@@ -119,19 +121,19 @@ void ManageAgentConfiguration(void)
 			// 	printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
 
 			if (ResponseToClientUDS(pkt->udsPath, "update complete") != UDS_OK)
-				Log(g_logger, LOG_FATAL, "Failed to UDS response");
+				Log(globResource.logger, LOG_FATAL, "Failed to UDS response");
 		}
 		else if (*npTmp == UDS_STATUS_PACKET)
 		{
-			Log(g_logger, LOG_DEBUG, "UDS: received update configuration request");
+			Log(globResource.logger, LOG_DEBUG, "UDS: received update configuration request");
 			if ((recvSize = recvfrom(uds, buf, 108, 0, (struct sockaddr*)&sockInfo, &sockLen)) == -1)
 			{
-				Log(g_logger, LOG_FATAL, "Failed to receive UDS packet");
+				Log(globResource.logger, LOG_FATAL, "Failed to receive UDS packet");
 				continue;
 			}
 			if (recvSize == 0)
 			{
-				Log(g_logger, LOG_INFO, "UDS: EOF");
+				Log(globResource.logger, LOG_INFO, "UDS: EOF");
 				close(uds);
 				return ;
 			}
@@ -139,11 +141,11 @@ void ManageAgentConfiguration(void)
 			SAgentStatusPacket pkt = { 0, };
 			CreateStatusPacket(&pkt);
 			if (ResponseToClientUDS(buf, (char*)&pkt) != UDS_OK)
-				Log(g_logger, LOG_FATAL, "Failed to UDS response");
+				Log(globResource.logger, LOG_FATAL, "Failed to UDS response");
 		}
 		else
 		{
-			Log(g_logger, LOG_ERROR, "UDS: undefined request");
+			Log(globResource.logger, LOG_ERROR, "UDS: undefined request");
 			continue;
 		}
 	}

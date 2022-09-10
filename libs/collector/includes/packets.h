@@ -132,11 +132,10 @@ typedef struct SUpdatePacket
 
 typedef struct SAgentStatusPacket
 {
-    char processName[32];
     int pid;
-    char cmdline[128];
     char peerIP[16];
     unsigned short peerPort;
+    bool bConnectedWithServer;
     bool bRunCpuCollector;
     unsigned long cpuPeriod;
     bool bRunMemCollector;

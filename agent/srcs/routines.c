@@ -9,21 +9,16 @@
 #include <sys/socket.h>
 #include <signal.h>
 #include <stdbool.h>
-#include "routines.h"
-#include "collector.h"
+#include "agentUtils.h"
 #include "avgCalculator.h"
 
 #define RECONNECT_PERIOD 5    // seconds
 #define RECONNECT_MAX_TRY 100
 #define AVG_TARGET_TIME_AS_MS 3600000.0 // 1 hour => 60 * 60 * 1000ms
 
-extern const Logger* g_logger;
-extern Queue* g_queue;
-extern const char g_serverIp[16];
-extern unsigned short g_serverPort;
-extern bool g_turnOff;
-static int g_servSockFd;
+extern SGlobResource globResource;
 
+static int g_servSockFd;
 static bool g_connected = false;
 static pthread_mutex_t g_condLock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t g_cond = PTHREAD_COND_INITIALIZER;
@@ -36,12 +31,12 @@ void GoToSleep(char* collectorName, bool isError)
     if (isError)
     {
         sprintf(buf, "%s: pause collector: TCP connection BAD", collectorName);
-        Log(g_logger, LOG_ERROR, buf);
+        Log(globResource.logger, LOG_ERROR, buf);
     }
     else
     {
         sprintf(buf, "%s: wait collector: wait TCP connection", collectorName);
-        Log(g_logger, LOG_INFO, buf);
+        Log(globResource.logger, LOG_INFO, buf);
     }
 
     pthread_mutex_lock(&g_condLock);
@@ -51,47 +46,49 @@ void GoToSleep(char* collectorName, bool isError)
     if (isError)
     {
         sprintf(buf, "%s: resume collector: TCP connection recovered", collectorName);
-        Log(g_logger, LOG_INFO, buf);
+        Log(globResource.logger, LOG_INFO, buf);
     }
 }
 
 void* CpuInfoRoutine(void* param)
 {
+    assert(param == NULL);
+
     ulong prevTime, postTime, elapseTime;
 	float toMs = 1000.0 / sysconf(_SC_CLK_TCK);
     ushort cpuCnt = sysconf(_SC_NPROCESSORS_ONLN);
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
-    SRoutineParam* pParam = (SRoutineParam*)param;
     char logmsgBuf[128];
-    ulong collectPeriodUs = pParam->collectPeriod * 1000;
-    int maxCount = (int)(AVG_TARGET_TIME_AS_MS / (float)pParam->collectPeriod);
+    ulong* collectPeriod = &globResource.collectPeriods[CPU_COLLECTOR_ID];
+    ulong collectPeriodUs = globResource.collectPeriods[CPU] * 1000;
+    int maxCount = (int)(AVG_TARGET_TIME_AS_MS / (float)*collectPeriod);
     SCData* avgData;
     SCData* collectedData;
     SBodyc* hBody;
 
-    collectedData = CollectEachCpuInfo(cpuCnt, toMs, buf, pParam->collectPeriod, pParam->agentId);
-    avgData = CalcCpuUtilizationAvg(collectedData->data, cpuCnt, maxCount, toMs, pParam->collectPeriod);
+    collectedData = CollectEachCpuInfo(cpuCnt, toMs, buf, *collectPeriod, globResource.agentID);
+    avgData = CalcCpuUtilizationAvg(collectedData->data, cpuCnt, maxCount, toMs, *collectPeriod);
     DestorySCData(&collectedData);
     DestorySCData(&avgData);
 
-    sprintf(logmsgBuf, "Ready CPU information collection routine in %d ms cycle", pParam->collectPeriod);
-    Log(g_logger, LOG_INFO, logmsgBuf);
+    sprintf(logmsgBuf, "Ready CPU information collection routine in %lu ms cycle", *collectPeriod);
+    Log(globResource.logger, LOG_INFO, logmsgBuf);
     
     if (g_connected == false)
         GoToSleep("CPU", false);
-    if (g_turnOff == true)
+    if (globResource.turnOff == true)
     {
         sprintf(logmsgBuf, "CPU: terminate collector");
-        Log(g_logger, LOG_INFO, logmsgBuf);
+        Log(globResource.logger, LOG_INFO, logmsgBuf);
     }
 
-    Log(g_logger, LOG_INFO, "Run CPU collector: Connected to TCP server");
+    Log(globResource.logger, LOG_INFO, "Run CPU collector: Connected to TCP server");
 
 
     while (1)
     {
-        if (g_turnOff == true)
+        if (globResource.turnOff == true)
             break;
         if (g_connected == false)
         {
@@ -101,10 +98,10 @@ void* CpuInfoRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
         
-        if ((collectedData = CollectEachCpuInfo(cpuCnt, toMs, buf, pParam->collectPeriod, pParam->agentId)) == NULL)
+        if ((collectedData = CollectEachCpuInfo(cpuCnt, toMs, buf, *collectPeriod, globResource.agentID)) == NULL)
         {
             sprintf(logmsgBuf, "CPU: failed to collect");
-            Log(g_logger, LOG_ERROR, logmsgBuf);
+            Log(globResource.logger, LOG_ERROR, logmsgBuf);
             gettimeofday(&timeVal, NULL);
             postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
             elapseTime = postTime - prevTime;
@@ -112,59 +109,61 @@ void* CpuInfoRoutine(void* param)
             continue;
         }
 
-        pthread_mutex_lock(&g_queue->lock);
-        Push(collectedData, g_queue);
-        pthread_mutex_unlock(&g_queue->lock);
+        pthread_mutex_lock(&globResource.queue->lock);
+        Push(collectedData, globResource.queue);
+        pthread_mutex_unlock(&globResource.queue->lock);
 
-        avgData = CalcCpuUtilizationAvg(collectedData->data, cpuCnt, maxCount, toMs, pParam->collectPeriod);
+        avgData = CalcCpuUtilizationAvg(collectedData->data, cpuCnt, maxCount, toMs, *collectPeriod);
 
-        pthread_mutex_lock(&g_queue->lock);
-        Push(avgData, g_queue);
-        pthread_mutex_unlock(&g_queue->lock);
+        pthread_mutex_lock(&globResource.queue->lock);
+        Push(avgData, globResource.queue);
+        pthread_mutex_unlock(&globResource.queue->lock);
         
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
         sprintf(logmsgBuf, "CPU: Collected in %ldus", elapseTime);
-        Log(g_logger, LOG_DEBUG, logmsgBuf);
+        Log(globResource.logger, LOG_DEBUG, logmsgBuf);
         
         usleep(collectPeriodUs - elapseTime);
     }
     sprintf(logmsgBuf, "CPU: terminate collector");
-    Log(g_logger, LOG_INFO, logmsgBuf);
+    Log(globResource.logger, LOG_INFO, logmsgBuf);
 }
 
 void* MemInfoRoutine(void* param)
 {
+    assert(param == NULL);
+
     ulong prevTime, postTime, elapseTime;
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
-    SRoutineParam* pParam = (SRoutineParam*)param;
     char logmsgBuf[128];
     SCData* collectedData;
-    ulong collectPeriodUs = pParam->collectPeriod * 1000;
+    ulong* collectPeriod = &globResource.collectPeriods[MEM_COLLECTOR_ID];
+    ulong collectPeriodUs = *collectPeriod * 1000;
     SCData* avgData;
 
     
-    sprintf(logmsgBuf, "Ready memory information collection routine in %d ms cycle", pParam->collectPeriod);
-    Log(g_logger, LOG_INFO, logmsgBuf);
+    sprintf(logmsgBuf, "Ready memory information collection routine in %lu ms cycle", *collectPeriod);
+    Log(globResource.logger, LOG_INFO, logmsgBuf);
     
     if (g_connected == false)
         GoToSleep("memory", false);
-    if (g_turnOff == true)
+    if (globResource.turnOff == true)
     {
         sprintf(logmsgBuf, "memory: terminate collector");
-        Log(g_logger, LOG_INFO, logmsgBuf);
+        Log(globResource.logger, LOG_INFO, logmsgBuf);
     }
-    Log(g_logger, LOG_INFO, "Run memory collector: Connected to TCP server");
+    Log(globResource.logger, LOG_INFO, "Run memory collector: Connected to TCP server");
 
-    int maxCount = (int)(AVG_TARGET_TIME_AS_MS / (float)pParam->collectPeriod);
+    int maxCount = (int)(AVG_TARGET_TIME_AS_MS / (float)*collectPeriod);
     
     SBodym* hBody;
 
     while(1)
     {
-        if (g_turnOff == true)
+        if (globResource.turnOff == true)
             break;
         if (g_connected == false)
         {
@@ -175,10 +174,10 @@ void* MemInfoRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
-        if ((collectedData = CollectMemInfo(buf, pParam->collectPeriod, pParam->agentId)) == NULL)
+        if ((collectedData = CollectMemInfo(buf, *collectPeriod, globResource.agentID)) == NULL)
         {
             sprintf(logmsgBuf, "memory: failed to collect");
-            Log(g_logger, LOG_ERROR, logmsgBuf);
+            Log(globResource.logger, LOG_ERROR, logmsgBuf);
             gettimeofday(&timeVal, NULL);
             postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
             elapseTime = postTime - prevTime;
@@ -187,27 +186,27 @@ void* MemInfoRoutine(void* param)
         }
         
         
-        pthread_mutex_lock(&g_queue->lock);
-        Push(collectedData, g_queue);
-        pthread_mutex_unlock(&g_queue->lock);
+        pthread_mutex_lock(&globResource.queue->lock);
+        Push(collectedData, globResource.queue);
+        pthread_mutex_unlock(&globResource.queue->lock);
 
         avgData = CalcMemAvg(collectedData->data, maxCount);
         
-        pthread_mutex_lock(&g_queue->lock);
-        Push(avgData, g_queue);
-        pthread_mutex_unlock(&g_queue->lock);
+        pthread_mutex_lock(&globResource.queue->lock);
+        Push(avgData, globResource.queue);
+        pthread_mutex_unlock(&globResource.queue->lock);
 
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 
         sprintf(logmsgBuf, "memory: collected in %ldus", elapseTime);
-        Log(g_logger, LOG_DEBUG, logmsgBuf);
+        Log(globResource.logger, LOG_DEBUG, logmsgBuf);
 
         usleep(collectPeriodUs - elapseTime);
     }
     sprintf(logmsgBuf, "memory: terminate collector");
-    Log(g_logger, LOG_INFO, logmsgBuf);
+    Log(globResource.logger, LOG_INFO, logmsgBuf);
 }
 
 int GetNicCount()
@@ -242,39 +241,41 @@ int GetNicCount()
 
 void* NetInfoRoutine(void* param)
 {
+    assert(param == NULL);
+
     ulong prevTime, postTime, elapseTime;
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
-    SRoutineParam* pParam = (SRoutineParam*)param;
     char logmsgBuf[128];
     int nicCount = GetNicCount();
-    ulong collectPeriodUs = pParam->collectPeriod * 1000;
+    ulong* collectPeriod = &globResource.collectPeriods[NET_COLLECTOR_ID];
+    ulong collectPeriodUs = *collectPeriod * 1000;
     SCData* collectedData;
     SCData* avgData;
-    int maxCount = (int)(AVG_TARGET_TIME_AS_MS / (float)pParam->collectPeriod);
+    int maxCount = (int)(AVG_TARGET_TIME_AS_MS / (float)*collectPeriod);
     
-    collectedData = CollectNetInfo(buf, nicCount, pParam->collectPeriod, pParam->agentId);
-    avgData = CalcNetThroughputAvg(collectedData->data, nicCount, maxCount, pParam->collectPeriod);
+    collectedData = CollectNetInfo(buf, nicCount, *collectPeriod, globResource.agentID);
+    avgData = CalcNetThroughputAvg(collectedData->data, nicCount, maxCount, *collectPeriod);
     DestorySCData(&collectedData);
     DestorySCData(&avgData);
 
-    sprintf(logmsgBuf, "Ready network information collection routine in %d ms cycle", pParam->collectPeriod);
-    Log(g_logger, LOG_INFO, logmsgBuf);
+    sprintf(logmsgBuf, "Ready network information collection routine in %lu ms cycle", *collectPeriod);
+    Log(globResource.logger, LOG_INFO, logmsgBuf);
     
     if (g_connected == false)
         GoToSleep("network", false);
 
-    if (g_turnOff == true)
+    if (globResource.turnOff == true)
     {
         sprintf(logmsgBuf, "network: terminate collector");
-        Log(g_logger, LOG_INFO, logmsgBuf);
+        Log(globResource.logger, LOG_INFO, logmsgBuf);
     }
 
     
-    Log(g_logger, LOG_INFO, "Run network collector: Connected to TCP server");
+    Log(globResource.logger, LOG_INFO, "Run network collector: Connected to TCP server");
     while(1)
     {
-        if (g_turnOff == true)
+        if (globResource.turnOff == true)
             break;
         if (g_connected == false)
         {
@@ -284,10 +285,10 @@ void* NetInfoRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
-        if ((collectedData = CollectNetInfo(buf, nicCount, pParam->collectPeriod, pParam->agentId)) == NULL)
+        if ((collectedData = CollectNetInfo(buf, nicCount, *collectPeriod, globResource.agentID)) == NULL)
         {
             sprintf(logmsgBuf, "network: failed to collect");
-            Log(g_logger, LOG_ERROR, logmsgBuf);
+            Log(globResource.logger, LOG_ERROR, logmsgBuf);
             gettimeofday(&timeVal, NULL);
             postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
             elapseTime = postTime - prevTime;
@@ -295,54 +296,56 @@ void* NetInfoRoutine(void* param)
             continue;
         }
 
-        pthread_mutex_lock(&g_queue->lock);
-        Push(collectedData, g_queue);
-        pthread_mutex_unlock(&g_queue->lock);
+        pthread_mutex_lock(&globResource.queue->lock);
+        Push(collectedData, globResource.queue);
+        pthread_mutex_unlock(&globResource.queue->lock);
         
-        avgData = CalcNetThroughputAvg(collectedData->data, nicCount, maxCount, pParam->collectPeriod);
+        avgData = CalcNetThroughputAvg(collectedData->data, nicCount, maxCount, *collectPeriod);
 
-        pthread_mutex_lock(&g_queue->lock);
-        Push(avgData, g_queue);
-        pthread_mutex_unlock(&g_queue->lock);
+        pthread_mutex_lock(&globResource.queue->lock);
+        Push(avgData, globResource.queue);
+        pthread_mutex_unlock(&globResource.queue->lock);
         
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 
         sprintf(logmsgBuf, "network: collected in %ldus", elapseTime);
-        Log(g_logger, LOG_DEBUG, logmsgBuf);
+        Log(globResource.logger, LOG_DEBUG, logmsgBuf);
         usleep(collectPeriodUs - elapseTime);
     }
     sprintf(logmsgBuf, "network: terminate collector");
-    Log(g_logger, LOG_INFO, logmsgBuf);
+    Log(globResource.logger, LOG_INFO, logmsgBuf);
 }
 
 void* ProcInfoRoutine(void* param)
 {
+    assert(param == NULL);
+
     ulong prevTime, postTime, elapseTime, totalElapsed;
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
-    SRoutineParam* pParam = (SRoutineParam*)param;
     char logmsgBuf[128];
-    ulong collectPeriodUs = pParam->collectPeriod * 1000;
+    ulong* collectPeriod = &globResource.collectPeriods[PROC_COLLECTOR_ID];
+    ulong collectPeriodUs = *collectPeriod * 1000;
     
-    sprintf(logmsgBuf, "Ready process information collection routine in %d ms cycle", pParam->collectPeriod);
-    Log(g_logger, LOG_INFO, logmsgBuf);
+    sprintf(logmsgBuf, "Ready process information collection routine in %lu ms cycle", *collectPeriod);
+    Log(globResource.logger, LOG_INFO, logmsgBuf);
     
     if (g_connected == false)
         GoToSleep("process", false);
-    if (g_turnOff == true)
+    if (globResource.turnOff == true)
     {
         sprintf(logmsgBuf, "process: terminate collector");
-        Log(g_logger, LOG_INFO, logmsgBuf);
+        Log(globResource.logger, LOG_INFO, logmsgBuf);
     }
-    Log(g_logger, LOG_INFO, "Run process collector: Connected to TCP server");
+    Log(globResource.logger, LOG_INFO, "Run process collector: Connected to TCP server");
 
     uchar dataBuf[1024 * 1024] = { 0, };
     SCData* collectedData;
     while(1)
     {
-        if (g_turnOff)
+        if (globResource.turnOff)
             break;
         if (g_connected == false)
         {
@@ -353,10 +356,10 @@ void* ProcInfoRoutine(void* param)
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
         memset(dataBuf, 0, 1024 * 1024);
-        if ((collectedData = CollectProcInfo(buf, dataBuf, pParam->collectPeriod, pParam->agentId)) == NULL)
+        if ((collectedData = CollectProcInfo(buf, dataBuf, *collectPeriod, globResource.agentID)) == NULL)
         {
             sprintf(logmsgBuf, "process: failed to collect");
-            Log(g_logger, LOG_ERROR, logmsgBuf);
+            Log(globResource.logger, LOG_ERROR, logmsgBuf);
             gettimeofday(&timeVal, NULL);
             postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
             elapseTime = postTime - prevTime;
@@ -364,9 +367,9 @@ void* ProcInfoRoutine(void* param)
             continue;
         }
 
-        pthread_mutex_lock(&g_queue->lock);
-        Push(collectedData, g_queue);
-        pthread_mutex_unlock(&g_queue->lock);
+        pthread_mutex_lock(&globResource.queue->lock);
+        Push(collectedData, globResource.queue);
+        pthread_mutex_unlock(&globResource.queue->lock);
 
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
@@ -376,12 +379,12 @@ void* ProcInfoRoutine(void* param)
         SHeader* hHeader = (SHeader*)pData;
 
         sprintf(logmsgBuf, "process: collected in %ldus, count %d ", elapseTime, hHeader->bodyCount);
-        Log(g_logger, LOG_DEBUG, logmsgBuf);
+        Log(globResource.logger, LOG_DEBUG, logmsgBuf);
 
         usleep(collectPeriodUs - elapseTime);
     }
     sprintf(logmsgBuf, "process: terminate collector");
-    Log(g_logger, LOG_INFO, logmsgBuf);
+    Log(globResource.logger, LOG_INFO, logmsgBuf);
 }
 
 int GetDiskDeviceCount(char* buf)
@@ -419,31 +422,33 @@ int GetDiskDeviceCount(char* buf)
 
 void* DiskInfoRoutine(void* param)
 {
+    assert(param == NULL);
+
     ulong prevTime, postTime, elapseTime;
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
-    SRoutineParam* pParam = (SRoutineParam*)param;
     char logmsgBuf[128];
     int diskDevCnt = GetDiskDeviceCount(buf);
-    ulong collectPeriodUs = pParam->collectPeriod * 1000;
+    ulong* collectPeriod = &globResource.collectPeriods[DISK_COLLECTOR_ID];
+    ulong collectPeriodUs = *collectPeriod * 1000;
     
-    sprintf(logmsgBuf, "Ready disk information collection routine in %d ms cycle", pParam->collectPeriod);
-    Log(g_logger, LOG_INFO, logmsgBuf);
+    sprintf(logmsgBuf, "Ready disk information collection routine in %lu ms cycle", *collectPeriod);
+    Log(globResource.logger, LOG_INFO, logmsgBuf);
     
     if (g_connected == false)
         GoToSleep("disk", false);
-    if (g_turnOff == true)
+    if (globResource.turnOff == true)
     {
         sprintf(logmsgBuf, "disk: terminate collector");
-        Log(g_logger, LOG_INFO, logmsgBuf);
+        Log(globResource.logger, LOG_INFO, logmsgBuf);
     }
-    Log(g_logger, LOG_INFO, "Run disk collector: Connected to TCP server");
+    Log(globResource.logger, LOG_INFO, "Run disk collector: Connected to TCP server");
 
     SCData* collectedData;
 
     while(1)
     {
-        if (g_turnOff == true)
+        if (globResource.turnOff == true)
             break;
         if (g_connected == false)
         {
@@ -453,10 +458,10 @@ void* DiskInfoRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
-        if ((collectedData = CollectDiskInfo(buf, diskDevCnt, pParam->collectPeriod, pParam->agentId)) == NULL)
+        if ((collectedData = CollectDiskInfo(buf, diskDevCnt, *collectPeriod, globResource.agentID)) == NULL)
         {
             sprintf(logmsgBuf, "disk: failed to collect");
-            Log(g_logger, LOG_ERROR, logmsgBuf);
+            Log(globResource.logger, LOG_ERROR, logmsgBuf);
             gettimeofday(&timeVal, NULL);
             postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
             elapseTime = postTime - prevTime;
@@ -464,25 +469,25 @@ void* DiskInfoRoutine(void* param)
             continue;
         }
 
-        pthread_mutex_lock(&g_queue->lock);
-        Push(collectedData, g_queue);
-        pthread_mutex_unlock(&g_queue->lock);
+        pthread_mutex_lock(&globResource.queue->lock);
+        Push(collectedData, globResource.queue);
+        pthread_mutex_unlock(&globResource.queue->lock);
 
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 
         sprintf(logmsgBuf, "disk: collected in %ldus", elapseTime);
-        Log(g_logger, LOG_DEBUG, logmsgBuf);
+        Log(globResource.logger, LOG_DEBUG, logmsgBuf);
         usleep(collectPeriodUs - elapseTime);
     }
     sprintf(logmsgBuf, "disk terminate collector");
-    Log(g_logger, LOG_INFO, logmsgBuf);
+    Log(globResource.logger, LOG_INFO, logmsgBuf);
 }
 
 void WakeupEveryCollector()
 {
-    Log(g_logger, LOG_DEBUG, "Wakeup every collector");
+    Log(globResource.logger, LOG_DEBUG, "Wakeup every collector");
     pthread_mutex_lock(&g_condLock);
     pthread_cond_broadcast(&g_cond);
     pthread_mutex_unlock(&g_condLock);
@@ -495,29 +500,29 @@ void RecoverTcpConnection(int signo)
 
     int connFailCount = 0;
     char logmsgBuf[128];
-    sprintf(logmsgBuf, "Disconnected to server: %s:%d", g_serverIp, g_serverPort);
-    Log(g_logger, LOG_FATAL, logmsgBuf);
+    sprintf(logmsgBuf, "Disconnected to server: %s:%d", globResource.peerIP, globResource.peerPort);
+    Log(globResource.logger, LOG_FATAL, logmsgBuf);
 
-    sprintf(logmsgBuf, "Try to reconnect: %s:%d", g_serverIp, g_serverPort);
-    Log(g_logger, LOG_DEBUG, logmsgBuf);
+    sprintf(logmsgBuf, "Try to reconnect: %s:%d", globResource.peerIP, globResource.peerPort);
+    Log(globResource.logger, LOG_DEBUG, logmsgBuf);
     while (1)
     {
-        if (g_turnOff)
+        if (globResource.turnOff)
         {
             WakeupEveryCollector();
             return;
         }
         close(g_servSockFd);
-        if ((g_servSockFd = ConnectToServer(g_serverIp, g_serverPort)) != -1)
+        if ((g_servSockFd = ConnectToServer(globResource.peerIP, globResource.peerPort)) != -1)
             break;
         connFailCount++;
-        sprintf(logmsgBuf, "Failed to connect %s:%d (%d)", g_serverIp, g_serverPort, connFailCount);
-        Log(g_logger, LOG_ERROR, logmsgBuf);
+        sprintf(logmsgBuf, "Failed to connect %s:%d (%d)", globResource.peerIP, globResource.peerPort, connFailCount);
+        Log(globResource.logger, LOG_ERROR, logmsgBuf);
         sleep(RECONNECT_PERIOD);
     }
     
-    sprintf(logmsgBuf, "Re-connected to %s:%d", g_serverIp, g_serverPort);
-    Log(g_logger, LOG_INFO, logmsgBuf);
+    sprintf(logmsgBuf, "Re-connected to %s:%d", globResource.peerIP, globResource.peerPort);
+    Log(globResource.logger, LOG_INFO, logmsgBuf);
     g_connected = true;
     WakeupEveryCollector();
 }
@@ -530,29 +535,29 @@ void* SendRoutine(void* param)
     int connFailCount = 0;
 
 	signal(SIGPIPE, RecoverTcpConnection);
-    Log(g_logger, LOG_INFO, "Start sender routine");
+    Log(globResource.logger, LOG_INFO, "Start sender routine");
 
     g_connected = false;
     while (1)
     {
-        if (g_turnOff)
+        if (globResource.turnOff)
         {
             WakeupEveryCollector();
             sprintf(logmsgBuf, "Terminate sender");
-            Log(g_logger, LOG_INFO, logmsgBuf);
+            Log(globResource.logger, LOG_INFO, logmsgBuf);
             return NULL;
         }
-        if ((g_servSockFd = ConnectToServer(g_serverIp, g_serverPort)) != -1)
+        if ((g_servSockFd = ConnectToServer(globResource.peerIP, globResource.peerPort)) != -1)
             break;
-        sprintf(logmsgBuf, "Failed to connect %s:%d (%d)", g_serverIp, g_serverPort, connFailCount);
+        sprintf(logmsgBuf, "Failed to connect %s:%d (%d)", globResource.peerIP, globResource.peerPort, connFailCount);
         connFailCount++;
-        Log(g_logger, LOG_ERROR, logmsgBuf);
-        sprintf(logmsgBuf, "Try to reconnect: %s:%d", g_serverIp, g_serverPort);
+        Log(globResource.logger, LOG_ERROR, logmsgBuf);
+        sprintf(logmsgBuf, "Try to reconnect: %s:%d", globResource.peerIP, globResource.peerPort);
         sleep(RECONNECT_PERIOD);
     }
 
-    sprintf(logmsgBuf, "Connected to %s:%d", g_serverIp, g_serverPort);
-    Log(g_logger, LOG_INFO, logmsgBuf);
+    sprintf(logmsgBuf, "Connected to %s:%d", globResource.peerIP, globResource.peerPort);
+    Log(globResource.logger, LOG_INFO, logmsgBuf);
     
     g_connected = true;
     WakeupEveryCollector();
@@ -560,31 +565,31 @@ void* SendRoutine(void* param)
     int i = 0;
     while(1)
     {
-        if (g_turnOff)
+        if (globResource.turnOff)
             break;
         if (colletecData == NULL)
         {
-            if (IsEmpty(g_queue))
+            if (IsEmpty(globResource.queue))
             {
                 usleep(500000);
                 continue;
             }
             
-            pthread_mutex_lock(&g_queue->lock);
-            colletecData = Pop(g_queue);
-            pthread_mutex_unlock(&g_queue->lock);
+            pthread_mutex_lock(&globResource.queue->lock);
+            colletecData = Pop(globResource.queue);
+            pthread_mutex_unlock(&globResource.queue->lock);
         }
         
         if ((sendBytes = send(g_servSockFd, colletecData->data, colletecData->dataSize, 0)) == -1)
             continue;
         
-        sprintf(logmsgBuf, "Send %d bytes to %s:%d ", sendBytes, g_serverIp, g_serverPort);
-        Log(g_logger, LOG_DEBUG, logmsgBuf);
+        sprintf(logmsgBuf, "Send %d bytes to %s:%d ", sendBytes, globResource.peerIP, globResource.peerPort);
+        Log(globResource.logger, LOG_DEBUG, logmsgBuf);
         free(colletecData->data);
         free(colletecData);
         colletecData = NULL;
     }
     
     sprintf(logmsgBuf, "Terminate sender");
-    Log(g_logger, LOG_INFO, logmsgBuf);
+    Log(globResource.logger, LOG_INFO, logmsgBuf);
 }
