@@ -6,10 +6,11 @@
 #include <unistd.h>
 #include <sys/un.h>
 #include <arpa/inet.h>
+#include <time.h>
 
 extern SGlobResource globResource;
 
-e_UdsError ResponseToClientUDS(const char* path, char* data)
+e_UdsError ResponseToClientUDS(const char* path, char* data, size_t dataSize)
 {
 	int uds = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (uds == -1)
@@ -21,7 +22,7 @@ e_UdsError ResponseToClientUDS(const char* path, char* data)
 	struct sockaddr_un remoteInfo = { 0, };
 	remoteInfo.sun_family = AF_UNIX;
 	strcpy(remoteInfo.sun_path, path);
-	if (sendto(uds, data, strlen(data), 0, (struct sockaddr*)&remoteInfo, sizeof(remoteInfo)) == -1)
+	if (sendto(uds, data, dataSize, 0, (struct sockaddr*)&remoteInfo, sizeof(remoteInfo)) == -1)
 	{
 		Log(globResource.logger, LOG_ERROR, "Failed to send UDS");
 		close(uds);
@@ -31,13 +32,28 @@ e_UdsError ResponseToClientUDS(const char* path, char* data)
 	return UDS_OK;
 }
 
+void UpdateAgentConfigure(SUpdatePacket* pkt)
+{
+	// not implemented yet;
+}
+
 void CreateStatusPacket(SAgentStatusPacket* pkt)
 {
 	// not implemented yet
 	pkt->pid = getpid();
 	strcpy(pkt->peerIP, globResource.peerIP);
 	pkt->peerPort = globResource.peerPort;
-	
+	pkt->bRunCpuCollector = globResource.collectorSwitch[CPU_COLLECTOR_ID];
+	pkt->cpuPeriod = globResource.collectPeriods[CPU_COLLECTOR_ID];
+	pkt->bRunMemCollector = globResource.collectorSwitch[MEM_COLLECTOR_ID];
+	pkt->memPeriod = globResource.collectPeriods[MEM_COLLECTOR_ID];
+	pkt->bRunNetCollector = globResource.collectorSwitch[NET_COLLECTOR_ID];
+	pkt->netPeriod = globResource.collectPeriods[NET_COLLECTOR_ID];
+	pkt->bRunProcCollector = globResource.collectorSwitch[PROC_COLLECTOR_ID];
+	pkt->procPeriod = globResource.collectPeriods[PROC_COLLECTOR_ID];
+	pkt->bRunDiskCollector = globResource.collectorSwitch[DISK_COLLECTOR_ID];
+	pkt->diskPeriod = globResource.collectPeriods[DISK_COLLECTOR_ID];
+	pkt->runningTime = time(NULL) - globResource.loadTime;
 }
 
 void ManageAgentConfiguration(void)
@@ -102,25 +118,9 @@ void ManageAgentConfiguration(void)
 			buf[recvSize] = 0;
 			pkt = (SUpdatePacket*)buf;
 
-			// TODO: update configuration using values in pkt. not print
-			// printf("Received informations\n");
-			// printf("RUN_CPU_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
-			// if (pkt->bRunCpuCollector)
-			// 	printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
-			// printf("RUN_MEM_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
-			// if (pkt->bRunCpuCollector)
-			// 	printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
-			// printf("RUN_NET_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
-			// if (pkt->bRunCpuCollector)
-			// 	printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
-			// printf("RUN_PROC_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
-			// if (pkt->bRunCpuCollector)
-			// 	printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
-			// printf("RUN_DISK_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
-			// if (pkt->bRunCpuCollector)
-			// 	printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+			UpdateAgentConfigure(pkt);
 
-			if (ResponseToClientUDS(pkt->udsPath, "update complete") != UDS_OK)
+			if (ResponseToClientUDS(pkt->udsPath, "update complete", 15) != UDS_OK)
 				Log(globResource.logger, LOG_FATAL, "Failed to UDS response");
 		}
 		else if (*npTmp == UDS_STATUS_PACKET)
@@ -140,7 +140,7 @@ void ManageAgentConfiguration(void)
 			buf[recvSize] = 0;
 			SAgentStatusPacket pkt = { 0, };
 			CreateStatusPacket(&pkt);
-			if (ResponseToClientUDS(buf, (char*)&pkt) != UDS_OK)
+			if (ResponseToClientUDS(buf, (char*)&pkt, sizeof(SAgentStatusPacket)) != UDS_OK)
 				Log(globResource.logger, LOG_FATAL, "Failed to UDS response");
 		}
 		else

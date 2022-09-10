@@ -20,6 +20,7 @@ typedef struct SGlobResource
 	bool collectorSwitch[COLLECTOR_COUNT];
 	SHashTable* configurations;
 	bool turnOff;
+	ulong loadTime;
 } SGlobResource;
 
 

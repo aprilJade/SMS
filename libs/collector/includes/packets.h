@@ -134,18 +134,19 @@ typedef struct SAgentStatusPacket
 {
     int pid;
     char peerIP[16];
-    unsigned short peerPort;
+    ushort peerPort;
     bool bConnectedWithServer;
     bool bRunCpuCollector;
-    unsigned long cpuPeriod;
+    ulong cpuPeriod;
     bool bRunMemCollector;
-    unsigned long memPeriod;
+    ulong memPeriod;
     bool bRunNetCollector;
-    unsigned long netPeriod;
+    ulong netPeriod;
     bool bRunProcCollector;
-    unsigned long procPeriod;
-    bool bRunDiskCOllector;
-    unsigned long diskPeriod;
+    ulong procPeriod;
+    bool bRunDiskCollector;
+    ulong diskPeriod;
+    ulong runningTime;
 } SAgentStatusPacket;
 
 #endif

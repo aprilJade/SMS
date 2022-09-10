@@ -104,7 +104,7 @@ int RunCollectors()
 			if (strcmp(tmp, "true") == 0)
 			{
 				globResource.collectorSwitch[i] = true;
-				
+
 				if ((tmp = GetValueByKey(periodKeys[i], globResource.configurations)) != NULL)
 					globResource.collectPeriods[i] = atoi(tmp);
 				else
@@ -146,6 +146,7 @@ int main(int argc, char** argv)
 		fprintf(stderr, "ERROR: you must input conf file path\n");
 		return EXIT_FAILURE;
 	}
+	globResource.loadTime = time(NULL);
 	globResource.configurations = NewHashTable();
 	if (ParseConf(argv[1], globResource.configurations) != CONF_NO_ERROR)
 	{

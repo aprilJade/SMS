@@ -13,7 +13,6 @@ typedef enum e_UdsError
 	UDS_UNDEFINED_PACKET_ERROR
 } e_UdsError;
 
-e_UdsError ResponseToClientUDS(const char* path, char* data);
 void ManageAgentConfiguration(void);
 
 #endif

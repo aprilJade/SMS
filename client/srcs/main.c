@@ -49,8 +49,25 @@ void PrintPacketContent(SUpdatePacket* pkt)
 
 void PrintAgentStatus(SAgentStatusPacket* pkt)
 {
-    // TODO: implement packet content printer
-    printf("not implemented yet!\n");
+    printf("<Agent status>\n");
+    printf("# Basic information\n");
+    printf("Running time: %lu s\n", pkt->runningTime);
+    printf("PID: %d\n", pkt->pid);
+    printf("Process name: %s\n", "not implemented yet");
+    putchar('\n');
+    printf("# Collector Status\n");
+    printf("CPU collector: %s on every %lu ms\n", pkt->bRunCpuCollector ? "ON" : "OFF", pkt->cpuPeriod);
+    printf("Memory collector: %s on every %lu ms\n", pkt->bRunMemCollector ? "ON" : "OFF", pkt->memPeriod);
+    printf("Network collector: %s on every %lu ms\n", pkt->bRunNetCollector ? "ON" : "OFF", pkt->netPeriod);
+    printf("Process collector: %s on every %lu ms\n", pkt->bRunProcCollector ? "ON" : "OFF", pkt->procPeriod);
+    printf("Disk collector: %s on every %lu ms\n", pkt->bRunDiskCollector ? "ON" : "OFF", pkt->diskPeriod);
+    putchar('\n');
+    printf("# Network Status\n");
+    printf("Connection: %s\n", pkt->bConnectedWithServer ? "Connected" : "Disconnected");
+    printf("Connectivity: not implemented yet(Good or Bad)\n");
+    printf("Peer IP: %s\n", pkt->peerIP);
+    printf("Peer Port: %u\n", pkt->peerPort);
+    putchar('\n');
 }
 
 static struct sockaddr_un clientInfo;
@@ -252,7 +269,7 @@ int main(int argc, char** argv)
 
         SAgentStatusPacket response;
         socklen_t remoteLen = sizeof(clientInfo);
-        printf("wait agnet response...\n");
+        printf("wait agent response...\n");
         ssize_t recvSize = recvfrom(recvFd, &response, sizeof(SAgentStatusPacket), 0, (struct sockaddr*)&clientInfo, &remoteLen);
         if (recvSize < 0)
         {
@@ -261,16 +278,19 @@ int main(int argc, char** argv)
             remove(UDS_CLIENT_PATH);
             exit(EXIT_FAILURE);
         }
-        
+        if (recvSize != sizeof(SAgentStatusPacket))
+        {
+            fprintf(stderr, "ERROR: agent response???\n");
+            close(recvFd);
+            remove(UDS_CLIENT_PATH);
+            exit(EXIT_FAILURE);
+        }
+        printf("Agent's answer has arrived. Print status.\n");
         PrintAgentStatus(&response);
 
         close(recvFd);
         remove(UDS_CLIENT_PATH);
         exit(EXIT_SUCCESS);
-        // #00. Send request agent status to agent
-        // #01. Receive answer from agent
-        // #02. Print agent status using received informations
-        // #03. exit
     }
     else
     {
