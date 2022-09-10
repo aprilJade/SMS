@@ -2,6 +2,7 @@
 #include "logger.h"
 #include "packets.h"
 
+#include <stdio.h>
 #include <sys/socket.h>
 #include <fcntl.h>
 #include <unistd.h>

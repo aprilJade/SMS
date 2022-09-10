@@ -412,3 +412,10 @@ SCData* CollectDiskInfo(char *buf, int diskDevCnt, int collectPeriod, char* agen
 	
 	return result;
 }
+
+void DestorySCData(SCData** target)
+{
+	free((*target)->data);
+	free(*target);
+	*target = NULL;
+}

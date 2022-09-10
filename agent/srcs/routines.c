@@ -66,6 +66,14 @@ void* CpuInfoRoutine(void* param)
     char logmsgBuf[128];
     ulong collectPeriodUs = pParam->collectPeriod * 1000;
     int maxCount = (int)(AVG_TARGET_TIME_AS_MS / (float)pParam->collectPeriod);
+    SCData* avgData;
+    SCData* collectedData;
+    SBodyc* hBody;
+
+    collectedData = CollectEachCpuInfo(cpuCnt, toMs, buf, pParam->collectPeriod, pParam->agentId);
+    avgData = CalcCpuUtilizationAvg(collectedData->data, cpuCnt, maxCount, toMs, pParam->collectPeriod);
+    DestorySCData(&collectedData);
+    DestorySCData(&avgData);
 
     sprintf(logmsgBuf, "Ready CPU information collection routine in %d ms cycle", pParam->collectPeriod);
     Log(g_logger, LOG_INFO, logmsgBuf);
@@ -80,9 +88,6 @@ void* CpuInfoRoutine(void* param)
 
     Log(g_logger, LOG_INFO, "Run CPU collector: Connected to TCP server");
 
-    SCData* avgData;
-    SCData* collectedData;
-    SBodyc* hBody;
 
     while (1)
     {
@@ -244,6 +249,14 @@ void* NetInfoRoutine(void* param)
     char logmsgBuf[128];
     int nicCount = GetNicCount();
     ulong collectPeriodUs = pParam->collectPeriod * 1000;
+    SCData* collectedData;
+    SCData* avgData;
+    int maxCount = (int)(AVG_TARGET_TIME_AS_MS / (float)pParam->collectPeriod);
+    
+    collectedData = CollectNetInfo(buf, nicCount, pParam->collectPeriod, pParam->agentId);
+    avgData = CalcNetThroughputAvg(collectedData->data, nicCount, maxCount, pParam->collectPeriod);
+    DestorySCData(&collectedData);
+    DestorySCData(&avgData);
 
     sprintf(logmsgBuf, "Ready network information collection routine in %d ms cycle", pParam->collectPeriod);
     Log(g_logger, LOG_INFO, logmsgBuf);
@@ -256,17 +269,9 @@ void* NetInfoRoutine(void* param)
         sprintf(logmsgBuf, "network: terminate collector");
         Log(g_logger, LOG_INFO, logmsgBuf);
     }
-    Log(g_logger, LOG_INFO, "Run network collector: Connected to TCP server");
 
-    SCData* collectedData;
-    SCData* avgData;
-    int maxCount = (int)(AVG_TARGET_TIME_AS_MS / (float)pParam->collectPeriod);
-    collectedData = CollectNetInfo(buf, nicCount, pParam->collectPeriod, pParam->agentId);
-    avgData = CalcNetThroughputAvg(collectedData->data, nicCount, maxCount, pParam->collectPeriod);
-    free(collectedData->data);
-    free(collectedData);
-    free(avgData->data);
-    free(avgData);
+    
+    Log(g_logger, LOG_INFO, "Run network collector: Connected to TCP server");
     while(1)
     {
         if (g_turnOff == true)

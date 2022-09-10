@@ -26,5 +26,6 @@ SCData* CollectMemInfo(char* buf, int collectPeriod, char* agent_id);
 SCData* CollectNetInfo(char* buf, int nicCount, int collectPeriod, char* agent_id);
 SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod, char* agent_id);
 SCData* CollectDiskInfo(char *buf, int diskDevCnt, int collectPeriod, char* agent_id);
+void DestorySCData(SCData** target);
 
 #endif
