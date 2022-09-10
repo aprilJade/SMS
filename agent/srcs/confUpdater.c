@@ -33,6 +33,11 @@ e_UdsError ResponseToClientUDS(const char* path, char* data)
 	return UDS_OK;
 }
 
+void CreateStatusPacket(SAgentStatusPacket* pkt)
+{
+	// not implemented yet
+}
+
 void ManageAgentConfiguration(void)
 {
 	int fd = open(UDS_SOCKET_PATH, O_CREAT | O_RDWR, 0777);
@@ -118,9 +123,28 @@ void ManageAgentConfiguration(void)
 		}
 		else if (*npTmp == UDS_STATUS_PACKET)
 		{
-			// not implemented yet
-			// #00. Generate status data packet
-			// #01. send to client! like ResponseToClientUDS(pkt->udsPath, statusPacket);
+			Log(g_logger, LOG_DEBUG, "UDS: received update configuration request");
+			if ((recvSize = recvfrom(uds, buf, 108, 0, (struct sockaddr*)&sockInfo, &sockLen)) == -1)
+			{
+				Log(g_logger, LOG_FATAL, "Failed to receive UDS packet");
+				continue;
+			}
+			if (recvSize == 0)
+			{
+				Log(g_logger, LOG_INFO, "UDS: EOF");
+				close(uds);
+				return ;
+			}
+			buf[recvSize] = 0;
+			SAgentStatusPacket pkt = { 0, };
+			CreateStatusPacket(&pkt);
+			if (ResponseToClientUDS(buf, (char*)&pkt) != UDS_OK)
+				Log(g_logger, LOG_FATAL, "Failed to UDS response");
+		}
+		else
+		{
+			Log(g_logger, LOG_ERROR, "UDS: undefined request");
+			continue;
 		}
 	}
 }

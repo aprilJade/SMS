@@ -47,6 +47,12 @@ void PrintPacketContent(SUpdatePacket* pkt)
         printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
 }
 
+void PrintAgentStatus(SAgentStatusPacket* pkt)
+{
+    // TODO: implement packet content printer
+    printf("not implemented yet!\n");
+}
+
 static struct sockaddr_un clientInfo;
 
 int CreateUDS()
@@ -198,6 +204,69 @@ int main(int argc, char** argv)
     }
     else if (strcmp(argv[1], "status") == 0)
     {
+        if (access(UDS_AGENT_PATH, F_OK) != 0)
+        {
+            printf("Agent is not working!\n");
+            exit(EXIT_SUCCESS);
+        }
+
+        if (argc != 2)
+        {
+            PrintUsage();
+            exit(EXIT_FAILURE);
+        }
+
+        int recvFd = CreateUDS();
+
+        int uds = socket(AF_UNIX, SOCK_DGRAM, 0);
+        if (uds == -1)
+        {
+            fprintf(stderr, "ERROR: failed to open uds: %s\n", strerror(errno));
+            close(recvFd);
+            remove(UDS_CLIENT_PATH);
+            exit(EXIT_FAILURE);
+        }
+
+        struct sockaddr_un remoteInfo = { 0, };
+        remoteInfo.sun_family = AF_UNIX;
+        strcpy(remoteInfo.sun_path, UDS_AGENT_PATH);
+        uint helloPkt = UDS_STATUS_PACKET;
+        if (sendto(uds, &helloPkt, sizeof(uint), 0, (struct sockaddr*)&remoteInfo, sizeof(remoteInfo)) == -1)
+        {
+            fprintf(stderr, "ERROR: failed to send update packet: %s\n", strerror(errno));
+            close(uds);
+            close(recvFd);
+            remove(UDS_CLIENT_PATH);
+            exit(EXIT_FAILURE);
+        }
+
+        if (sendto(uds, UDS_CLIENT_PATH, strlen(UDS_CLIENT_PATH), 0, (struct sockaddr*)&remoteInfo, sizeof(remoteInfo)) == -1)
+        {
+            fprintf(stderr, "ERROR: failed to send update packet: %s\n", strerror(errno));
+            close(uds);
+            close(recvFd);
+            remove(UDS_CLIENT_PATH);
+            exit(EXIT_FAILURE);
+        }
+        close(uds);
+
+        SAgentStatusPacket response;
+        socklen_t remoteLen = sizeof(clientInfo);
+        printf("wait agnet response...\n");
+        ssize_t recvSize = recvfrom(recvFd, &response, sizeof(SAgentStatusPacket), 0, (struct sockaddr*)&clientInfo, &remoteLen);
+        if (recvSize < 0)
+        {
+            fprintf(stderr, "ERROR: agent is not responding\n");
+            close(recvFd);
+            remove(UDS_CLIENT_PATH);
+            exit(EXIT_FAILURE);
+        }
+        
+        PrintAgentStatus(&response);
+
+        close(recvFd);
+        remove(UDS_CLIENT_PATH);
+        exit(EXIT_SUCCESS);
         // #00. Send request agent status to agent
         // #01. Receive answer from agent
         // #02. Print agent status using received informations

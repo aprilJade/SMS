@@ -130,4 +130,23 @@ typedef struct SUpdatePacket
     unsigned long diskPeriod;
 } SUpdatePacket;
 
+typedef struct SAgentStatusPacket
+{
+    char processName[32];
+    int pid;
+    char cmdline[128];
+    char peerIP[16];
+    unsigned short peerPort;
+    bool bRunCpuCollector;
+    unsigned long cpuPeriod;
+    bool bRunMemCollector;
+    unsigned long memPeriod;
+    bool bRunNetCollector;
+    unsigned long netPeriod;
+    bool bRunProcCollector;
+    unsigned long procPeriod;
+    bool bRunDiskCOllector;
+    unsigned long diskPeriod;
+} SAgentStatusPacket;
+
 #endif
