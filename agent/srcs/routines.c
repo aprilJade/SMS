@@ -529,7 +529,7 @@ void RecoverTcpConnection(int signo)
 
 void* SendRoutine(void* param)
 {
-    SCData* colletecData = NULL;
+    SCData* collectedData = NULL;
     int sendBytes;
     char logmsgBuf[128];
     int connFailCount = 0;
@@ -567,7 +567,7 @@ void* SendRoutine(void* param)
     {
         if (globResource.turnOff)
             break;
-        if (colletecData == NULL)
+        if (collectedData == NULL)
         {
             if (IsEmpty(globResource.queue))
             {
@@ -576,18 +576,16 @@ void* SendRoutine(void* param)
             }
             
             pthread_mutex_lock(&globResource.queue->lock);
-            colletecData = Pop(globResource.queue);
+            collectedData = Pop(globResource.queue);
             pthread_mutex_unlock(&globResource.queue->lock);
         }
         
-        if ((sendBytes = send(g_servSockFd, colletecData->data, colletecData->dataSize, 0)) == -1)
+        if ((sendBytes = send(g_servSockFd, collectedData->data, collectedData->dataSize, 0)) == -1)
             continue;
         
         sprintf(logmsgBuf, "Send %d bytes to %s:%d ", sendBytes, globResource.peerIP, globResource.peerPort);
         Log(globResource.logger, LOG_DEBUG, logmsgBuf);
-        free(colletecData->data);
-        free(colletecData);
-        colletecData = NULL;
+        DestorySCData(&collectedData);
     }
     
     sprintf(logmsgBuf, "Terminate sender");

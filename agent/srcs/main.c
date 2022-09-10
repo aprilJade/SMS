@@ -85,6 +85,7 @@ void HandleSignal(int signo)
 	remove(UDS_SOCKET_PATH);
 	exit(signo);
 }
+
 int RunCollectors()
 {
 	char logmsgBuf[128];
@@ -102,6 +103,8 @@ int RunCollectors()
 		{
 			if (strcmp(tmp, "true") == 0)
 			{
+				globResource.collectorSwitch[i] = true;
+				
 				if ((tmp = GetValueByKey(periodKeys[i], globResource.configurations)) != NULL)
 					globResource.collectPeriods[i] = atoi(tmp);
 				else
