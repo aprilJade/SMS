@@ -26,6 +26,31 @@ static const char* const strSignal[] = {
 	[SIGKILL] = "SIGKILL",
 };
 
+static const char* const runKeys[COLLECTOR_COUNT] = {
+	[CPU_COLLECTOR_ID] = CONF_KEY_RUN_CPU_COLLECTOR,
+	[MEM_COLLECTOR_ID] = CONF_KEY_RUN_MEM_COLLECTOR,
+	[NET_COLLECTOR_ID] = CONF_KEY_RUN_NET_COLLECTOR,
+	[PROC_COLLECTOR_ID] = CONF_KEY_RUN_PROC_COLLECTOR,
+	[DISK_COLLECTOR_ID] = CONF_KEY_RUN_DISK_COLLECTOR
+};
+
+static const char* const periodKeys[COLLECTOR_COUNT] = {
+	[CPU_COLLECTOR_ID] = CONF_KEY_CPU_COLLECTION_PERIOD,
+	[MEM_COLLECTOR_ID] = CONF_KEY_MEM_COLLECTION_PERIOD,
+	[NET_COLLECTOR_ID] = CONF_KEY_NET_COLLECTION_PERIOD,
+	[PROC_COLLECTOR_ID] = CONF_KEY_PROC_COLLECTION_PERIOD,
+	[DISK_COLLECTOR_ID] = CONF_KEY_DISK_COLLECTION_PERIOD
+};
+
+static void* (*collectRoutines[COLLECTOR_COUNT])(void*) = {
+	[CPU_COLLECTOR_ID] = CpuInfoRoutine,
+	[MEM_COLLECTOR_ID] = MemInfoRoutine,
+	[NET_COLLECTOR_ID] = NetInfoRoutine,
+	[PROC_COLLECTOR_ID] = ProcInfoRoutine,
+	[DISK_COLLECTOR_ID] = DiskInfoRoutine
+};
+
+
 SGlobResource globResource = { 0, };
 
 void WakeupEveryCollector(void);
@@ -60,31 +85,6 @@ void HandleSignal(int signo)
 	remove(UDS_SOCKET_PATH);
 	exit(signo);
 }
-
-const char* const runKeys[COLLECTOR_COUNT] = {
-	[CPU_COLLECTOR_ID] = CONF_KEY_RUN_CPU_COLLECTOR,
-	[MEM_COLLECTOR_ID] = CONF_KEY_RUN_MEM_COLLECTOR,
-	[NET_COLLECTOR_ID] = CONF_KEY_RUN_NET_COLLECTOR,
-	[PROC_COLLECTOR_ID] = CONF_KEY_RUN_PROC_COLLECTOR,
-	[DISK_COLLECTOR_ID] = CONF_KEY_RUN_DISK_COLLECTOR
-};
-
-const char* const periodKeys[COLLECTOR_COUNT] = {
-	[CPU_COLLECTOR_ID] = CONF_KEY_CPU_COLLECTION_PERIOD,
-	[MEM_COLLECTOR_ID] = CONF_KEY_MEM_COLLECTION_PERIOD,
-	[NET_COLLECTOR_ID] = CONF_KEY_NET_COLLECTION_PERIOD,
-	[PROC_COLLECTOR_ID] = CONF_KEY_PROC_COLLECTION_PERIOD,
-	[DISK_COLLECTOR_ID] = CONF_KEY_DISK_COLLECTION_PERIOD
-};
-
-void* (*collectRoutines[COLLECTOR_COUNT])(void*) = {
-	[CPU_COLLECTOR_ID] = CpuInfoRoutine,
-	[MEM_COLLECTOR_ID] = MemInfoRoutine,
-	[NET_COLLECTOR_ID] = NetInfoRoutine,
-	[PROC_COLLECTOR_ID] = ProcInfoRoutine,
-	[DISK_COLLECTOR_ID] = DiskInfoRoutine
-};
-
 int RunCollectors()
 {
 	char logmsgBuf[128];
@@ -207,12 +207,6 @@ int main(int argc, char** argv)
 	}
 	
 	RunCollectors();
-	// globResource.collectors[CPU_COLLECTOR_ID] = RunCollector(CpuInfoRoutine, CONF_KEY_RUN_CPU_COLLECTOR, CONF_KEY_CPU_COLLECTION_PERIOD, globResource.configurations);
-	// globResource.collectors[MEM_COLLECTOR_ID] = RunCollector(MemInfoRoutine, CONF_KEY_RUN_MEM_COLLECTOR, CONF_KEY_MEM_COLLECTION_PERIOD, globResource.configurations);
-	// globResource.collectors[NET_COLLECTOR_ID] = RunCollector(NetInfoRoutine, CONF_KEY_RUN_NET_COLLECTOR, CONF_KEY_NET_COLLECTION_PERIOD, globResource.configurations);
-	// globResource.collectors[PROC_COLLECTOR_ID] = RunCollector(ProcInfoRoutine, CONF_KEY_RUN_PROC_COLLECTOR, CONF_KEY_PROC_COLLECTION_PERIOD, globResource.configurations);
-	// globResource.collectors[DISK_COLLECTOR_ID] = RunCollector(DiskInfoRoutine, CONF_KEY_RUN_DISK_COLLECTOR, CONF_KEY_DISK_COLLECTION_PERIOD, globResource.configurations);
-	
 	ManageAgentConfiguration();
 		
 	exit(EXIT_SUCCESS);
