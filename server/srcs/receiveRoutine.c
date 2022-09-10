@@ -57,14 +57,12 @@ void* ReceiveRoutine(void* param)
         {
             sprintf(logMsg, "Disconnect to agent %s:%d (Failed to receive packet)", pParam->host, pParam->port);
             Log(g_logger, LOG_ERROR, logMsg);
-            close(pParam->clientSock);
             break;
         }
         if (readSize == 0)
         {
             sprintf(logMsg, "Disconnected from %s:%d", pParam->host, pParam->port);
             Log(g_logger, LOG_INFO, logMsg);
-            close(pParam->clientSock);
             break;
         }
         hHeader = (SHeader*)pb;
@@ -74,7 +72,6 @@ void* ReceiveRoutine(void* param)
                 pParam->host,
                 pParam->port);
             Log(g_logger, LOG_FATAL, logMsg);
-            close(pParam->clientSock);
             break;
         }
 
@@ -90,18 +87,19 @@ void* ReceiveRoutine(void* param)
             {
                 sprintf(logMsg, "Disconnect to agent %s:%d (Failed to receive packet)", pParam->host, pParam->port);
                 Log(g_logger, LOG_ERROR, logMsg);
-                close(pParam->clientSock);
                 break;
             }
             if (readSize == 0)
             {
                 sprintf(logMsg, "Disconnected from %s:%d", pParam->host, pParam->port);
                 Log(g_logger, LOG_INFO, logMsg);
-                close(pParam->clientSock);
                 break;
             }
             totalReadSize += readSize;
         }
+        if (totalReadSize < packetSize)
+            break;
+        
         pb[totalReadSize] = 0;
 
         sprintf(logMsg, "Received packet from %s:%d %d B",

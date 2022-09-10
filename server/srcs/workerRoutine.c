@@ -265,6 +265,7 @@ int InsertNetAvgInfo(void* data, SWorkTools* tools)
             hBody[i].sendPacketsPerSecAvg);
         if (Query(tools->dbWrapper, sql) == -1)
         {
+            Log(g_logger, LOG_DEBUG, sql);
             sprintf(sql, "%d: Failed to store in DB: Network AVG", tools->workerId);
             Log(g_logger, LOG_ERROR, sql);
             return -1;

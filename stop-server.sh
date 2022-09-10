@@ -15,6 +15,6 @@ else
         fi
         sleep 1
     done
-    echo SMS: Terminate SMS server.
+    echo SMS: Terminate SMS server successfully.
 fi
 

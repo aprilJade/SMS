@@ -261,7 +261,12 @@ void* NetInfoRoutine(void* param)
     SCData* collectedData;
     SCData* avgData;
     int maxCount = (int)(AVG_TARGET_TIME_AS_MS / (float)pParam->collectPeriod);
-   
+    collectedData = CollectNetInfo(buf, nicCount, pParam->collectPeriod, pParam->agentId);
+    avgData = CalcNetThroughputAvg(collectedData->data, nicCount, maxCount, pParam->collectPeriod);
+    free(collectedData->data);
+    free(collectedData);
+    free(avgData->data);
+    free(avgData);
     while(1)
     {
         if (g_turnOff == true)

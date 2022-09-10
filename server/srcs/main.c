@@ -194,7 +194,6 @@ Logger* GenLogger(SHashTable* options)
 	{
 		if (strcmp(logLevel, "default") == 0)
 			logger = NewLogger(logPath, LOG_INFO);
-		return logger;
 	}
 	logger = NewLogger(logPath, LOG_DEBUG);
 	return logger;

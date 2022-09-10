@@ -15,8 +15,8 @@
 #include "confParser.h"
 
 // CHECK: modify below path when deploy SMS
-#define UDS_AGENT_PATH "./bin/.agent.sock"
-#define UDS_CLIENT_PATH "./bin/.client.sock"
+#define UDS_AGENT_PATH "/home/apriljade/repo/SMS/bin/.agent.sock"
+#define UDS_CLIENT_PATH "/home/apriljade/repo/SMS/bin/.client.sock"
 
 void PrintUsage()
 {
