@@ -1,10 +1,10 @@
 #ifndef COLLECTOR_H
 #define COLLECTOR_H
 
-#define BUFFER_SIZE 2048
-
 #include <stddef.h>
 #include "packets.h"
+
+#define BUFFER_SIZE 2048
 
 typedef struct SCData
 {
