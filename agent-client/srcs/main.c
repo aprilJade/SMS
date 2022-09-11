@@ -5,12 +5,18 @@
 
 int main(int argc, char** argv)
 {   
-    if (strcmp(argv[1], "update") == 0 && argc == 3)
-        RequestUpdateConfigToAgent(argv[2]);
-    else if (strcmp(argv[1], "status") == 0 && argc == 2)
-        RequestStatusToAgent();
+    
+    if (argc == 3)
+    {
+        if (strcmp(argv[1], "update") == 0)
+            RequestUpdateConfigToAgent(argv[2]);
+    }
+    else if (argc == 2)
+    {
+        if (strcmp(argv[1], "status") == 0)
+            RequestStatusToAgent();
+    }
     else
         PrintUsage();
-
     exit(EXIT_SUCCESS);
 }

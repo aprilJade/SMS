@@ -5,7 +5,11 @@
 
 void PrintUsage()
 {
-    fprintf(stderr, "Not implemented yet: PrintUsage()\n");
+    puts("< agent-cli usage >");
+    puts("./agent-cli [command] [arguments]\n");
+    puts("< commands >");
+    puts("update: update agent's configuration using conf file. (argument required)");
+    puts("status: print agent's status. (no argument)");
 }
 
 void PrintPacketContent(SUpdatePacket* pkt)
