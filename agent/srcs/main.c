@@ -50,7 +50,6 @@ static void* (*collectRoutines[COLLECTOR_COUNT])(void*) = {
 	[DISK_COLLECTOR_ID] = DiskInfoRoutine
 };
 
-
 SGlobResource globResource = { 0, };
 
 void WakeupEveryCollector(void);

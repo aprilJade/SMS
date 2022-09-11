@@ -26,25 +26,26 @@ void PrintUsage()
 void PrintPacketContent(SUpdatePacket* pkt)
 {
     printf("client UDS socket path: %s\n", pkt->udsPath);
-    printf("RUN_CPU_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
-    if (pkt->bRunCpuCollector)
-        printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
 
-    printf("RUN_MEM_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
-    if (pkt->bRunCpuCollector)
-        printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+    printf("RUN_CPU_COLLECTOR: %s\n", (pkt->bRunCollector[0] ? "true" : "false"));
+    if (pkt->bRunCollector[0])
+        printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->collectPeriod[0]);
 
-    printf("RUN_NET_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
-    if (pkt->bRunCpuCollector)
-        printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+    printf("RUN_MEM_COLLECTOR: %s\n", (pkt->bRunCollector[1] ? "true" : "false"));
+    if (pkt->bRunCollector[1])
+        printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->collectPeriod[1]);
 
-    printf("RUN_PROC_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
-    if (pkt->bRunCpuCollector)
-        printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+    printf("RUN_NET_COLLECTOR: %s\n", (pkt->bRunCollector[2] ? "true" : "false"));
+    if (pkt->bRunCollector[2])
+        printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->collectPeriod[2]);
 
-    printf("RUN_DISK_COLLECTOR: %s\n", (pkt->bRunCpuCollector ? "true" : "false"));
-    if (pkt->bRunCpuCollector)
-        printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->cpuPeriod);
+    printf("RUN_PROC_COLLECTOR: %s\n", (pkt->bRunCollector[3] ? "true" : "false"));
+    if (pkt->bRunCollector[3])
+        printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->collectPeriod[3]);
+
+    printf("RUN_DISK_COLLECTOR: %s\n", (pkt->bRunCollector[4] ? "true" : "false"));
+    if (pkt->bRunCollector[4])
+        printf("CPU_COLLECTION_PERIOD: %lu ms\n", pkt->collectPeriod[4]);
 }
 
 void PrintAgentStatus(SAgentStatusPacket* pkt)
@@ -56,11 +57,11 @@ void PrintAgentStatus(SAgentStatusPacket* pkt)
     printf("Process name: %s\n", "not implemented yet");
     putchar('\n');
     printf("# Collector Status\n");
-    printf("CPU collector: %s on every %lu ms\n", pkt->bRunCpuCollector ? "ON" : "OFF", pkt->cpuPeriod);
-    printf("Memory collector: %s on every %lu ms\n", pkt->bRunMemCollector ? "ON" : "OFF", pkt->memPeriod);
-    printf("Network collector: %s on every %lu ms\n", pkt->bRunNetCollector ? "ON" : "OFF", pkt->netPeriod);
-    printf("Process collector: %s on every %lu ms\n", pkt->bRunProcCollector ? "ON" : "OFF", pkt->procPeriod);
-    printf("Disk collector: %s on every %lu ms\n", pkt->bRunDiskCollector ? "ON" : "OFF", pkt->diskPeriod);
+    printf("CPU collector: %s on every %lu ms\n", pkt->bRunCollector[0] ? "ON" : "OFF", pkt->collectPeriod[0]);
+    printf("Memory collector: %s on every %lu ms\n", pkt->bRunCollector[1] ? "ON" : "OFF", pkt->collectPeriod[1]);
+    printf("Network collector: %s on every %lu ms\n", pkt->bRunCollector[2] ? "ON" : "OFF", pkt->collectPeriod[2]);
+    printf("Process collector: %s on every %lu ms\n", pkt->bRunCollector[3] ? "ON" : "OFF", pkt->collectPeriod[3]);
+    printf("Disk collector: %s on every %lu ms\n", pkt->bRunCollector[4] ? "ON" : "OFF", pkt->collectPeriod[4]);
     putchar('\n');
     printf("# Network Status\n");
     printf("Connection: %s\n", pkt->bConnectedWithServer ? "Connected" : "Disconnected");
@@ -102,9 +103,45 @@ int CreateUDS()
     return uds;
 }
 
+
+static const char* const runKeys[] = {
+	CONF_KEY_RUN_CPU_COLLECTOR,
+	CONF_KEY_RUN_MEM_COLLECTOR,
+	CONF_KEY_RUN_NET_COLLECTOR,
+	CONF_KEY_RUN_PROC_COLLECTOR,
+	CONF_KEY_RUN_DISK_COLLECTOR
+};
+
+static const char* const periodKeys[] = {
+	CONF_KEY_CPU_COLLECTION_PERIOD,
+	CONF_KEY_MEM_COLLECTION_PERIOD,
+	CONF_KEY_NET_COLLECTION_PERIOD,
+	CONF_KEY_PROC_COLLECTION_PERIOD,
+	CONF_KEY_DISK_COLLECTION_PERIOD
+};
+
 int CreateUpdatePacket(SHashTable* options, SUpdatePacket* out)
 {
-    // Not implemented yet
+    char* tmp;
+
+    for (int i = 0; i < 5; i++)
+    {
+        if ((tmp = GetValueByKey(runKeys[i], options)) != NULL)
+        {
+            if (strcmp(tmp, "true") == 0)
+            {
+                out->bRunCollector[i] = true;
+
+                if ((tmp = GetValueByKey(periodKeys[i], options)) != NULL)
+                    out->collectPeriod[i] = atoi(tmp);
+                else
+                    out->collectPeriod[i] = 1000;
+                        
+                if (out->collectPeriod[i] < 500)
+                    out->collectPeriod[i] = 500;
+            }
+        }
+    }
     strcpy(out->udsPath, UDS_CLIENT_PATH);
     return 0;
 }
@@ -285,7 +322,7 @@ int main(int argc, char** argv)
             remove(UDS_CLIENT_PATH);
             exit(EXIT_FAILURE);
         }
-        printf("Agent's answer has arrived. Print status.\n");
+        printf("Agent's status has arrived. Print status.\n");
         PrintAgentStatus(&response);
 
         close(recvFd);

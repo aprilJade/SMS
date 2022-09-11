@@ -32,28 +32,60 @@ e_UdsError ResponseToClientUDS(const char* path, char* data, size_t dataSize)
 	return UDS_OK;
 }
 
+static const char* const names[] = {
+	[CPU_COLLECTOR_ID] = "CPU",
+	[MEM_COLLECTOR_ID] = "memory",
+	[NET_COLLECTOR_ID] = "network",
+	[PROC_COLLECTOR_ID] = "process",
+	[DISK_COLLECTOR_ID] = "disk"
+};
+
+static void* (*collectRoutines[COLLECTOR_COUNT])(void*) = {
+	[CPU_COLLECTOR_ID] = CpuInfoRoutine,
+	[MEM_COLLECTOR_ID] = MemInfoRoutine,
+	[NET_COLLECTOR_ID] = NetInfoRoutine,
+	[PROC_COLLECTOR_ID] = ProcInfoRoutine,
+	[DISK_COLLECTOR_ID] = DiskInfoRoutine
+};
+
 void UpdateAgentConfigure(SUpdatePacket* pkt)
 {
-	// not implemented yet;
+	char logBuf[128];
+
+	for (int i = 0; i < COLLECTOR_COUNT; i++)
+	{
+		globResource.collectPeriods[i] = pkt->collectPeriod[i];
+		if (globResource.collectorSwitch[i] != pkt->bRunCollector[i])
+		{
+			if (pkt->bRunCollector[i])	// before false but now true
+			{
+				// Run cpu collector
+				pthread_create(&globResource.collectors[i], NULL, collectRoutines[i], NULL);
+			}
+			else
+			{
+				pthread_cancel(globResource.collectors[i]);
+				globResource.collectors[i] = 0;
+				sprintf(logBuf, "%s: stop collector", names[i]);
+				Log(globResource.logger, LOG_INFO, logBuf);
+			}
+			globResource.collectorSwitch[i] = pkt->bRunCollector[i];
+		}
+	}
 }
 
 void CreateStatusPacket(SAgentStatusPacket* pkt)
 {
-	// not implemented yet
 	pkt->pid = getpid();
 	strcpy(pkt->peerIP, globResource.peerIP);
 	pkt->peerPort = globResource.peerPort;
-	pkt->bRunCpuCollector = globResource.collectorSwitch[CPU_COLLECTOR_ID];
-	pkt->cpuPeriod = globResource.collectPeriods[CPU_COLLECTOR_ID];
-	pkt->bRunMemCollector = globResource.collectorSwitch[MEM_COLLECTOR_ID];
-	pkt->memPeriod = globResource.collectPeriods[MEM_COLLECTOR_ID];
-	pkt->bRunNetCollector = globResource.collectorSwitch[NET_COLLECTOR_ID];
-	pkt->netPeriod = globResource.collectPeriods[NET_COLLECTOR_ID];
-	pkt->bRunProcCollector = globResource.collectorSwitch[PROC_COLLECTOR_ID];
-	pkt->procPeriod = globResource.collectPeriods[PROC_COLLECTOR_ID];
-	pkt->bRunDiskCollector = globResource.collectorSwitch[DISK_COLLECTOR_ID];
-	pkt->diskPeriod = globResource.collectPeriods[DISK_COLLECTOR_ID];
+	for (int i = 0; i < COLLECTOR_COUNT; i++)
+	{
+		pkt->bRunCollector[i] = globResource.collectorSwitch[i];
+		pkt->collectPeriod[i] = globResource.collectPeriods[i];
+	}
 	pkt->runningTime = time(NULL) - globResource.loadTime;
+	pkt->bConnectedWithServer = globResource.bIsConnected;
 }
 
 void ManageAgentConfiguration(void)
@@ -94,7 +126,6 @@ void ManageAgentConfiguration(void)
 	int* npTmp;
 	while (1)
 	{
-		//printf("Wait to receive update request...\n");
 		if ((recvSize = recvfrom(uds, buf, 4, 0, (struct sockaddr*)&sockInfo, &sockLen)) == -1)
 		{
 			Log(globResource.logger, LOG_FATAL, "Failed to receive UDS packet");
@@ -125,7 +156,7 @@ void ManageAgentConfiguration(void)
 		}
 		else if (*npTmp == UDS_STATUS_PACKET)
 		{
-			Log(globResource.logger, LOG_DEBUG, "UDS: received update configuration request");
+			Log(globResource.logger, LOG_DEBUG, "UDS: received status request");
 			if ((recvSize = recvfrom(uds, buf, 108, 0, (struct sockaddr*)&sockInfo, &sockLen)) == -1)
 			{
 				Log(globResource.logger, LOG_FATAL, "Failed to receive UDS packet");

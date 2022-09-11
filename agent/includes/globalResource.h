@@ -7,7 +7,9 @@
 #include "confUpdater.h"
 
 #define COLLECTOR_COUNT 5
-typedef struct SGlobResource
+
+// A collection of variables used across the agent
+typedef struct SGlobResource 
 {
 	Logger* logger;
 	Queue* queue;
@@ -18,8 +20,11 @@ typedef struct SGlobResource
 	pthread_t collectors[COLLECTOR_COUNT];
 	ulong collectPeriods[COLLECTOR_COUNT];
 	bool collectorSwitch[COLLECTOR_COUNT];
+	pthread_mutex_t tcpLock;
+	pthread_cond_t tcpCond;
 	SHashTable* configurations;
 	bool turnOff;
+	bool bIsConnected;
 	ulong loadTime;
 } SGlobResource;
 

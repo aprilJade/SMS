@@ -118,16 +118,8 @@ typedef struct SBodyAvgN
 typedef struct SUpdatePacket
 {
     char udsPath[108];
-    bool bRunCpuCollector;
-    unsigned long cpuPeriod;
-    bool bRunMemCollector;
-    unsigned long memPeriod;
-    bool bRunNetCollector;
-    unsigned long netPeriod;
-    bool bRunProcCollector;
-    unsigned long procPeriod;
-    bool bRunDiskCOllector;
-    unsigned long diskPeriod;
+    bool bRunCollector[5];
+    ulong collectPeriod[5];
 } SUpdatePacket;
 
 typedef struct SAgentStatusPacket
@@ -136,16 +128,8 @@ typedef struct SAgentStatusPacket
     char peerIP[16];
     ushort peerPort;
     bool bConnectedWithServer;
-    bool bRunCpuCollector;
-    ulong cpuPeriod;
-    bool bRunMemCollector;
-    ulong memPeriod;
-    bool bRunNetCollector;
-    ulong netPeriod;
-    bool bRunProcCollector;
-    ulong procPeriod;
-    bool bRunDiskCollector;
-    ulong diskPeriod;
+    bool bRunCollector[5];
+    ulong collectPeriod[5];
     ulong runningTime;
 } SAgentStatusPacket;
 
