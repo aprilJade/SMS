@@ -46,14 +46,27 @@ void UpdateAgentConfigure(SUpdatePacket* pkt)
 {
 	char logBuf[128];
 
+	if (globResource.logger->loggingLevel != pkt->logLevel)
+	{
+		sprintf(logBuf, "change log level to %s", pkt->logLevel == LOG_DEBUG ? "\'debug\'" : "\'default\'");
+		Log(globResource.logger, LOG_INFO, logBuf);
+		globResource.logger->loggingLevel = pkt->logLevel;
+	}
+
 	for (int i = 0; i < COLLECTOR_COUNT; i++)
 	{
-		globResource.collectPeriods[i] = pkt->collectPeriod[i];
+		if (globResource.collectPeriods[i] != pkt->collectPeriod[i])
+		{
+			sprintf(logBuf, "%s: change period from %lu to %lu",
+				names[i], globResource.collectPeriods[i], pkt->collectPeriod[i]);
+			Log(globResource.logger, LOG_INFO, logBuf);
+			globResource.collectPeriods[i] = pkt->collectPeriod[i];
+		}
+
 		if (globResource.collectorSwitch[i] != pkt->bRunCollector[i])
 		{
 			if (pkt->bRunCollector[i])	// before false but now true
 			{
-				// Run cpu collector
 				pthread_create(&globResource.collectors[i], NULL, collectRoutines[i], NULL);
 			}
 			else

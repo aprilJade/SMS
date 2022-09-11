@@ -15,12 +15,12 @@ Logger* NewLogger(char* logPath, int logLevel);
 int Log(const Logger* handle, int logLevel, char* logMsg);
 int GenLogFileFullPath(char* logPath, char* buf);
 
-enum eLoggingLevel
+typedef enum eLoggingLevel
 {
     LOG_FATAL,
     LOG_ERROR,
     LOG_INFO,   // default
     LOG_DEBUG   
-};  
+} eLoggingLevel;  
 
 #endif

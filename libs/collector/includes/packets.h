@@ -120,6 +120,7 @@ typedef struct SUpdatePacket
     char udsPath[108];
     bool bRunCollector[5];
     ulong collectPeriod[5];
+    int logLevel;
 } SUpdatePacket;
 
 typedef struct SAgentStatusPacket

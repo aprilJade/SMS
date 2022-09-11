@@ -1,4 +1,6 @@
 #include "printer.h"
+#include "logger.h"
+
 #include <stdio.h>
 
 void PrintUsage()
@@ -9,6 +11,8 @@ void PrintUsage()
 void PrintPacketContent(SUpdatePacket* pkt)
 {
     printf("client UDS socket path: %s\n", pkt->udsPath);
+    
+    printf("agent log level: %s\n", pkt->logLevel == LOG_DEBUG ? "debug" : "default");
 
     printf("RUN_CPU_COLLECTOR: %s\n", (pkt->bRunCollector[0] ? "true" : "false"));
     if (pkt->bRunCollector[0])

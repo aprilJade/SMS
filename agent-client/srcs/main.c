@@ -13,6 +13,7 @@
 
 #include "printer.h"
 #include "confParser.h"
+#include "logger.h"
 
 // CHECK: modify below path when deploy SMS
 #define UDS_AGENT_PATH "/home/apriljade/repo/SMS/bin/.agent.sock"
@@ -71,6 +72,13 @@ static const char* const periodKeys[] = {
 int CreateUpdatePacket(SHashTable* options, SUpdatePacket* out)
 {
     char* tmp;
+    
+    out->logLevel = LOG_INFO;
+    if ((tmp = GetValueByKey(CONF_KEY_LOG_LEVEL, options)) != NULL)
+    {
+        if (strcmp(tmp, "debug") == 0)
+            out->logLevel = LOG_DEBUG;
+    }
 
     for (int i = 0; i < 5; i++)
     {
