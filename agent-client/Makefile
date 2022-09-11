@@ -1,4 +1,4 @@
-NAME		=	sms
+NAME		=	agent-cli
 INCLUDES	=	-I./includes/ -I../libs/SMSutils/includes \
 				-I../libs/collector/includes -I/usr/include/postgresql/ \
 				-I../libs/hook_module

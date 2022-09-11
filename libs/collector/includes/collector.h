@@ -12,15 +12,6 @@ typedef struct SCData
     int dataSize;
 } SCData;
 
-enum eCollectorID
-{
-    CPU = 'c',
-    MEMORY = 'm',
-    NETWORK = 'n',
-    PROCESS = 'p',
-    DISK = 'd'
-};
-
 SCData* CollectEachCpuInfo(ushort cpuCnt, long timeConversion, char* rdBuf, int collectPeriod, char* agent_id);
 SCData* CollectMemInfo(char* buf, int collectPeriod, char* agent_id);
 SCData* CollectNetInfo(char* buf, int nicCount, int collectPeriod, char* agent_id);

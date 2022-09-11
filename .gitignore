@@ -9,4 +9,4 @@ objs/
 *.sql
 bin/
 printer
-sms
+agent-cli

@@ -40,13 +40,7 @@ static const char* const names[] = {
 	[DISK_COLLECTOR_ID] = "disk"
 };
 
-static void* (*collectRoutines[COLLECTOR_COUNT])(void*) = {
-	[CPU_COLLECTOR_ID] = CpuInfoRoutine,
-	[MEM_COLLECTOR_ID] = MemInfoRoutine,
-	[NET_COLLECTOR_ID] = NetInfoRoutine,
-	[PROC_COLLECTOR_ID] = ProcInfoRoutine,
-	[DISK_COLLECTOR_ID] = DiskInfoRoutine
-};
+extern void* (*collectRoutines[COLLECTOR_COUNT])(void*);
 
 void UpdateAgentConfigure(SUpdatePacket* pkt)
 {

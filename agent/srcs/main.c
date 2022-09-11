@@ -42,7 +42,7 @@ static const char* const periodKeys[COLLECTOR_COUNT] = {
 	[DISK_COLLECTOR_ID] = CONF_KEY_DISK_COLLECTION_PERIOD
 };
 
-static void* (*collectRoutines[COLLECTOR_COUNT])(void*) = {
+void* (*collectRoutines[COLLECTOR_COUNT])(void*) = {
 	[CPU_COLLECTOR_ID] = CpuInfoRoutine,
 	[MEM_COLLECTOR_ID] = MemInfoRoutine,
 	[NET_COLLECTOR_ID] = NetInfoRoutine,
@@ -51,8 +51,6 @@ static void* (*collectRoutines[COLLECTOR_COUNT])(void*) = {
 };
 
 SGlobResource globResource = { 0, };
-
-void WakeupEveryCollector(void);
 
 void HandleSignal(int signo)
 {
