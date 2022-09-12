@@ -71,15 +71,18 @@ typedef struct SBodyp
 typedef struct SBodyd
 {
     uchar name[16];
-    ulong readSuccessCount;
-    ulong readSectorCount;
-    ulong readTime;
-    ulong writeSuccessCount;
-    ulong writeSectorCount;
-    ulong writeTime;
-    uint currentIoCount;
-    ulong doingIoTime;
-    ulong weightedDoingIoTime;
+    float totalSizeGB;
+    float freeSizeGB;
+    float diskUsage;
+    ulong readSuccessCount;     // ...?
+    ulong readSectorCount;      // maybe doesn't need
+    ulong readTime;             // milliseconds
+    ulong writeSuccessCount;    // ...? bytes? kilobytes?
+    ulong writeSectorCount;     // maybe doesn't need
+    ulong writeTime;            // milliseconds
+    uint currentIoCount;        // hmm...
+    ulong doingIoTime;          // umm..?
+    ulong weightedDoingIoTime;  // ???
 } SBodyd;
 
 typedef struct SBodyAvgC
@@ -109,6 +112,15 @@ typedef struct SBodyAvgN
     float sendPacketsPerSec;
     float sendPacketsPerSecAvg;
 } SBodyAvgN;
+
+typedef struct SBodyAvgD
+{
+    uchar name[16];
+    float readPerSec;
+    float writePerSec;
+    float badSectorRatio;
+    float diskUsageAvg;
+} SBodyAvgD;
 
 #pragma pack(pop)
 

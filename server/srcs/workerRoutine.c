@@ -405,8 +405,13 @@ int InsertDiskInfo(void* data, SWorkTools* tools)
             Log(g_logger, LOG_ERROR, sql);
             return -1;
         }
-        hBody++;
+        //hBody++;
     }
+    printf("name: %s\n", hBody->name);
+    printf("total: %.2f GB\n", hBody->totalSizeGB);
+    printf("avail: %.2f GB\n", hBody->freeSizeGB);
+    printf("usage: %.2f %%\n", hBody->diskUsage);
+
     return 0;
 }
 

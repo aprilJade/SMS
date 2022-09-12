@@ -470,7 +470,10 @@ void* DiskInfoRoutine(void* param)
     Log(globResource.logger, LOG_INFO, "Run disk collector: Connected to TCP server");
 
     SCData* collectedData;
-
+    
+    // HACK
+    diskDevCnt = 1;
+    
     while(globResource.turnOff == false && globResource.collectorSwitch[DISK_COLLECTOR_ID] == true)
     {
         if (globResource.bIsConnected == false)

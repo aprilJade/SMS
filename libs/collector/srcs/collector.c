@@ -8,6 +8,7 @@
 #include <dirent.h>
 #include <sys/time.h>
 #include <time.h>
+#include <sys/vfs.h>
 #include "collector.h"
 #include "packets.h"
 
@@ -367,11 +368,14 @@ SCData* CollectDiskInfo(char *buf, int diskDevCnt, int collectPeriod, char* agen
 			buf++;
 		
 		buf++;
-		if (strncmp(buf, "loop", 4) == 0 || strncmp(buf, "ram", 3) == 0)
-		{
-			while(*buf++ != '\n');
+		// HACK!!!
+		if (strncmp(buf, "sdc", 3) != 0)
 			continue;
-		}
+		// if (strncmp(buf, "loop", 4) == 0 || strncmp(buf, "ram", 3) == 0)
+		// {
+		// 	while(*buf++ != '\n');
+		// 	continue;
+		// }
 
 		memset(hBody->name, 0, 16);
 		for (int i = 0; *buf != ' ' && i < 15; i++)
@@ -407,8 +411,14 @@ SCData* CollectDiskInfo(char *buf, int diskDevCnt, int collectPeriod, char* agen
 		hBody->weightedDoingIoTime = atol(buf);
 		while(*buf++ != '\n');
 
-		hBody++;
+		//hBody++;
 	}
+
+	struct statfs fs;
+    statfs("/", &fs);
+    hBody->freeSizeGB = (float)(fs.f_bfree * fs.f_bsize) / 1024.0 / 1024.0 / 1024.0;
+	hBody->totalSizeGB = (float)(fs.f_blocks * fs.f_bsize) / 1024.0 / 1024.0 / 1024.0;
+	hBody->diskUsage = 100 - hBody->freeSizeGB / hBody->totalSizeGB * 100.0;
 	
 	return result;
 }
