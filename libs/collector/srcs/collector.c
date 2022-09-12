@@ -9,6 +9,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <sys/vfs.h>
+#include <fstab.h>
 #include "collector.h"
 #include "packets.h"
 
@@ -325,20 +326,27 @@ SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod, char* agen
 
 SCData* CollectDiskInfo(char *buf, int diskDevCnt, int collectPeriod, char* agentId)
 {
-	int	fd;
-	int readSize = 0;
+	struct statfs fs;
+	struct fstab* fsent;
+	int fsCnt = 0;
 
-	fd = open("/proc/diskstats", O_RDONLY);
-	if (fd == -1)
-		return NULL;
-	readSize = read(fd, buf, BUFFER_SIZE);
-	if (readSize == -1)
-		return NULL;
-	buf[readSize] = 0;
-	close(fd);
+	SBodyd* hBody = (SBodyd*)buf;
+
+	while (fsent = getfsent())
+	{
+		strcpy(hBody->mountPoint, fsent->fs_file);
+		strcpy(hBody->fsType, fsent->fs_vfstype);
+		statfs(fsent->fs_file, &fs);
+		hBody->freeSizeGB = (float)(fs.f_bfree * fs.f_bsize) / 1024.0 / 1024.0 / 1024.0;
+		hBody->totalSizeGB = (float)(fs.f_blocks * fs.f_bsize) / 1024.0 / 1024.0 / 1024.0;
+		hBody->diskUsage = 100 - hBody->freeSizeGB / hBody->totalSizeGB * 100.0;
+		hBody++;
+		fsCnt++;
+	}
+	endfsent();
 
 	SCData* result = (SCData*)malloc(sizeof(SCData));
-	result->dataSize = diskDevCnt * sizeof(SBodyd) + sizeof(SHeader);
+	result->dataSize = fsCnt * sizeof(SBodyd) + sizeof(SHeader);
 	result->data = (uchar*)malloc(result->dataSize);
 	if (result == NULL)
 		return NULL;
@@ -346,79 +354,14 @@ SCData* CollectDiskInfo(char *buf, int diskDevCnt, int collectPeriod, char* agen
 	SHeader* hh = (SHeader*)result->data;
 	hh->signature = SIGNATURE_DISK;
 	hh->collectPeriod = collectPeriod;
-	hh->bodyCount = diskDevCnt;
+	hh->bodyCount = fsCnt;
 	hh->bodySize = sizeof(SBodyd);
 	hh->collectTime = time(NULL);
 	memset(hh->agentId, 0, 16);
 	strncpy(hh->agentId, agentId, 15);
 	hh->agentId[15] = 0;
 
-	SBodyd* hBody;
-	hBody = (SBodyd*)(result->data + sizeof(SHeader));
-
-	while (*buf)
-	{
-		while (*buf == ' ')
-			buf++;
-		while (*buf != ' ')
-			buf++;
-		while (*buf == ' ')
-			buf++;
-		while (*buf != ' ')
-			buf++;
-		
-		buf++;
-		// HACK!!!
-		if (strncmp(buf, "sdc", 3) != 0)
-			continue;
-		// if (strncmp(buf, "loop", 4) == 0 || strncmp(buf, "ram", 3) == 0)
-		// {
-		// 	while(*buf++ != '\n');
-		// 	continue;
-		// }
-
-		memset(hBody->name, 0, 16);
-		for (int i = 0; *buf != ' ' && i < 15; i++)
-			hBody->name[i] = *buf++;
-
-		buf++;
-		hBody->readSuccessCount = atol(buf);
-		while (*buf++ != ' ');
-		while (*buf++ != ' ');
-
-		hBody->readSectorCount = atol(buf);
-		while (*buf++ != ' ');
-
-		hBody->readTime = atol(buf);
-		while (*buf++ != ' ');
-
-		hBody->writeSuccessCount = atol(buf);
-		while (*buf++ != ' ');
-		while (*buf++ != ' ');
-
-		hBody->writeSectorCount = atol(buf);
-		while (*buf++ != ' ');
-		
-		hBody->writeTime = atol(buf);
-		while (*buf++ != ' ');
-
-		hBody->currentIoCount = atoi(buf);
-		while (*buf++ != ' ');
-
-		hBody->doingIoTime = atol(buf);
-		while (*buf++ != ' ');
-
-		hBody->weightedDoingIoTime = atol(buf);
-		while(*buf++ != '\n');
-
-		//hBody++;
-	}
-
-	struct statfs fs;
-    statfs("/", &fs);
-    hBody->freeSizeGB = (float)(fs.f_bfree * fs.f_bsize) / 1024.0 / 1024.0 / 1024.0;
-	hBody->totalSizeGB = (float)(fs.f_blocks * fs.f_bsize) / 1024.0 / 1024.0 / 1024.0;
-	hBody->diskUsage = 100 - hBody->freeSizeGB / hBody->totalSizeGB * 100.0;
+	memcpy(result->data + sizeof(SHeader), buf, result->dataSize - sizeof(SHeader));
 	
 	return result;
 }

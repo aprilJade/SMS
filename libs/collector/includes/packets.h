@@ -70,19 +70,11 @@ typedef struct SBodyp
 
 typedef struct SBodyd
 {
-    uchar name[16];
     float totalSizeGB;
     float freeSizeGB;
     float diskUsage;
-    ulong readSuccessCount;     // ...?
-    ulong readSectorCount;      // maybe doesn't need
-    ulong readTime;             // milliseconds
-    ulong writeSuccessCount;    // ...? bytes? kilobytes?
-    ulong writeSectorCount;     // maybe doesn't need
-    ulong writeTime;            // milliseconds
-    uint currentIoCount;        // hmm...
-    ulong doingIoTime;          // umm..?
-    ulong weightedDoingIoTime;  // ???
+    uchar mountPoint[32];
+    uchar fsType[8];
 } SBodyd;
 
 typedef struct SBodyAvgC

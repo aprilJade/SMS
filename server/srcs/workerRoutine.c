@@ -390,25 +390,26 @@ int InsertDiskInfo(void* data, SWorkTools* tools)
 
     for (int i = 0; i < hHeader->bodyCount; i++)
     {
-        sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', \'%s\', %ld, %ld, %ld, %ld, %ld, %ld, %d, %ld, %ld);",
-            diskInsertSql,
-            hHeader->agentId,
-            ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
-            ts->tm_hour, ts->tm_min, ts->tm_sec,
-            hBody->name,
-            hBody->readSuccessCount, hBody->readSectorCount, hBody->readTime,
-            hBody->writeSuccessCount, hBody->writeSectorCount, hBody->writeTime,
-            hBody->currentIoCount, hBody->doingIoTime, hBody->weightedDoingIoTime);
-        if (Query(tools->dbWrapper, sql) == -1)
-        {
-            sprintf(sql, "%d: Failed to store in DB: Disk", tools->workerId);
-            Log(g_logger, LOG_ERROR, sql);
-            return -1;
-        }
-        // printf("name: %s\n", hBody->name);
-        // printf("total: %.2f GB\n", hBody->totalSizeGB);
-        // printf("avail: %.2f GB\n", hBody->freeSizeGB);
-        // printf("usage: %.2f %%\n", hBody->diskUsage);
+        // sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', \'%s\', %ld, %ld, %ld, %ld, %ld, %ld, %d, %ld, %ld);",
+        //     diskInsertSql,
+        //     hHeader->agentId,
+        //     ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
+        //     ts->tm_hour, ts->tm_min, ts->tm_sec,
+        //     hBody->name,
+        //     hBody->readSuccessCount, hBody->readSectorCount, hBody->readTime,
+        //     hBody->writeSuccessCount, hBody->writeSectorCount, hBody->writeTime,
+        //     hBody->currentIoCount, hBody->doingIoTime, hBody->weightedDoingIoTime);
+        // if (Query(tools->dbWrapper, sql) == -1)
+        // {
+        //     sprintf(sql, "%d: Failed to store in DB: Disk", tools->workerId);
+        //     Log(g_logger, LOG_ERROR, sql);
+        //     return -1;
+        // }
+        printf("mount point: %s\n", hBody->mountPoint);
+        printf("vfstype: %s\n", hBody->fsType);
+        printf("total: %.2f GB\n", hBody->totalSizeGB);
+        printf("avail: %.2f GB\n", hBody->freeSizeGB);
+        printf("usage: %.2f %%\n", hBody->diskUsage);
         hBody++;
     }
 
