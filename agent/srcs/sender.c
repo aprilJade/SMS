@@ -6,8 +6,8 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <assert.h>
-static int g_servSockFd;
 
+static int g_servSockFd;
 extern SGlobResource globResource;
 
 static void RecoverTcpConnection(int signo)
@@ -30,7 +30,7 @@ static void RecoverTcpConnection(int signo)
         if ((g_servSockFd = ConnectToServer(globResource.peerIP, globResource.peerPort)) != -1)
             break;
         connFailCount++;
-        sprintf(logmsgBuf, "Failed to connect %s:%d (%d)", globResource.peerIP, globResource.peerPort, connFailCount);
+        sprintf(logmsgBuf, "Failed to connect %s:%d...%d", globResource.peerIP, globResource.peerPort, connFailCount);
         Log(globResource.logger, LOG_ERROR, logmsgBuf);
         sleep(RECONNECT_PERIOD);
     }
@@ -91,7 +91,7 @@ void* SendRoutine(void* param)
 
         if ((sendBytes = send(g_servSockFd, collectedData->data, collectedData->dataSize, 0)) == -1)
             continue;
-        
+
         sprintf(logmsgBuf, "Send %d bytes to %s:%d ", sendBytes, globResource.peerIP, globResource.peerPort);
         Log(globResource.logger, LOG_DEBUG, logmsgBuf);
 

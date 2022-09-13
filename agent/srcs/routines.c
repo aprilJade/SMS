@@ -52,15 +52,20 @@ void* CpuInfoRoutine(void* param)
             continue;
         }
 
-        pthread_mutex_lock(&globResource.queue->lock);
-        Push(collectedData, globResource.queue);
-        pthread_mutex_unlock(&globResource.queue->lock);
-
         avgData = CalcCpuUtilizationAvg(collectedData->data, cpuCnt, maxCount, toMs, *collectPeriod);
-
-        pthread_mutex_lock(&globResource.queue->lock);
-        Push(avgData, globResource.queue);
-        pthread_mutex_unlock(&globResource.queue->lock);
+        
+        if (globResource.bIsConnected)
+        {
+            pthread_mutex_lock(&globResource.queue->lock);
+            Push(collectedData, globResource.queue);
+            Push(avgData, globResource.queue);
+            pthread_mutex_unlock(&globResource.queue->lock);
+        }
+        else
+        {
+            DestorySCData(&collectedData);
+            DestorySCData(&avgData);
+        }
         
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
@@ -114,16 +119,20 @@ void* MemInfoRoutine(void* param)
             continue;
         }
         
-        
-        pthread_mutex_lock(&globResource.queue->lock);
-        Push(collectedData, globResource.queue);
-        pthread_mutex_unlock(&globResource.queue->lock);
-
         avgData = CalcMemAvg(collectedData->data, maxCount);
-        
-        pthread_mutex_lock(&globResource.queue->lock);
-        Push(avgData, globResource.queue);
-        pthread_mutex_unlock(&globResource.queue->lock);
+
+        if (globResource.bIsConnected)
+        {
+            pthread_mutex_lock(&globResource.queue->lock);
+            Push(collectedData, globResource.queue);
+            Push(avgData, globResource.queue);
+            pthread_mutex_unlock(&globResource.queue->lock);
+        }
+        else
+        {
+            DestorySCData(&collectedData);
+            DestorySCData(&avgData);
+        }
 
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
@@ -206,16 +215,21 @@ void* NetInfoRoutine(void* param)
             continue;
         }
 
-        pthread_mutex_lock(&globResource.queue->lock);
-        Push(collectedData, globResource.queue);
-        pthread_mutex_unlock(&globResource.queue->lock);
-        
         avgData = CalcNetThroughputAvg(collectedData->data, nicCount, maxCount, *collectPeriod);
 
-        pthread_mutex_lock(&globResource.queue->lock);
-        Push(avgData, globResource.queue);
-        pthread_mutex_unlock(&globResource.queue->lock);
-        
+        if (globResource.bIsConnected)
+        {
+            pthread_mutex_lock(&globResource.queue->lock);
+            Push(collectedData, globResource.queue);
+            Push(avgData, globResource.queue);
+            pthread_mutex_unlock(&globResource.queue->lock);
+        }
+        else
+        {
+            DestorySCData(&collectedData);
+            DestorySCData(&avgData);
+        }        
+
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
@@ -260,16 +274,22 @@ void* ProcInfoRoutine(void* param)
             continue;
         }
 
-        pthread_mutex_lock(&globResource.queue->lock);
-        Push(collectedData, globResource.queue);
-        pthread_mutex_unlock(&globResource.queue->lock);
+        if (globResource.bIsConnected)
+        {
+            pthread_mutex_lock(&globResource.queue->lock);
+            Push(collectedData, globResource.queue);
+            pthread_mutex_unlock(&globResource.queue->lock);
+        }
+        else
+        {
+            DestorySCData(&collectedData);
+        }
 
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 
-        uchar* pData = collectedData->data;
-        SHeader* hHeader = (SHeader*)pData;
+        SHeader* hHeader = (SHeader*)(collectedData->data);
 
         sprintf(logmsgBuf, "process: collected in %ldus, count %d ", elapseTime, hHeader->bodyCount);
         Log(globResource.logger, LOG_DEBUG, logmsgBuf);
@@ -310,9 +330,16 @@ void* DiskInfoRoutine(void* param)
             continue;
         }
 
-        pthread_mutex_lock(&globResource.queue->lock);
-        Push(collectedData, globResource.queue);
-        pthread_mutex_unlock(&globResource.queue->lock);
+        if (globResource.bIsConnected)
+        {
+            pthread_mutex_lock(&globResource.queue->lock);
+            Push(collectedData, globResource.queue);
+            pthread_mutex_unlock(&globResource.queue->lock);
+        }
+        else
+        {
+            DestorySCData(&collectedData);
+        }
 
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
