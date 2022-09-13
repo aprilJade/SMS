@@ -124,6 +124,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/bin
 
 
 # Todo List
+- [ ] Collector의 delta와 avg를 계산하기 위한 함수들이 내부 버퍼를 사용하므로 Thread-safe하지 않음. 수정할 것.
 - [ ] 공통
   - [ ] 고도화
     - [ ] agent와 server간의 handshake 구현 (TCP handshake가 아니라 application level의 handshake를 뜻함)
