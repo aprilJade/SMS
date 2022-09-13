@@ -15,6 +15,8 @@
 #include "pgWrapper.h"
 #include "confParser.h"
 #include "udpPacket.h"
+#include "logger.h"
+#include "Queue.h"
 
 #define CONNECTION_COUNT 1024
 #define MAX_WORKER_COUNT 16
@@ -35,7 +37,6 @@ static const char* const strSignal[] = {
 
 bool g_turnOff = false;
 const Logger* g_logger;
-int udpSockFd;
 pthread_t udpTid;
 pthread_t* workerId;
 Queue* g_queue;
@@ -96,74 +97,7 @@ int OpenSocket(short port)
     return servFd;
 }
 
-static ulong ConvertToBytesFromLargeUnit(char* str)
-{
-    ulong result = atol(str);
-    int i = 0;
-    while(str[i] >= '0' && str[i] <= '9')
-        i++;
-    
-    if (i == strlen(str))
-        return result;
-    switch (str[i])
-    {
-    case 'k':
-        result *= 1024;
-        break;
-    case 'M':
-        result *= 1024 * 1024;
-        break;
-    case 'G':
-        result *= 1024 * 1024 * 1024;
-        break;
-    }
-    return result;
-}
-
-static SThreshold GetThresholds(SHashTable* options)
-{
-    char* value;
-    float fTmp;
-    uint uTmp;
-    SThreshold ret = { 100, 100, 100, 3000, 3000 };
-
-    if ((value = GetValueByKey(CONF_KEY_CPU_UTILIAZATION_THRESHOLD, options)) != NULL)
-    {
-        fTmp = atof(value);
-        if (fTmp >= 0 && fTmp <= 100.0)
-            ret.cpuUtilization = fTmp;    
-    }
-
-    if ((value = GetValueByKey(CONF_KEY_MEM_USAGE_THRESHOLD, options)) != NULL)
-    {  
-        fTmp = atof(value);
-        if (fTmp >= 0 && fTmp <= 100.0)
-            ret.memUsage = fTmp;   
-    }
-
-    if ((value = GetValueByKey(CONF_KEY_SWAP_USAGE_THRESHOLD, options)) != NULL)
-    {  
-        fTmp = atof(value);
-        if (fTmp >= 0 && fTmp <= 100.0)
-            ret.swapUsage = fTmp;   
-    }
-
-    if ((value = GetValueByKey(CONF_KEY_SEND_BYTES_THRESHOLD, options)) != NULL)
-    {  
-        if (atoi(value) >= 0)
-            ret.sendBytes = ConvertToBytesFromLargeUnit(value);   
-    }
-
-    if ((value = GetValueByKey(CONF_KEY_RECV_BYTES_THRESHOLD, options)) != NULL)
-    {  
-        if (atoi(value) >= 0)
-            ret.recvBytes = ConvertToBytesFromLargeUnit(value);   
-    }
-
-    return ret;
-}
-
-void CreateWorker(int workerCount, SPgWrapper* db, SHashTable* options)
+static void CreateWorker(int workerCount, SPgWrapper* db, SHashTable* options)
 {
     SWorkerParam* param;
     SThreshold threshold = GetThresholds(options);
@@ -197,108 +131,6 @@ Logger* GenLogger(SHashTable* options)
 	}
 	logger = NewLogger(logPath, LOG_DEBUG);
 	return logger;
-}
-
-void* UdpRoutine(void* param)
-{
-    SPgWrapper* db = (SPgWrapper*)param;
-
-    udpSockFd = socket(PF_INET, SOCK_DGRAM, 0);
-    if (udpSockFd < 0)
-        return 0;
-    struct sockaddr_in udpAddr;
-    memset(&udpAddr, 0, sizeof(udpAddr));
-
-    udpAddr.sin_family = AF_INET;
-    udpAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    udpAddr.sin_port = htons(4343);
-
-    if (bind(udpSockFd, (struct sockaddr*)&udpAddr, sizeof(udpAddr)) < 0)
-        return 0;
-    
-    int readSize;
-    char buf[1024];
-    char logMsg[256];
-    struct sockaddr_in udpClientAddr;
-    socklen_t len;
-    SPrefixPkt* prevPkt;
-    SPostfixPkt* postPkt;
-
-    sprintf(logMsg, "Start UDP receiver");
-    Log(g_logger, LOG_INFO, logMsg);
-    char* strInsert = "INSERT INTO udp_informations (agent_id, measurement_time, process_name, pid, max_send_bytes, send_bytes_avg, max_elapse_time, elapse_time_avg) VALUES";
-    char sql[512];
-    while (1)
-    {
-        if (g_turnOff)
-            break;
-        if (!db->connected)
-        {
-            sprintf(logMsg, "Wait DB connection...");
-            Log(g_logger, LOG_INFO, logMsg);
-            pthread_mutex_lock(&db->lock);
-            pthread_cond_wait(&db->cond, &db->lock);
-            pthread_mutex_unlock(&db->lock);
-            sprintf(logMsg, "PostgreSQL is connected");
-            Log(g_logger, LOG_INFO, logMsg);
-        }
-
-        if ((readSize = recvfrom(udpSockFd, buf, sizeof(SPrefixPkt), 0, (struct sockaddr*)&udpClientAddr, &len)) < 0)
-        {
-            sprintf(logMsg, "Fail to receive UDP packet");
-            Log(g_logger, LOG_ERROR, logMsg);
-            continue;
-        }
-        buf[readSize];
-
-        if (readSize != sizeof(SPrefixPkt))
-        {
-            // TODO: handle packet loss..
-            continue;
-        }
-        
-        prevPkt = (SPrefixPkt*)buf;
-        // TODO: handle prevPkt...
-
-        if ((readSize = recvfrom(udpSockFd, buf, sizeof(SPostfixPkt), 0, (struct sockaddr*)&udpClientAddr, &len)) < 0)
-        {
-            sprintf(logMsg, "Fail to receive UDP packet");
-            Log(g_logger, LOG_ERROR, logMsg);  
-            continue;
-        }
-        buf[readSize];
-
-        if (readSize != sizeof(SPostfixPkt))
-        {
-            // TODO: handle packet loss...
-            continue;
-        }
-
-        postPkt = (SPostfixPkt*)buf;
-        struct tm* ts;
-        ts = localtime(&postPkt->measurementTime);
-        sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', \'%s\', %u, %u, %f, %lu, %f);",
-            strInsert,
-            postPkt->agentId,
-            ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
-            ts->tm_hour, ts->tm_min, ts->tm_sec,
-            postPkt->processName,
-            postPkt->pid,
-            postPkt->maxSendBytes,
-            postPkt->sendBytesAvg,
-            postPkt->maxElapseTime,
-            postPkt->elapseTimeAvg);
-
-        if (Query(db, sql) == -1)
-        {
-            sprintf(sql, "Failed to store in DB: UDP");
-            Log(g_logger, LOG_ERROR, sql);
-            continue;
-        }
-    }
-
-    sprintf(logMsg, "End UDP receiver");
-    Log(g_logger, LOG_INFO, logMsg);
 }
 
 int main(int argc, char** argv)
@@ -366,7 +198,7 @@ int main(int argc, char** argv)
     Log(g_logger, LOG_INFO, logMsg);
     
     SPgWrapper* db = NewPgWrapper("dbname = postgres port = 5442");
-    pthread_create(&udpTid, NULL, UdpRoutine, db);
+    pthread_create(&udpTid, NULL, UdpReceiveRoutine, db);
     
     int servFd, clientFd;
     struct sockaddr_in clientAddr;
@@ -415,7 +247,7 @@ int main(int argc, char** argv)
         param->host = inet_ntoa(clientAddr.sin_addr);
         param->port = ntohs(clientAddr.sin_port);
 
-        if (pthread_create(&tid, NULL, ReceiveRoutine, param) == -1)
+        if (pthread_create(&tid, NULL, TcpReceiveRoutine, param) == -1)
         {
             Log(g_logger, LOG_FATAL, "Failed to create receiver");
             close(clientFd);

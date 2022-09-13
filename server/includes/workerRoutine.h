@@ -1,19 +1,6 @@
 #ifndef WORKER_ROUTINE_H
 #define WORKER_ROUTINE_H
-#include "logger.h"
-#include "packets.h"
-#include "Queue.h"
-#include "pgWrapper.h"
-#include "confParser.h"
-
-typedef struct SThreshold
-{
-    float cpuUtilization;
-    float memUsage;
-    float swapUsage;
-    ulong sendBytes;
-    ulong recvBytes;
-} SThreshold;
+#include "workerUtils.h"
 
 typedef struct SWorkerParam
 {
@@ -22,12 +9,6 @@ typedef struct SWorkerParam
     int workerId;
 } SWorkerParam;
 
-typedef struct SWorkTools
-{
-    SPgWrapper* dbWrapper;
-    SThreshold threshold;
-    int workerId;
-} SWorkTools;
 
 void* WorkerRoutine(void* param);
 

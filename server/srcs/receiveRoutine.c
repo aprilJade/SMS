@@ -1,7 +1,15 @@
 #include "receiveRoutine.h"
+#include "pgWrapper.h"
+#include "udpPacket.h"
+#include "packets.h"
+#include "logger.h"
+#include "Queue.h"
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/wait.h>
+#include <arpa/inet.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <sys/socket.h>
@@ -9,6 +17,7 @@
 
 #define RECV_BUFFER_SIZE 1024 * 512
 
+int udpSockFd;
 extern const Logger* g_logger;
 extern Queue* g_queue;
 extern bool g_turnOff;
@@ -36,7 +45,7 @@ int IsValidSignature(int signature)
     return 0;
 }
 
-void* ReceiveRoutine(void* param)
+void* TcpReceiveRoutine(void* param)
 {
     SReceiveParam* pParam = (SReceiveParam*)param;
     int readSize;
@@ -123,4 +132,106 @@ void* ReceiveRoutine(void* param)
     pthread_mutex_lock(&g_clientCntLock);
     g_clientCnt--;
     pthread_mutex_unlock(&g_clientCntLock);
+}
+
+void* UdpReceiveRoutine(void* param)
+{
+    SPgWrapper* db = (SPgWrapper*)param;
+
+    udpSockFd = socket(PF_INET, SOCK_DGRAM, 0);
+    if (udpSockFd < 0)
+        return 0;
+    struct sockaddr_in udpAddr;
+    memset(&udpAddr, 0, sizeof(udpAddr));
+
+    udpAddr.sin_family = AF_INET;
+    udpAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    udpAddr.sin_port = htons(4343);
+
+    if (bind(udpSockFd, (struct sockaddr*)&udpAddr, sizeof(udpAddr)) < 0)
+        return 0;
+    
+    int readSize;
+    char buf[1024];
+    char logMsg[256];
+    struct sockaddr_in udpClientAddr;
+    socklen_t len;
+    SPrefixPkt* prevPkt;
+    SPostfixPkt* postPkt;
+
+    sprintf(logMsg, "Start UDP receiver");
+    Log(g_logger, LOG_INFO, logMsg);
+    char* strInsert = "INSERT INTO udp_informations (agent_id, measurement_time, process_name, pid, max_send_bytes, send_bytes_avg, max_elapse_time, elapse_time_avg) VALUES";
+    char sql[512];
+    while (1)
+    {
+        if (g_turnOff)
+            break;
+        if (!db->connected)
+        {
+            sprintf(logMsg, "Wait DB connection...");
+            Log(g_logger, LOG_INFO, logMsg);
+            pthread_mutex_lock(&db->lock);
+            pthread_cond_wait(&db->cond, &db->lock);
+            pthread_mutex_unlock(&db->lock);
+            sprintf(logMsg, "PostgreSQL is connected");
+            Log(g_logger, LOG_INFO, logMsg);
+        }
+
+        if ((readSize = recvfrom(udpSockFd, buf, sizeof(SPrefixPkt), 0, (struct sockaddr*)&udpClientAddr, &len)) < 0)
+        {
+            sprintf(logMsg, "Fail to receive UDP packet");
+            Log(g_logger, LOG_ERROR, logMsg);
+            continue;
+        }
+        buf[readSize];
+
+        if (readSize != sizeof(SPrefixPkt))
+        {
+            // TODO: handle packet loss..
+            continue;
+        }
+        
+        prevPkt = (SPrefixPkt*)buf;
+        // TODO: handle prevPkt...
+
+        if ((readSize = recvfrom(udpSockFd, buf, sizeof(SPostfixPkt), 0, (struct sockaddr*)&udpClientAddr, &len)) < 0)
+        {
+            sprintf(logMsg, "Fail to receive UDP packet");
+            Log(g_logger, LOG_ERROR, logMsg);  
+            continue;
+        }
+        buf[readSize];
+
+        if (readSize != sizeof(SPostfixPkt))
+        {
+            // TODO: handle packet loss...
+            continue;
+        }
+
+        postPkt = (SPostfixPkt*)buf;
+        struct tm* ts;
+        ts = localtime(&postPkt->measurementTime);
+        sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', \'%s\', %u, %u, %f, %lu, %f);",
+            strInsert,
+            postPkt->agentId,
+            ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
+            ts->tm_hour, ts->tm_min, ts->tm_sec,
+            postPkt->processName,
+            postPkt->pid,
+            postPkt->maxSendBytes,
+            postPkt->sendBytesAvg,
+            postPkt->maxElapseTime,
+            postPkt->elapseTimeAvg);
+
+        if (Query(db, sql) == -1)
+        {
+            sprintf(sql, "Failed to store in DB: UDP");
+            Log(g_logger, LOG_ERROR, sql);
+            continue;
+        }
+    }
+
+    sprintf(logMsg, "End UDP receiver");
+    Log(g_logger, LOG_INFO, logMsg);
 }
