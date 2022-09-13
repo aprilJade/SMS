@@ -6,8 +6,6 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <assert.h>
-#include <sys/socket.h>
-#include <signal.h>
 #include <stdbool.h>
 #include "globalResource.h"
 

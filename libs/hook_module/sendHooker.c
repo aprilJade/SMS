@@ -39,11 +39,6 @@ static ulong sendBytesAvg[TAGET_SECONDS];
 static int sendBytesCnt[TAGET_SECONDS];
 static ssize_t sendBytes;
 
-static void InitializeUdpPacket(struct SPrefixPkt* prevPkt, struct SPostfixPkt* postPkt)
-{
-    
-}
-
 __attribute__((constructor))
 static void InitializeHookingModule()
 {

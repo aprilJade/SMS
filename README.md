@@ -124,13 +124,6 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/bin
 
 
 # Todo List
-- [x] ~임계치 설정하기~
-- [x] ~런타임에 설정 값 변경기능 추가~
-  - [x] ~수집 스레드 ON/OFF~
-  - [x] ~수집 주기 변경~
-  - [x] ~로그 레벨 변경~
-- [x] ~agent~
-  - [x] ~델타값과 평균값이 저장된 DB를 조회해보았을 때 최초에 송신하는 값은 음수임 (처리할 것...)~
 - [ ] 공통
   - [ ] 고도화
     - [ ] agent와 server간의 handshake 구현 (TCP handshake가 아니라 application level의 handshake를 뜻함)
@@ -205,7 +198,12 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/bin
           - [x] ~Abort~
           - [x] ~Segfault~
           - [x] ~Bus Error~
-  
+- [x] ~임계치 설정하기~
+- [x] ~런타임에 설정 값 변경기능 추가~
+  - [x] ~수집 스레드 ON/OFF~
+  - [x] ~수집 주기 변경~
+  - [x] ~로그 레벨 변경~
+- [x] ~델타값과 평균값이 저장된 DB를 조회해보았을 때 최초에 송신하는 값은 음수임 (처리할 것...)~
   
 - [x] ~Server~
   - [x] ~간단한 테스팅을 위한 TCP 서버 구현~
