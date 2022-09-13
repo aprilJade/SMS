@@ -95,7 +95,7 @@ void CreateStatusPacket(SAgentStatusPacket* pkt)
 	pkt->bConnectedWithServer = globResource.bIsConnected;
 }
 
-void ManageAgentConfiguration(void)
+void ManageAgentRoutine(void)
 {
 	int fd = open(UDS_SOCKET_PATH, O_CREAT | O_RDWR, 0777);
 	if (fd == -1)

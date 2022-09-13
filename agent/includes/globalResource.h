@@ -4,7 +4,7 @@
 #include "confParser.h"
 #include "routines.h"
 #include "collector.h"
-#include "confUpdater.h"
+#include "agentManager.h"
 
 #define COLLECTOR_COUNT 5
 

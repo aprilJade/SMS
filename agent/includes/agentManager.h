@@ -13,6 +13,6 @@ typedef enum e_UdsError
 	UDS_UNDEFINED_PACKET_ERROR
 } e_UdsError;
 
-void ManageAgentConfiguration(void);
+void ManageAgentRoutine(void);
 
 #endif

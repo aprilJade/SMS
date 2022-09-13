@@ -208,7 +208,7 @@ int main(int argc, char** argv)
 	}
 	
 	RunCollectors();
-	ManageAgentConfiguration();
+	ManageAgentRoutine();
 		
 	exit(EXIT_SUCCESS);
 }
