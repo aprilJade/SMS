@@ -1,5 +1,4 @@
 #include "globalResource.h"
-
 #include <stdio.h>
 #include <sys/socket.h>
 #include <fcntl.h>
@@ -8,9 +7,18 @@
 #include <arpa/inet.h>
 #include <time.h>
 
+static const char* const names[] = {
+	[CPU_COLLECTOR_ID] = "CPU",
+	[MEM_COLLECTOR_ID] = "memory",
+	[NET_COLLECTOR_ID] = "network",
+	[PROC_COLLECTOR_ID] = "process",
+	[DISK_COLLECTOR_ID] = "disk"
+};
+
+extern void* (*collectRoutines[COLLECTOR_COUNT])(void*);
 extern SGlobResource globResource;
 
-e_UdsError ResponseToClientUDS(const char* path, char* data, size_t dataSize)
+static e_UdsError ResponseToClientUDS(const char* path, char* data, size_t dataSize)
 {
 	int uds = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (uds == -1)
@@ -32,17 +40,8 @@ e_UdsError ResponseToClientUDS(const char* path, char* data, size_t dataSize)
 	return UDS_OK;
 }
 
-static const char* const names[] = {
-	[CPU_COLLECTOR_ID] = "CPU",
-	[MEM_COLLECTOR_ID] = "memory",
-	[NET_COLLECTOR_ID] = "network",
-	[PROC_COLLECTOR_ID] = "process",
-	[DISK_COLLECTOR_ID] = "disk"
-};
 
-extern void* (*collectRoutines[COLLECTOR_COUNT])(void*);
-
-void UpdateAgentConfigure(SUpdatePacket* pkt)
+static void UpdateAgentConfigure(SUpdatePacket* pkt)
 {
 	char logBuf[128];
 
@@ -81,7 +80,7 @@ void UpdateAgentConfigure(SUpdatePacket* pkt)
 	}
 }
 
-void CreateStatusPacket(SAgentStatusPacket* pkt)
+static void CreateStatusPacket(SAgentStatusPacket* pkt)
 {
 	pkt->pid = getpid();
 	strcpy(pkt->peerIP, globResource.peerIP);

@@ -6,8 +6,6 @@
 #include <sys/time.h>
 #include <string.h>
 #include <errno.h>
-#include <limits.h>
-#include <stdbool.h>
 #include "globalResource.h"
 #include "sender.h"
 
