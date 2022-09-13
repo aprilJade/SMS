@@ -10,7 +10,6 @@
 #include <signal.h>
 #include <stdbool.h>
 #include "globalResource.h"
-#include "avgCalculator.h"
 
 #define RECONNECT_PERIOD 5    // seconds
 #define RECONNECT_MAX_TRY 100
