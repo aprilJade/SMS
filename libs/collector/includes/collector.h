@@ -24,7 +24,7 @@ SCData* CollectEachCpuInfo(ushort cpuCnt, long timeConversion, char* rdBuf, int 
 SCData* CollectMemInfo(char* buf, int collectPeriod, char* agent_id);
 SCData* CollectNetInfo(char* buf, int nicCount, int collectPeriod, char* agent_id);
 SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod, char* agent_id);
-SCData* CollectDiskInfo(char *buf, int diskDevCnt, int collectPeriod, char* agent_id);
+SCData* CollectDiskInfo(char *buf, int collectPeriod, char* agent_id);
 SCData* CalcCpuUtilizationAvg(uchar* collectedData, int cpuCnt, int maxCount, float toMs, int collectPeriod);
 SCData* CalcMemAvg(uchar* collectedData, int maxCount);
 SCData* CalcNetThroughputAvg(uchar* collectedData, int nicCount, int maxCount, int collectPeriod);

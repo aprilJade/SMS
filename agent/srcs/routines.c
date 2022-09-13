@@ -403,39 +403,6 @@ void* ProcInfoRoutine(void* param)
     Log(globResource.logger, LOG_INFO, "process: terminate collector");
 }
 
-int GetDiskDeviceCount(char* buf)
-{
-    int fd = open("/proc/diskstats", O_RDONLY);
-    if (fd == -1)
-        return -1;
-    int readSize = read(fd, buf, BUFFER_SIZE);
-    if (readSize == -1)
-        return -1;
-    close(fd);
-	int result = 0;
-	while (*buf)
-	{
-		while (*buf == ' ')
-			buf++;
-		while (*buf != ' ')
-			buf++;
-		while (*buf == ' ')
-			buf++;
-		while (*buf != ' ')
-			buf++;
-		
-		buf++;
-		if (strncmp(buf, "loop", 4) == 0 || strncmp(buf, "ram", 3) == 0)
-		{
-			while(*buf++ != '\n');
-			continue;
-		}
-		result++;
-		while(*buf++ != '\n');
-	}
-	return result;
-}
-
 void* DiskInfoRoutine(void* param)
 {
     assert(param == NULL);
@@ -444,7 +411,6 @@ void* DiskInfoRoutine(void* param)
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
     char logmsgBuf[128];
-    int diskDevCnt = GetDiskDeviceCount(buf);
     ulong* collectPeriod = &globResource.collectPeriods[DISK_COLLECTOR_ID];
     
     sprintf(logmsgBuf, "Ready disk information collection routine in %lu ms cycle", *collectPeriod);
@@ -470,9 +436,6 @@ void* DiskInfoRoutine(void* param)
 
     SCData* collectedData;
     
-    // HACK
-    diskDevCnt = 1;
-    
     while(globResource.turnOff == false && globResource.collectorSwitch[DISK_COLLECTOR_ID] == true)
     {
         if (globResource.bIsConnected == false)
@@ -486,7 +449,7 @@ void* DiskInfoRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
-        if ((collectedData = CollectDiskInfo(buf, diskDevCnt, *collectPeriod, globResource.agentID)) == NULL)
+        if ((collectedData = CollectDiskInfo(buf, *collectPeriod, globResource.agentID)) == NULL)
         {
             sprintf(logmsgBuf, "disk: failed to collect");
             Log(globResource.logger, LOG_ERROR, logmsgBuf);

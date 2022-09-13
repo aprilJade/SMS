@@ -332,7 +332,7 @@ SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod, char* agen
 }
 
 
-SCData* CollectDiskInfo(char *buf, int diskDevCnt, int collectPeriod, char* agentId)
+SCData* CollectDiskInfo(char *buf, int collectPeriod, char* agentId)
 {
 	struct statfs fs;
 	struct fstab* fsent;
