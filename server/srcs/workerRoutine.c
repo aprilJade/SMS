@@ -75,6 +75,8 @@ void* WorkerRoutine(void* param)
                 pthread_mutex_lock(&g_clientCntLock);
                 pthread_cond_wait(&g_clientCntCond, &g_clientCntLock);
                 pthread_mutex_unlock(&g_clientCntLock);
+                if (g_turnOff)
+                    break;
                 sprintf(logMsg, "%d Wakeup: New client connected", pParam->workerId);
                 Log(g_logger, LOG_INFO, logMsg);
             }
