@@ -365,7 +365,7 @@ int main(int argc, char** argv)
     sprintf(logMsg, "Server loaded: %d", getpid());
     Log(g_logger, LOG_INFO, logMsg);
     
-    SPgWrapper* db = NewPgWrapper("dbname = postgres");
+    SPgWrapper* db = NewPgWrapper("dbname = postgres port = 5442");
     pthread_create(&udpTid, NULL, UdpRoutine, db);
     
     int servFd, clientFd;

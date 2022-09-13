@@ -19,21 +19,6 @@ extern SGlobResource globResource;
 
 static int g_servSockFd;
 
-void GoToSleep()
-{
-    pthread_mutex_lock(&globResource.tcpLock);
-    pthread_cond_wait(&globResource.tcpCond, &globResource.tcpLock);
-    pthread_mutex_unlock(&globResource.tcpLock);
-}
-
-void WakeupEveryCollector()
-{
-    Log(globResource.logger, LOG_DEBUG, "Wakeup every collector");
-    pthread_mutex_lock(&globResource.tcpLock);
-    pthread_cond_broadcast(&globResource.tcpCond);
-    pthread_mutex_unlock(&globResource.tcpLock);
-}
-
 void* CpuInfoRoutine(void* param)
 {
     assert(param == NULL);
@@ -54,38 +39,13 @@ void* CpuInfoRoutine(void* param)
     avgData = CalcCpuUtilizationAvg(collectedData->data, cpuCnt, maxCount, toMs, *collectPeriod);
     DestorySCData(&collectedData);
     DestorySCData(&avgData);
+    usleep(*collectPeriod * 1000);
 
     sprintf(logmsgBuf, "Ready CPU information collection routine in %lu ms cycle", *collectPeriod);
     Log(globResource.logger, LOG_INFO, logmsgBuf);
     
-    if (globResource.bIsConnected == false)
-    {
-        Log(globResource.logger, LOG_INFO, "CPU: wait TCP connection");
-        GoToSleep();
-        if (globResource.collectorSwitch[CPU_COLLECTOR_ID] == false)
-        {
-            Log(globResource.logger, LOG_INFO, "CPU: terminate collector");
-            return NULL;
-        }
-    }
-    if (globResource.turnOff == true)
-    {
-        sprintf(logmsgBuf, "CPU: terminate collector");
-        Log(globResource.logger, LOG_INFO, logmsgBuf);
-    }
-
-    Log(globResource.logger, LOG_INFO, "Run CPU collector: Connected to TCP server");
-
     while (globResource.turnOff == false && globResource.collectorSwitch[CPU_COLLECTOR_ID] == true)
     {
-        if (globResource.bIsConnected == false)
-        {
-            Log(globResource.logger, LOG_INFO, "CPU: wait TCP connection");
-            GoToSleep();
-            if (globResource.collectorSwitch[CPU_COLLECTOR_ID] == true)
-                Log(globResource.logger, LOG_INFO, "CPU: TCP connection is recovered");
-            continue;
-        }
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
         
@@ -133,45 +93,22 @@ void* MemInfoRoutine(void* param)
     SCData* collectedData;
     ulong* collectPeriod = &globResource.collectPeriods[MEM_COLLECTOR_ID];
     SCData* avgData;
-
     
     sprintf(logmsgBuf, "Ready memory information collection routine in %lu ms cycle", *collectPeriod);
     Log(globResource.logger, LOG_INFO, logmsgBuf);
     
-    if (globResource.bIsConnected == false)
-    {
-        Log(globResource.logger, LOG_INFO, "memory: wait TCP connection");
-        GoToSleep();
-        if (globResource.collectorSwitch[MEM_COLLECTOR_ID] == false)
-        {
-            Log(globResource.logger, LOG_INFO, "memory: terminate collector");
-            return NULL;
-        }
-    }
-
-    if (globResource.turnOff == true)
-    {
-        sprintf(logmsgBuf, "memory: terminate collector");
-        Log(globResource.logger, LOG_INFO, logmsgBuf);
-    }
-    Log(globResource.logger, LOG_INFO, "Run memory collector: Connected to TCP server");
-
     int maxCount = (int)(AVG_TARGET_TIME_AS_MS / (float)*collectPeriod);
     
-    SBodym* hBody;
+    
+    collectedData = CollectMemInfo(buf, *collectPeriod, globResource.agentID);
+    avgData = CalcMemAvg(collectedData->data, maxCount);
+    DestorySCData(&collectedData);
+    DestorySCData(&avgData);
+    usleep(*collectPeriod * 1000);
 
     while(globResource.turnOff == false && globResource.collectorSwitch[MEM_COLLECTOR_ID] == true)
     {
-        if (globResource.bIsConnected == false)
-        {
-            Log(globResource.logger, LOG_INFO, "memory: wait TCP connection");
-            GoToSleep();
-            if (globResource.collectorSwitch[MEM_COLLECTOR_ID] == true)
-                Log(globResource.logger, LOG_INFO, "memory: TCP connection is recovered");
-            continue;
-        }
-
-        gettimeofday(&timeVal, NULL);
+                gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
         if ((collectedData = CollectMemInfo(buf, *collectPeriod, globResource.agentID)) == NULL)
@@ -256,40 +193,13 @@ void* NetInfoRoutine(void* param)
     avgData = CalcNetThroughputAvg(collectedData->data, nicCount, maxCount, *collectPeriod);
     DestorySCData(&collectedData);
     DestorySCData(&avgData);
-
+    usleep(*collectPeriod * 1000);
+    
     sprintf(logmsgBuf, "Ready network information collection routine in %lu ms cycle", *collectPeriod);
     Log(globResource.logger, LOG_INFO, logmsgBuf);
-    
-    if (globResource.bIsConnected == false)
-    {
-        Log(globResource.logger, LOG_INFO, "network: wait TCP connection");
-        GoToSleep();
-        if (globResource.collectorSwitch[NET_COLLECTOR_ID] == false)
-        {
-            Log(globResource.logger, LOG_INFO, "network: terminate collector");
-            return NULL;
-        }
-    }
-
-    if (globResource.turnOff == true)
-    {
-        sprintf(logmsgBuf, "network: terminate collector");
-        Log(globResource.logger, LOG_INFO, logmsgBuf);
-    }
-
-    Log(globResource.logger, LOG_INFO, "Run network collector: Connected to TCP server");
-
+   
     while(globResource.turnOff == false && globResource.collectorSwitch[NET_COLLECTOR_ID] == true)
     {
-        
-        if (globResource.bIsConnected == false)
-        {
-            Log(globResource.logger, LOG_INFO, "network: wait TCP connection");
-            GoToSleep();
-            if (globResource.collectorSwitch[NET_COLLECTOR_ID] == true)
-                Log(globResource.logger, LOG_INFO, "network: TCP connection is recovered");
-            continue;
-        }
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
@@ -338,37 +248,11 @@ void* ProcInfoRoutine(void* param)
     sprintf(logmsgBuf, "Ready process information collection routine in %lu ms cycle", *collectPeriod);
     Log(globResource.logger, LOG_INFO, logmsgBuf);
     
-    if (globResource.bIsConnected == false)
-    {
-        Log(globResource.logger, LOG_INFO, "process: wait TCP connection");
-        GoToSleep();
-        if (globResource.collectorSwitch[PROC_COLLECTOR_ID] == false)
-        {
-            Log(globResource.logger, LOG_INFO, "process: terminate collector");
-            return NULL;
-        }
-    }
-
-    if (globResource.turnOff == true)
-    {
-        sprintf(logmsgBuf, "process: terminate collector");
-        Log(globResource.logger, LOG_INFO, logmsgBuf);
-    }
-    Log(globResource.logger, LOG_INFO, "Run process collector: Connected to TCP server");
-
     uchar dataBuf[1024 * 1024] = { 0, };
     SCData* collectedData;
 
     while(globResource.turnOff == false && globResource.collectorSwitch[PROC_COLLECTOR_ID] == true)
     {
-        if (globResource.bIsConnected == false)
-        {
-            Log(globResource.logger, LOG_INFO, "process: wait TCP connection");
-            GoToSleep();
-            if (globResource.collectorSwitch[PROC_COLLECTOR_ID] == true)
-                Log(globResource.logger, LOG_INFO, "process: TCP connection is recovered");
-            continue;
-        }
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
@@ -416,36 +300,10 @@ void* DiskInfoRoutine(void* param)
     sprintf(logmsgBuf, "Ready disk information collection routine in %lu ms cycle", *collectPeriod);
     Log(globResource.logger, LOG_INFO, logmsgBuf);
     
-    if (globResource.bIsConnected == false)
-    {
-        Log(globResource.logger, LOG_INFO, "disk: wait TCP connection");
-        GoToSleep();
-        if (globResource.collectorSwitch[DISK_COLLECTOR_ID] == false)
-        {
-            Log(globResource.logger, LOG_INFO, "disk: TCP connection is recovered");
-            return NULL;
-        }
-    }
-
-    if (globResource.turnOff == true)
-    {
-        sprintf(logmsgBuf, "disk: terminate collector");
-        Log(globResource.logger, LOG_INFO, logmsgBuf);
-    }
-    Log(globResource.logger, LOG_INFO, "Run disk collector: Connected to TCP server");
-
     SCData* collectedData;
     
     while(globResource.turnOff == false && globResource.collectorSwitch[DISK_COLLECTOR_ID] == true)
     {
-        if (globResource.bIsConnected == false)
-        {
-            Log(globResource.logger, LOG_INFO, "disk: wait TCP connection");
-            GoToSleep();
-            if (globResource.collectorSwitch[DISK_COLLECTOR_ID] == true)
-                Log(globResource.logger, LOG_INFO, "disk: TCP connection is recovered");
-            continue;
-        }
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
@@ -491,10 +349,7 @@ void RecoverTcpConnection(int signo)
     while (1)
     {
         if (globResource.turnOff)
-        {
-            WakeupEveryCollector();
             return;
-        }
         close(g_servSockFd);
         if ((g_servSockFd = ConnectToServer(globResource.peerIP, globResource.peerPort)) != -1)
             break;
@@ -507,7 +362,6 @@ void RecoverTcpConnection(int signo)
     sprintf(logmsgBuf, "Re-connected to %s:%d", globResource.peerIP, globResource.peerPort);
     Log(globResource.logger, LOG_INFO, logmsgBuf);
     globResource.bIsConnected = true;
-    WakeupEveryCollector();
 }
 
 void* SendRoutine(void* param)
@@ -526,7 +380,6 @@ void* SendRoutine(void* param)
     {
         if (globResource.turnOff)
         {
-            WakeupEveryCollector();
             sprintf(logmsgBuf, "Terminate sender");
             Log(globResource.logger, LOG_INFO, logmsgBuf);
             return NULL;
@@ -544,7 +397,6 @@ void* SendRoutine(void* param)
     Log(globResource.logger, LOG_INFO, logmsgBuf);
     
     globResource.bIsConnected = true;
-    WakeupEveryCollector();
 
     while(globResource.turnOff == false)
     {
@@ -560,12 +412,13 @@ void* SendRoutine(void* param)
             collectedData = Pop(globResource.queue);
             pthread_mutex_unlock(&globResource.queue->lock);
         }
-        
+
         if ((sendBytes = send(g_servSockFd, collectedData->data, collectedData->dataSize, 0)) == -1)
             continue;
         
         sprintf(logmsgBuf, "Send %d bytes to %s:%d ", sendBytes, globResource.peerIP, globResource.peerPort);
         Log(globResource.logger, LOG_DEBUG, logmsgBuf);
+
         DestorySCData(&collectedData);
     }
     

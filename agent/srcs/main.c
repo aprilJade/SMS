@@ -59,7 +59,6 @@ void HandleSignal(int signo)
 	if (signo == SIGQUIT || signo == SIGTERM)
 	{
 		globResource.turnOff = true;
-		WakeupEveryCollector();
 		for (int i = 0; i < COLLECTOR_COUNT; i++)
 		{
 			if (globResource.collectors[i] == 0)

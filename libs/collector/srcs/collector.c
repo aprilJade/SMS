@@ -331,7 +331,6 @@ SCData* CollectProcInfo(char *buf, uchar* dataBuf, int collectPeriod, char* agen
 	return result;
 }
 
-
 SCData* CollectDiskInfo(char *buf, int collectPeriod, char* agentId)
 {
 	struct statfs fs;
@@ -373,7 +372,6 @@ SCData* CollectDiskInfo(char *buf, int collectPeriod, char* agentId)
 	
 	return result;
 }
-
 
 SCData* CalcCpuUtilizationAvg(uchar* collectedData, int cpuCnt, int maxCount, float toMs, int collectPeriod)
 {

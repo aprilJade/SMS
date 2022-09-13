@@ -16,8 +16,6 @@ enum e_collectorIdx
     DISK_COLLECTOR_ID
 };
 
-void WakeupEveryCollector();
-void GoToSleep();
 void* CpuInfoRoutine(void* param);
 void* MemInfoRoutine(void* param);
 void* NetInfoRoutine(void* param);
