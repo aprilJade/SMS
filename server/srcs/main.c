@@ -16,7 +16,7 @@
 #include "confParser.h"
 #include "udpPacket.h"
 #include "logger.h"
-#include "Queue.h"
+#include "queue.h"
 
 #define CONNECTION_COUNT 1024
 #define MAX_WORKER_COUNT 16

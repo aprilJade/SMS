@@ -1,7 +1,7 @@
 #include "workerRoutine.h"
 #include "workerUtils.h"
 #include "logger.h"
-#include "Queue.h"
+#include "queue.h"
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
@@ -49,7 +49,7 @@ void* WorkerRoutine(void* param)
     SWorkerParam* pParam = (SWorkerParam*)param;
     char logMsg[128];
     char sqlBuffer[1024];
-    
+
     sprintf(logMsg, "%d worker-created", pParam->workerId);
     Log(g_logger, LOG_INFO, logMsg);
 

@@ -1,4 +1,4 @@
-#include "Queue.h"
+#include "queue.h"
 #include <stdlib.h>
 
 Queue* NewQueue()
