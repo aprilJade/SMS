@@ -1,6 +1,5 @@
 #include "printer.h"
 #include "logger.h"
-
 #include <stdio.h>
 
 void PrintUsage()

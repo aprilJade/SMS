@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/un.h>
+#include <errno.h>
 #include <arpa/inet.h>
 #include <time.h>
 
@@ -100,7 +101,7 @@ void ManageAgentRoutine(void)
 	if (fd == -1)
 	{
 		// TODO: handle error
-		//fprintf(stderr, "failed to create uds file: %s\n", strerror(errno));
+		fprintf(stderr, "failed to create uds file: %s\n", strerror(errno));
 		return;
 	}
 	close(fd);
@@ -109,7 +110,7 @@ void ManageAgentRoutine(void)
 	if ((uds = socket(AF_UNIX, SOCK_DGRAM, 0)) == -1)
 	{
 		// TODO: handle error
-		//fprintf(stderr, "failed to uds socket: %s\n", strerror(errno));
+		fprintf(stderr, "failed to uds socket: %s\n", strerror(errno));
 		return;
 	}
 	struct sockaddr_un sockInfo = { 0, };
@@ -121,7 +122,7 @@ void ManageAgentRoutine(void)
 	{
 		// TODO: handle error
 		close(uds);
-		//fprintf(stderr, "failed to bind uds socket: %s\n", strerror(errno));
+		fprintf(stderr, "failed to bind uds socket: %s\n", strerror(errno));
 		return;
 	}
 
@@ -132,6 +133,7 @@ void ManageAgentRoutine(void)
 	int* npTmp;
 	while (1)
 	{
+		puts("hi");
 		if ((recvSize = recvfrom(uds, buf, 4, 0, (struct sockaddr*)&sockInfo, &sockLen)) == -1)
 		{
 			Log(globResource.logger, LOG_FATAL, "Failed to receive UDS packet");

@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <assert.h>
+#include "logger.h"
 #include "globalResource.h"
 
 #define AVG_TARGET_TIME_AS_MS 3600000.0 // 1 hour => 60 * 60 * 1000ms
