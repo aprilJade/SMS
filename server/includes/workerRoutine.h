@@ -4,7 +4,6 @@
 
 typedef struct SWorkerParam
 {
-    SPgWrapper* db;
     SThreshold threshold;
     int workerId;
 } SWorkerParam;

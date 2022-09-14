@@ -97,20 +97,16 @@ int OpenSocket(short port)
     return servFd;
 }
 
-static void CreateWorker(int workerCount, SPgWrapper* db, SHashTable* options)
+static void CreateWorker(int workerCount, SHashTable* options)
 {
     SWorkerParam* param;
     SThreshold threshold = GetThresholds(options);
     workerId = (pthread_t*)malloc(sizeof(pthread_t) * workerCount);
 
-    if (db->connected == false)
-        Log(g_logger, LOG_FATAL, "PostgreSQL connection failed");
-    
     for (int i = 0; i < workerCount; i++)
     {
         param = (SWorkerParam*)malloc(sizeof(SWorkerParam));
         param->workerId = i;
-        param->db = db;
         param->threshold = threshold;
         pthread_create(&workerId[i], NULL, WorkerRoutine, param);
     }
@@ -127,11 +123,9 @@ Logger* GenLogger(SHashTable* options)
 	if ((logLevel = GetValueByKey(CONF_KEY_LOG_LEVEL, options)) != NULL)
 	{
 		if (strcmp(logLevel, "default") == 0)
-			logger = NewLogger(logPath, LOG_INFO);
-        return logger;
+			return NewLogger(logPath, LOG_INFO);
 	}
-	logger = NewLogger(logPath, LOG_DEBUG);
-	return logger;
+	return NewLogger(logPath, LOG_DEBUG);
 }
 
 int main(int argc, char** argv)
@@ -223,7 +217,7 @@ int main(int argc, char** argv)
     int workerCount = 2;
     if (tmp != NULL)
         workerCount = atoi(tmp);
-    CreateWorker(workerCount, db, options);
+    CreateWorker(workerCount, options);
 
     while (1)
     {

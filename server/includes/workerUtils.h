@@ -18,16 +18,28 @@ typedef struct SWorkTools
     SPgWrapper* dbWrapper;
     SThreshold threshold;
     int workerId;
+    int queriedSqlCnt;
 } SWorkTools;
 
-int InsertCpuInfo(void* data, SWorkTools* tools);
-int InsertCpuAvgInfo(void* data, SWorkTools* tools);
-int InsertMemInfo(void* data, SWorkTools* tools);
-int InsertMemAvgInfo(void* data, SWorkTools* tools);
-int InsertNetInfo(void* data, SWorkTools* tools);
-int InsertNetAvgInfo(void* data, SWorkTools* tools);
-int InsertProcInfo(void* data, SWorkTools* tools);
-int InsertDiskInfo(void* data, SWorkTools* tools);
+typedef struct SSqlVec
+{
+    char** data;
+    int dataCnt;
+    int maxCnt;
+} SSqlVec;
+
+void NewSqlQueue(SSqlVec* vec, int maxCnt);
+int AddTailSql(char* sql, SSqlVec* vec);
+char* GetHeadSql(SSqlVec* vec);
+
+int InsertCpuInfo(char* sqlBuffer, void* data, SWorkTools* tools);
+int InsertCpuAvgInfo(char* sqlBuffer, void* data, SWorkTools* tools);
+int InsertMemInfo(char* sqlBuffer, void* data, SWorkTools* tools);
+int InsertMemAvgInfo(char* sqlBuffer, void* data, SWorkTools* tools);
+int InsertNetInfo(char* sqlBuffer, void* data, SWorkTools* tools);
+int InsertNetAvgInfo(char* sqlBuffer, void* data, SWorkTools* tools);
+int InsertProcInfo(char* sqlBuffer, void* data, SWorkTools* tools);
+int InsertDiskInfo(char* sqlBuffer, void* data, SWorkTools* tools);
 
 SThreshold GetThresholds(SHashTable* options);
 

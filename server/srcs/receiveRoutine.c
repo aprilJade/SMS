@@ -169,16 +169,6 @@ void* UdpReceiveRoutine(void* param)
     {
         if (g_turnOff)
             break;
-        if (!db->connected)
-        {
-            sprintf(logMsg, "Wait DB connection...");
-            Log(g_logger, LOG_INFO, logMsg);
-            pthread_mutex_lock(&db->lock);
-            pthread_cond_wait(&db->cond, &db->lock);
-            pthread_mutex_unlock(&db->lock);
-            sprintf(logMsg, "PostgreSQL is connected");
-            Log(g_logger, LOG_INFO, logMsg);
-        }
 
         if ((readSize = recvfrom(udpSockFd, buf, sizeof(SPrefixPkt), 0, (struct sockaddr*)&udpClientAddr, &len)) < 0)
         {

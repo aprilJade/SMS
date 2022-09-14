@@ -28,7 +28,36 @@ static const char* const thresholdInsertSql =
 
 extern Logger* g_logger;
 
-int InsertCpuInfo(void* data, SWorkTools* tools)
+
+void NewSqlQueue(SSqlVec* vec, int maxCnt)
+{
+    vec = (SSqlVec*)malloc(sizeof(SSqlVec));
+    vec->maxCnt = maxCnt;
+    vec->data = (char**)malloc(sizeof(char*) * maxCnt);
+    vec->dataCnt = 0;
+}
+
+int AddTailSql(char* sql, SSqlVec* vec)
+{
+    if (vec->dataCnt < vec->maxCnt)
+    {
+        vec->data[vec->dataCnt++] = sql;
+        return 0;
+    }
+    return 1;
+}
+
+char* GetHeadSql(SSqlVec* vec)
+{
+    if (vec->dataCnt > 0)
+    {
+        return vec->data[vec->dataCnt-- - 1];
+    }
+    return NULL;
+}
+
+
+int InsertCpuInfo(char* sqlBuffer, void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodyc* hBody;
@@ -36,10 +65,9 @@ int InsertCpuInfo(void* data, SWorkTools* tools)
     hBody = (SBodyc*)(data + sizeof(SHeader));
     ts = localtime(&hHeader->collectTime);
 
-    char sql[512];
     for (int i = 0; i < hHeader->bodyCount; i++)
     {
-        sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', %d, %ld, %ld, %ld, %ld);",
+        sprintf(sqlBuffer, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', %d, %ld, %ld, %ld, %ld);",
                     cpuInsertSql,
                     hHeader->agentId,
                     ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
@@ -49,17 +77,18 @@ int InsertCpuInfo(void* data, SWorkTools* tools)
                     hBody[i].sysCpuRunTime,
                     hBody[i].idleTime,
                     hBody[i].waitTime);
-        if (Query(tools->dbWrapper, sql) == -1)
+        if (Query(tools->dbWrapper, sqlBuffer) == -1)
         {
-            sprintf(sql, "%d: Failed to store in DB: CPU", tools->workerId);
-            Log(g_logger, LOG_ERROR, sql);
+            sprintf(sqlBuffer, "%d: Failed to store in DB: CPU", tools->workerId);
+            Log(g_logger, LOG_ERROR, sqlBuffer);
             return -1;
         }
+        tools->queriedSqlCnt++;
     }
     return 0;
 }
 
-int InsertCpuAvgInfo(void* data, SWorkTools* tools)
+int InsertCpuAvgInfo(char* sqlBuffer, void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodyAvgC* hBody = (SBodyAvgC*)(data + sizeof(SHeader));
@@ -103,10 +132,11 @@ int InsertCpuAvgInfo(void* data, SWorkTools* tools)
             return -1;
         }
     }
+    tools->queriedSqlCnt++;
     return 0;
 }
 
-int InsertMemInfo(void* data, SWorkTools* tools)
+int InsertMemInfo(char* sqlBuffer, void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodym* hBody = (SBodym*)(data + sizeof(SHeader));
@@ -131,10 +161,11 @@ int InsertMemInfo(void* data, SWorkTools* tools)
         Log(g_logger, LOG_ERROR, sql);
         return -1;
     }
+    tools->queriedSqlCnt++;
     return 0;
 }
 
-int InsertMemAvgInfo(void* data, SWorkTools* tools)
+int InsertMemAvgInfo(char* sqlBuffer, void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodyAvgM* hBody = (SBodyAvgM*)(data + sizeof(SHeader));
@@ -157,6 +188,7 @@ int InsertMemAvgInfo(void* data, SWorkTools* tools)
         Log(g_logger, LOG_ERROR, sql);
         return -1;
     }
+    tools->queriedSqlCnt++;
 
     if (hBody->memUsage > tools->threshold.memUsage)
     {
@@ -173,6 +205,7 @@ int InsertMemAvgInfo(void* data, SWorkTools* tools)
             Log(g_logger, LOG_ERROR, sql);
             return -1;
         }
+        tools->queriedSqlCnt++;
     }
 
     if (hBody->swapUsage > tools->threshold.swapUsage)
@@ -190,11 +223,12 @@ int InsertMemAvgInfo(void* data, SWorkTools* tools)
             Log(g_logger, LOG_ERROR, sql);
             return -1;
         }
+        tools->queriedSqlCnt++;
     }
     return 0;
 }
 
-int InsertNetInfo(void* data, SWorkTools* tools)
+int InsertNetInfo(char* sqlBuffer, void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodyn* hBody = (SBodyn*)(data + sizeof(SHeader));
@@ -223,11 +257,12 @@ int InsertNetInfo(void* data, SWorkTools* tools)
             Log(g_logger, LOG_ERROR, sql);
             return -1;
         }
+        tools->queriedSqlCnt++;
     }
     return 0;
 }
 
-int InsertNetAvgInfo(void* data, SWorkTools* tools)
+int InsertNetAvgInfo(char* sqlBuffer, void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodyAvgN* hBody = (SBodyAvgN*)(data + sizeof(SHeader));
@@ -261,6 +296,9 @@ int InsertNetAvgInfo(void* data, SWorkTools* tools)
             Log(g_logger, LOG_ERROR, sql);
             return -1;
         }
+        
+        tools->queriedSqlCnt++;
+
         if (hBody[i].recvBytesPerSec > tools->threshold.recvBytes)
         {
             sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', \'RECV\', %lu, %f);",
@@ -276,6 +314,7 @@ int InsertNetAvgInfo(void* data, SWorkTools* tools)
                 Log(g_logger, LOG_ERROR, sql);
                 return -1;
             }
+            tools->queriedSqlCnt++;
         }
         if (hBody[i].sendBytesPerSec > tools->threshold.sendBytes)
         {
@@ -292,12 +331,13 @@ int InsertNetAvgInfo(void* data, SWorkTools* tools)
                 Log(g_logger, LOG_ERROR, sql);
                 return -1;
             }
+            tools->queriedSqlCnt++;
         }
     }
     return 0;
 }
 
-int InsertProcInfo(void* data, SWorkTools* tools)
+int InsertProcInfo(char* sqlBuffer, void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     struct tm* ts;
@@ -311,12 +351,6 @@ int InsertProcInfo(void* data, SWorkTools* tools)
     data += sizeof(SHeader);
     SBodyp* hBody;
     char cmdlineBuf[2048];
-
-    if (Query(tools->dbWrapper, "BEGIN") == -1)
-    {
-        sprintf(sql, "%d: Failed to BEGIN command: Process", tools->workerId);
-        Log(g_logger, LOG_ERROR, sql);
-    }
 
     for (int i = 0; i < hHeader->bodyCount; i++)
     {
@@ -360,18 +394,13 @@ int InsertProcInfo(void* data, SWorkTools* tools)
             sprintf(sql, "%d: Failed to store in DB: Process", tools->workerId);
             Log(g_logger, LOG_ERROR, sql);
         }
+        tools->queriedSqlCnt++;
     }
 
-    if (Query(tools->dbWrapper, "END") == -1)
-    {
-        sprintf(sql, "%d: Failed to END command: Process", tools->workerId);
-        Log(g_logger, LOG_ERROR, sql);
-        return -1;
-    }
     return 0;
 }
 
-int InsertDiskInfo(void* data, SWorkTools* tools)
+int InsertDiskInfo(char* sqlBuffer, void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;
     SBodyd* hBody = (SBodyd*)(data + sizeof(SHeader));
@@ -394,8 +423,8 @@ int InsertDiskInfo(void* data, SWorkTools* tools)
             Log(g_logger, LOG_ERROR, sql);
             return -1;
         }
-        
         hBody++;
+        tools->queriedSqlCnt++;
     }
 
     return 0;

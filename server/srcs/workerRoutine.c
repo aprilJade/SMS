@@ -19,7 +19,7 @@ extern unsigned int g_clientCnt;
 extern pthread_mutex_t g_clientCntLock;
 extern pthread_cond_t g_clientCntCond;
 
-static const int (*InsertFunc[])(void*, SWorkTools*) = {
+static const int (*InsertFunc[])(char*, void*, SWorkTools*) = {
     ['c'] = InsertCpuInfo,
     ['C'] = InsertCpuAvgInfo,
     ['m'] = InsertMemInfo,
@@ -34,6 +34,8 @@ void* WorkerRoutine(void* param)
 {
     SWorkerParam* pParam = (SWorkerParam*)param;
     char logMsg[128];
+    char sqlBuffer[1024];
+
     SHeader* hHeader;
     void* data;
     SWorkTools workTools;
@@ -41,29 +43,26 @@ void* WorkerRoutine(void* param)
     ulong prevTime, postTime, elapseTime, totalElapsed;
     int pktId;
     workTools.workerId = pParam->workerId;
-    workTools.dbWrapper = pParam->db;
+    workTools.dbWrapper = NewPgWrapper("dbname = postgres port = 5442");
     workTools.threshold = pParam->threshold;
+    workTools.queriedSqlCnt = 0;
+
+    while (workTools.dbWrapper->connected == false)
+    {
+        // TODO: recover connection...
+        // Not impelemeted yet
+        
+    }
+    Query(workTools.dbWrapper, "BEGIN");
 
     sprintf(logMsg, "%d worker-created", pParam->workerId);
     Log(g_logger, LOG_INFO, logMsg);
-    sprintf(logMsg, "%d work-wait", pParam->workerId);
-    Log(g_logger, LOG_DEBUG, logMsg);
 
     while (1)
     {
         if (g_turnOff)
             break;
-        if (!pParam->db->connected)
-        {
-            sprintf(logMsg, "%d Go to sleep: DB connection is bad", pParam->workerId);
-            Log(g_logger, LOG_FATAL, logMsg);
-            pthread_mutex_lock(&pParam->db->lock);
-            pthread_cond_wait(&pParam->db->cond, &pParam->db->lock);
-            pthread_mutex_unlock(&pParam->db->lock);
-            sprintf(logMsg, "%d Ready to work: DB connection recovered", pParam->workerId);
-            Log(g_logger, LOG_INFO, logMsg);
-            continue;
-        }
+        
 
         if (IsEmpty(g_queue))
         {
@@ -83,6 +82,13 @@ void* WorkerRoutine(void* param)
             continue;
         }
         
+        if (workTools.queriedSqlCnt >= 128)
+        {
+            Query(workTools.dbWrapper, "END");
+            workTools.queriedSqlCnt = 0;
+            Query(workTools.dbWrapper, "BEGIN");
+        }
+
         pthread_mutex_lock(&g_queue->lock);
         if (IsEmpty(g_queue))
         {
@@ -99,17 +105,21 @@ void* WorkerRoutine(void* param)
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
         hHeader = (SHeader*)data;
-        if (InsertFunc[hHeader->signature & EXTRACT_SIGNATURE](data, &workTools) == -1)
-            pParam->db->connected = false;
+        if (InsertFunc[hHeader->signature & EXTRACT_SIGNATURE](sqlBuffer, data, &workTools) == -1)
+        {
+            workTools.dbWrapper->connected = false;
+            Log(g_logger, LOG_ERROR, "%d DB connection bad");
+            continue;
+        }
+
+        sprintf(logMsg, "%d query count: %d", pParam->workerId, workTools.queriedSqlCnt);
+        Log(g_logger, LOG_DEBUG, logMsg);
 
         free(data);
 
         gettimeofday(&timeVal, NULL);
         elapseTime = (timeVal.tv_sec * 1000000 + timeVal.tv_usec) - prevTime;
         sprintf(logMsg, "%d work-done in %ld us", pParam->workerId, elapseTime);
-        Log(g_logger, LOG_DEBUG, logMsg);
-
-        sprintf(logMsg, "%d work-wait", pParam->workerId);
         Log(g_logger, LOG_DEBUG, logMsg);
     }
 

@@ -5,7 +5,6 @@
 
 int main(int argc, char** argv)
 {   
-    
     if (argc == 3)
     {
         if (strcmp(argv[1], "update") == 0)
