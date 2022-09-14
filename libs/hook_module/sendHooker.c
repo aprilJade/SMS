@@ -137,7 +137,9 @@ ssize_t send(int fd, const void* buf, size_t len, int flags)
     if (postPkt.maxSendBytes < sendBytes)
         postPkt.maxSendBytes = sendBytes;
     sendBytesCnt[idx]++;
+
     sendBytesAvg[idx] = ((sendBytesAvg[idx] * (sendBytesCnt[idx] - 1)) + sendBytes) / sendBytesCnt[idx];
+    
     postPkt.sendBytesAvg = 0;
     for (int i = 0; i < TAGET_SECONDS; i++)
         postPkt.sendBytesAvg += sendBytesAvg[i];

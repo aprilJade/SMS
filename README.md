@@ -103,6 +103,13 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/bin
 
 # Feedback log
 
+### 2022.09.14 4주차 Feedback
+- [ ] DB쿼리에 대한 병목현상을 고려하기 
+- [ ] 클라이언트의 시간뿐아니라 서버의 시간 또한 기록하기 (client가 시간 서버와 연결이 되지 않아 측정된 시간이 부정확한 경우가 있음)
+- [ ] ID 발급 주체를 서버로 변경 
+  - [ ] 발급되는 ID는 항상 유일해야함 (중복을 없애야함)
+  - [ ] 만일 동일한 Agent라면 발급한 ID를 계속 사용해야함
+  
 ### 2022.08.30 3주차 Feedback
 - [x] ~signal handler에서 최소한의 작업만 하며 종료~
        

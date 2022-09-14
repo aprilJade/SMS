@@ -68,12 +68,14 @@ void* TcpReceiveRoutine(void* param)
             Log(g_logger, LOG_ERROR, logMsg);
             break;
         }
+
         if (readSize == 0)
         {
             sprintf(logMsg, "Disconnected from %s:%d", pParam->host, pParam->port);
             Log(g_logger, LOG_INFO, logMsg);
             break;
         }
+        
         hHeader = (SHeader*)pb;
         if (!IsValidSignature(hHeader->signature))
         {

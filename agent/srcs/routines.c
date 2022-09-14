@@ -106,7 +106,7 @@ void* MemInfoRoutine(void* param)
 
     while(globResource.turnOff == false && globResource.collectorSwitch[MEM_COLLECTOR_ID] == true)
     {
-                gettimeofday(&timeVal, NULL);
+        gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
         if ((collectedData = CollectMemInfo(buf, *collectPeriod, globResource.agentID)) == NULL)
