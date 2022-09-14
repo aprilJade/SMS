@@ -17,7 +17,19 @@ SPgWrapper* NewPgWrapper(const char* conninfo)
 bool ConnectPg(SPgWrapper* wrapper)
 {
     wrapper->conn = PQconnectdb(wrapper->connInfo);
-    return CheckPgStatus(wrapper);
+    wrapper->connected = CheckPgStatus(wrapper);
+    return wrapper->connected;
+}
+
+bool TryConectPg(SPgWrapper* wrapper, int tryCnt, int tryPeriodSec)
+{
+    for (int i = 0; i < tryCnt; i++)
+    {
+        if (ConnectPg(wrapper))
+            break;
+        sleep(tryPeriodSec);
+    }
+    return wrapper->connected;
 }
 
 bool CheckPgStatus(SPgWrapper* db)

@@ -19,6 +19,9 @@ extern unsigned int g_clientCnt;
 extern pthread_mutex_t g_clientCntLock;
 extern pthread_cond_t g_clientCntCond;
 
+const int dbConnMaxCnt = 600;
+const int dbConnInterval = 1;
+
 static const int (*InsertFunc[])(char*, void*, SWorkTools*) = {
     ['c'] = InsertCpuInfo,
     ['C'] = InsertCpuAvgInfo,
@@ -29,6 +32,17 @@ static const int (*InsertFunc[])(char*, void*, SWorkTools*) = {
     ['p'] = InsertProcInfo,
     ['d'] = InsertDiskInfo
 };
+
+void RecoverDBConnection(SWorkTools* workTools)
+{
+    char logMsg[128];
+    while (TryConectPg(workTools->dbWrapper, dbConnMaxCnt, dbConnInterval) == false)
+    {
+        sprintf(logMsg, "%d DB connection is failed %d times in %d second interval",
+            workTools->workerId, dbConnMaxCnt, dbConnInterval);
+        Log(g_logger, LOG_FATAL, logMsg);
+    }
+}
 
 void* WorkerRoutine(void* param)
 {
@@ -46,13 +60,10 @@ void* WorkerRoutine(void* param)
     workTools.dbWrapper = NewPgWrapper("dbname = postgres port = 5442");
     workTools.threshold = pParam->threshold;
     workTools.queriedSqlCnt = 0;
-
-    while (workTools.dbWrapper->connected == false)
-    {
-        // TODO: recover connection...
-        // Not impelemeted yet
-        
-    }
+    
+    if (workTools.dbWrapper->connected == false)
+        RecoverDBConnection(&workTools);
+    
     Query(workTools.dbWrapper, "BEGIN");
 
     sprintf(logMsg, "%d worker-created", pParam->workerId);
@@ -82,7 +93,7 @@ void* WorkerRoutine(void* param)
             continue;
         }
         
-        if (workTools.queriedSqlCnt >= 128)
+        if (workTools.queriedSqlCnt >= QUERY_COUNT_THRESHOLD)
         {
             Query(workTools.dbWrapper, "END");
             workTools.queriedSqlCnt = 0;
@@ -98,9 +109,6 @@ void* WorkerRoutine(void* param)
         data = Pop(g_queue);
         pthread_mutex_unlock(&g_queue->lock);
 
-        sprintf(logMsg, "%d work-start", pParam->workerId);
-        Log(g_logger, LOG_DEBUG, logMsg);
-        
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
 
@@ -108,7 +116,13 @@ void* WorkerRoutine(void* param)
         if (InsertFunc[hHeader->signature & EXTRACT_SIGNATURE](sqlBuffer, data, &workTools) == -1)
         {
             workTools.dbWrapper->connected = false;
-            Log(g_logger, LOG_ERROR, "%d DB connection bad");
+            sprintf(logMsg, "%d DB connection bad. Try to recover DB connection", workTools.workerId);
+            Log(g_logger, LOG_ERROR, logMsg);
+
+            RecoverDBConnection(&workTools);
+            
+            sprintf(logMsg, "%d DB connection is recovered", workTools.workerId);
+            Log(g_logger, LOG_INFO, logMsg);
             continue;
         }
 

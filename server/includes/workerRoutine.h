@@ -2,6 +2,8 @@
 #define WORKER_ROUTINE_H
 #include "workerUtils.h"
 
+#define QUERY_COUNT_THRESHOLD 128
+
 typedef struct SWorkerParam
 {
     SThreshold threshold;
