@@ -94,23 +94,20 @@ void* TcpReceiveRoutine(void* param)
 
         while (totalReadSize < packetSize)
         {
-            if ((readSize = recv(pParam->clientSock, pb + totalReadSize, packetSize - totalReadSize, 0)) == -1)
+            if ((readSize = recv(pParam->clientSock, pb + totalReadSize, packetSize - totalReadSize, 0)) <= 0)
             {
+                if (readSize == 0)
+                {
+                    sprintf(logMsg, "Disconnected from %s:%d", pParam->host, pParam->port);
+                    Log(g_logger, LOG_INFO, logMsg);
+                    break;
+                }
                 sprintf(logMsg, "Disconnect to agent %s:%d (Failed to receive packet)", pParam->host, pParam->port);
                 Log(g_logger, LOG_ERROR, logMsg);
                 break;
             }
-            if (readSize == 0)
-            {
-                sprintf(logMsg, "Disconnected from %s:%d", pParam->host, pParam->port);
-                Log(g_logger, LOG_INFO, logMsg);
-                break;
-            }
             totalReadSize += readSize;
         }
-        if (totalReadSize < packetSize)
-            break;
-        
         pb[totalReadSize] = 0;
 
         sprintf(logMsg, "Received packet from %s:%d %d B",
