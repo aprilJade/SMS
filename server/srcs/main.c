@@ -44,6 +44,7 @@ int g_stderrFd = 2;
 pthread_mutex_t g_clientCntLock = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t g_clientCntCond = PTHREAD_COND_INITIALIZER;
 unsigned int g_clientCnt = 0;
+unsigned int g_workerCnt;
 
 void HandleSignal(int signo)
 {
@@ -55,7 +56,7 @@ void HandleSignal(int signo)
         pthread_mutex_lock(&g_clientCntLock);
         pthread_cond_broadcast(&g_clientCntCond);
         pthread_mutex_unlock(&g_clientCntLock);
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < g_workerCnt; i++)
             pthread_join(workerId[i], NULL);
 		Log(g_logger, LOG_INFO, "Server is terminated");
 	}
@@ -218,7 +219,7 @@ int main(int argc, char** argv)
     if (tmp != NULL)
         workerCount = atoi(tmp);
     CreateWorker(workerCount, options);
-
+    g_workerCnt = workerCount;
     while (1)
     {
         if (listen(servFd, CONNECTION_COUNT) == -1)

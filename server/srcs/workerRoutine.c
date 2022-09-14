@@ -49,6 +49,9 @@ void* WorkerRoutine(void* param)
     SWorkerParam* pParam = (SWorkerParam*)param;
     char logMsg[128];
     char sqlBuffer[1024];
+    
+    sprintf(logMsg, "%d worker-created", pParam->workerId);
+    Log(g_logger, LOG_INFO, logMsg);
 
     SHeader* hHeader;
     void* data;
@@ -64,16 +67,15 @@ void* WorkerRoutine(void* param)
     if (workTools.dbWrapper->connected == false)
         RecoverDBConnection(&workTools);
     
+    sprintf(logMsg, "%d strat transaction", workTools.workerId);
+    Log(g_logger, LOG_DEBUG, logMsg);
     Query(workTools.dbWrapper, "BEGIN");
 
-    sprintf(logMsg, "%d worker-created", pParam->workerId);
-    Log(g_logger, LOG_INFO, logMsg);
 
     while (1)
     {
         if (g_turnOff)
             break;
-        
 
         if (IsEmpty(g_queue))
         {
@@ -95,8 +97,14 @@ void* WorkerRoutine(void* param)
         
         if (workTools.queriedSqlCnt >= QUERY_COUNT_THRESHOLD)
         {
+            sprintf(logMsg, "%d end transaction", workTools.workerId);
+            Log(g_logger, LOG_DEBUG, logMsg);
             Query(workTools.dbWrapper, "END");
+
             workTools.queriedSqlCnt = 0;
+
+            sprintf(logMsg, "%d strat transaction", workTools.workerId);
+            Log(g_logger, LOG_DEBUG, logMsg);
             Query(workTools.dbWrapper, "BEGIN");
         }
 
