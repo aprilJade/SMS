@@ -14,7 +14,7 @@
 #include "workerRoutine.h"
 #include "pgWrapper.h"
 #include "confParser.h"
-#include "udpPacket.h"
+#include "hookerUtils.h"
 #include "logger.h"
 #include "queue.h"
 

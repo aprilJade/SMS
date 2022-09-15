@@ -101,7 +101,6 @@ Logger* NewLogger(char* logPath, int logLevel)
     return logger;
 }
 
-
 int Log(const Logger* handle, int logLevel, char* logMsg)
 {
     assert(handle != NULL && logMsg != NULL);

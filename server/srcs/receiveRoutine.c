@@ -1,6 +1,6 @@
 #include "receiveRoutine.h"
 #include "pgWrapper.h"
-#include "udpPacket.h"
+#include "hookerUtils.h"
 #include "packets.h"
 #include "logger.h"
 #include "queue.h"
@@ -135,7 +135,7 @@ void* TcpReceiveRoutine(void* param)
 
 void* UdpReceiveRoutine(void* param)
 {
-    SPgWrapper* db = (SPgWrapper*)param;
+    SPgWrapper* db = NewPgWrapper("dbname = postgres port = 5442");
 
     udpSockFd = socket(PF_INET, SOCK_DGRAM, 0);
     if (udpSockFd < 0)
@@ -160,7 +160,7 @@ void* UdpReceiveRoutine(void* param)
 
     sprintf(logMsg, "Start UDP receiver");
     Log(g_logger, LOG_INFO, logMsg);
-    char* strInsert = "INSERT INTO udp_informations (agent_id, measurement_time, process_name, pid, max_send_bytes, send_bytes_avg, max_elapse_time, elapse_time_avg) VALUES";
+    char* strInsert = "INSERT INTO udp_informations (agent_id, measurement_time, process_name, pid, send_bytes, max_send_bytes, send_bytes_avg, elapse_time, max_elapse_time, elapse_time_avg) VALUES";
     char sql[512];
     while (1)
     {
@@ -201,15 +201,17 @@ void* UdpReceiveRoutine(void* param)
         postPkt = (SPostfixPkt*)buf;
         struct tm* ts;
         ts = localtime(&postPkt->measurementTime);
-        sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', \'%s\', %u, %u, %f, %lu, %f);",
+        sprintf(sql, "%s (\'%s\', \'%04d-%02d-%02d %02d:%02d:%02d\', \'%s\', %u, %u, %u, %f, %lu, %lu, %f);",
             strInsert,
             postPkt->agentId,
             ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
             ts->tm_hour, ts->tm_min, ts->tm_sec,
             postPkt->processName,
             postPkt->pid,
+            postPkt->sendBytes,
             postPkt->maxSendBytes,
             postPkt->sendBytesAvg,
+            postPkt->elapseTime,
             postPkt->maxElapseTime,
             postPkt->elapseTimeAvg);
 

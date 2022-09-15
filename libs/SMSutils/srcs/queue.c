@@ -38,8 +38,10 @@ int Push(void* data, Queue* queue)
 
     tmp->data = data;
     tmp->next = NULL;
+    
     while (queue->next)
         queue = queue->next;
     queue->next = tmp;
+    
     return 0;
 }
