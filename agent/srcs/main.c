@@ -87,6 +87,7 @@ int RunCollectors()
 	char* tmp;
 
 	memset(globResource.agentID, 0, 16);
+	// TODO: change agent ID processing
 	if ((tmp = GetValueByKey(CONF_KEY_ID, globResource.configurations)) == NULL)
 		strcpy(globResource.agentID, "debug");
 	else
@@ -134,13 +135,26 @@ Logger* GenLogger(SHashTable* options)
 	return NewLogger(logPath, LOG_DEBUG);
 }
 
-int main(int argc, char** argv)
+__attribute__((constructor))
+static void InitializeAgent(int argc, char** argv)
 {
 	if (argc != 2)
 	{
 		fprintf(stderr, "ERROR: you must input conf file path\n");
-		return EXIT_FAILURE;
+		exit(EXIT_FAILURE);
 	}
+
+	signal(SIGBUS, HandleSignal);
+	signal(SIGABRT, HandleSignal);
+	signal(SIGFPE, HandleSignal);
+	signal(SIGQUIT, HandleSignal);
+	signal(SIGSEGV, HandleSignal); 
+	signal(SIGINT, HandleSignal);
+	signal(SIGILL, HandleSignal);
+	signal(SIGSYS, HandleSignal);
+	signal(SIGTERM, HandleSignal);
+	signal(SIGKILL, HandleSignal);
+
 	globResource.loadTime = time(NULL);
 	globResource.configurations = NewHashTable();
 	if (ParseConf(argv[1], globResource.configurations) != CONF_NO_ERROR)
@@ -148,10 +162,9 @@ int main(int argc, char** argv)
 		fprintf(stderr, "ERROR: ParseConf failed\n");
 		exit(EXIT_FAILURE);
 	}
-	char* value;
-	char logmsgBuf[128] = { 0, };
 	globResource.logger = GenLogger(globResource.configurations);
 	globResource.queue = NewQueue();
+	char* value;
 
 	if ((value = GetValueByKey(CONF_KEY_RUN_AS_DAEMON, globResource.configurations)) != NULL)
 	{
@@ -179,32 +192,27 @@ int main(int argc, char** argv)
 		}
 	}
 
-	signal(SIGBUS, HandleSignal);
-	signal(SIGABRT, HandleSignal);
-	signal(SIGFPE, HandleSignal);
-	signal(SIGQUIT, HandleSignal);
-	signal(SIGSEGV, HandleSignal); 
-	signal(SIGINT, HandleSignal);
-	signal(SIGILL, HandleSignal);
-	signal(SIGSYS, HandleSignal);
-	signal(SIGTERM, HandleSignal);
-	signal(SIGKILL, HandleSignal);
-
-	pthread_t senderTid;
 	if ((value = GetValueByKey(CONF_KEY_HOST_ADDRESS, globResource.configurations)) != NULL)
 		strcpy(globResource.peerIP, value);
 	else
 		strcpy(globResource.peerIP, "127.0.0.1");
 	value = GetValueByKey(CONF_KEY_HOST_PORT, globResource.configurations);
 	globResource.peerPort = value != NULL ? atoi(value) : 4242;
+}
 
-	if (pthread_create(&senderTid, NULL, SendRoutine, NULL) == -1)
+int main(int argc, char** argv)
+{
+	char logmsgBuf[128] = { 0, };
+
+	pthread_t senderTid;
+	if (pthread_create(&senderTid, NULL, SendRoutine, NULL) != 0)
 	{
-		sprintf(logmsgBuf, "Fail to start sender");
+		sprintf(logmsgBuf, "Fail to start sender: %s", strerror(errno));
 		Log(globResource.logger, LOG_FATAL, logmsgBuf);
 		exit(EXIT_FAILURE);
 	}
-	
+	pthread_detach(senderTid);
+
 	RunCollectors();
 	ManageAgentRoutine();
 		

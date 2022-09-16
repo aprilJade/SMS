@@ -28,12 +28,6 @@ static struct SPostfixPkt postPkt;
 static size_t postPktSize;
 static time_t loadTime;
 
-// static int prevIdx;
-// static float elapseAvg[TAGET_SECONDS];
-// static int elapseCnt[TAGET_SECONDS];
-// static ulong sendBytesAvg[TAGET_SECONDS];
-// static int sendBytesCnt[TAGET_SECONDS];
-
 static SAvgArray* avgArray[65536];
 
 __attribute__((constructor))
@@ -53,11 +47,6 @@ static void InitializeHookingModule()
     servAddr.sin_addr.s_addr = inet_addr(defaultHostIp);
     servAddr.sin_port = htons(defaultHostPort);
     sockLen = sizeof(servAddr);
-
-    // memset(elapseAvg, 0, sizeof(float) * TAGET_SECONDS);
-    // memset(elapseCnt, 0, sizeof(int) * TAGET_SECONDS);
-    // memset(sendBytesAvg, 0, sizeof(float) * TAGET_SECONDS);
-    // memset(sendBytesCnt, 0, sizeof(int) * TAGET_SECONDS);
 
     // #01. Initialize packet data that befor sending real packet declared struct SPrevPkt
     prevPkt.pid = getpid();

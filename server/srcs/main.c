@@ -78,7 +78,38 @@ void HandleSignal(int signo)
 	exit(signo);
 }
 
-int OpenSocket(short port)
+static void CreateWorker(int workerCount, SHashTable* options)
+{
+    SWorkerParam* param;
+    SThreshold threshold = GetThresholds(options);
+    workerId = (pthread_t*)malloc(sizeof(pthread_t) * workerCount);
+
+    for (int i = 0; i < workerCount; i++)
+    {
+        param = (SWorkerParam*)malloc(sizeof(SWorkerParam));
+        param->workerId = i;
+        param->threshold = threshold;
+        pthread_create(&workerId[i], NULL, WorkerRoutine, param);
+    }
+}
+
+static Logger* GenLogger(SHashTable* options)
+{
+	char* logPath;
+	char* logLevel;
+	Logger* logger;
+
+	if ((logPath = GetValueByKey(CONF_KEY_LOG_PATH, options)) == NULL)
+		logPath = "./server";
+	if ((logLevel = GetValueByKey(CONF_KEY_LOG_LEVEL, options)) != NULL)
+	{
+		if (strcmp(logLevel, "default") == 0)
+			return NewLogger(logPath, LOG_INFO);
+	}
+	return NewLogger(logPath, LOG_DEBUG);
+}
+
+static int OpenServerSocket(short port)
 {
     struct sockaddr_in servAddr;
     int servFd = socket(PF_INET, SOCK_STREAM, 0);
@@ -96,37 +127,6 @@ int OpenSocket(short port)
         return -1;
     }
     return servFd;
-}
-
-static void CreateWorker(int workerCount, SHashTable* options)
-{
-    SWorkerParam* param;
-    SThreshold threshold = GetThresholds(options);
-    workerId = (pthread_t*)malloc(sizeof(pthread_t) * workerCount);
-
-    for (int i = 0; i < workerCount; i++)
-    {
-        param = (SWorkerParam*)malloc(sizeof(SWorkerParam));
-        param->workerId = i;
-        param->threshold = threshold;
-        pthread_create(&workerId[i], NULL, WorkerRoutine, param);
-    }
-}
-
-Logger* GenLogger(SHashTable* options)
-{
-	char* logPath;
-	char* logLevel;
-	Logger* logger;
-
-	if ((logPath = GetValueByKey(CONF_KEY_LOG_PATH, options)) == NULL)
-		logPath = "./server";
-	if ((logLevel = GetValueByKey(CONF_KEY_LOG_LEVEL, options)) != NULL)
-	{
-		if (strcmp(logLevel, "default") == 0)
-			return NewLogger(logPath, LOG_INFO);
-	}
-	return NewLogger(logPath, LOG_DEBUG);
 }
 
 int main(int argc, char** argv)
@@ -184,7 +184,7 @@ int main(int argc, char** argv)
 	signal(SIGKILL, HandleSignal);	// terminate signal
 
     tmp = GetValueByKey(CONF_KEY_LISTEN_PORT, options);
-    unsigned short port = 4242;
+    unsigned short port = DEFAULT_PORT;
     if (tmp != NULL)
         port = (unsigned short)atoi(tmp);
 	g_logger = GenLogger(options);
@@ -193,12 +193,12 @@ int main(int argc, char** argv)
     sprintf(logMsg, "Server loaded: %d", getpid());
     Log(g_logger, LOG_INFO, logMsg);
     
-    SPgWrapper* db = NewPgWrapper("dbname = postgres port = 5442");
-    pthread_create(&udpTid, NULL, UdpReceiveRoutine, db);
+    pthread_create(&udpTid, NULL, UdpReceiveRoutine, NULL);
     
     int servFd, clientFd;
     struct sockaddr_in clientAddr;
-    if ((servFd = OpenSocket(port)) == -1)
+
+    if ((servFd = OpenServerSocket(port)) == -1)
     {
         sprintf(logMsg, "Socket is not opened: %s", strerror(errno));
         Log(g_logger, LOG_FATAL, "Socket is not opened.");
