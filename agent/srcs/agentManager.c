@@ -133,7 +133,6 @@ void ManageAgentRoutine(void)
 	int* npTmp;
 	while (1)
 	{
-		puts("hi");
 		if ((recvSize = recvfrom(uds, buf, 4, 0, (struct sockaddr*)&sockInfo, &sockLen)) == -1)
 		{
 			Log(globResource.logger, LOG_FATAL, "Failed to receive UDS packet");

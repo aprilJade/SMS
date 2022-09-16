@@ -11,7 +11,7 @@ int ConnectToServer(const char *host, short port)
 {
     assert(host && port >= 0 && port < 65536);
     struct sockaddr_in sockaddr;
-    int fd = socket(PF_INET, SOCK_STREAM, 0);
+    int fd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
     if(fd == -1)
         return -1;
 
@@ -23,6 +23,7 @@ int ConnectToServer(const char *host, short port)
         close(fd);
         return -1;
     }
+    
     return fd;
 }
 

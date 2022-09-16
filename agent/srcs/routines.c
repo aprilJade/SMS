@@ -257,7 +257,7 @@ void* ProcInfoRoutine(void* param)
     
     uchar dataBuf[1024 * 1024] = { 0, };
     SCData* collectedData;
-
+    
     while(globResource.turnOff == false && globResource.collectorSwitch[PROC_COLLECTOR_ID] == true)
     {
         gettimeofday(&timeVal, NULL);
@@ -285,14 +285,12 @@ void* ProcInfoRoutine(void* param)
         {
             DestorySCData(&collectedData);
         }
-
+        
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 
-        SHeader* hHeader = (SHeader*)(collectedData->data);
-
-        sprintf(logmsgBuf, "process: collected in %ldus, count %d ", elapseTime, hHeader->bodyCount);
+        sprintf(logmsgBuf, "process: collected in %ldus", elapseTime);
         Log(globResource.logger, LOG_DEBUG, logmsgBuf);
 
         usleep(*collectPeriod * 1000 - elapseTime);
