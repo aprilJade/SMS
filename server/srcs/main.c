@@ -10,6 +10,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#include <net/if_arp.h>
+#include <net/if.h>
+#include <sys/ioctl.h>
 #include "receiveRoutine.h"
 #include "workerRoutine.h"
 #include "pgWrapper.h"
@@ -129,6 +132,37 @@ static int OpenServerSocket(short port)
     return servFd;
 }
 
+static bool GetMacAddr(int targetSock, uchar* out, int outSize)
+{
+    struct ifconf ifc = { 0, };
+    struct ifreq ifr[10];
+
+    ifc.ifc_len = 10 * sizeof(struct ifreq);
+    ifc.ifc_buf = (char *)ifr;
+
+    if (ioctl(targetSock, SIOCGIFCONF, (char *)&ifc) < 0)
+    {
+        // TODO: handle error: couldn't get a MAC address
+        fprintf(stderr, "Failed to get MAC address\n");
+        return false;
+    }
+    else
+    {
+        int nicCnt = ifc.ifc_len / (sizeof(struct ifreq));
+        for (int i = 0; i < nicCnt; i++)
+        {        
+            if (ioctl(targetSock, SIOCGIFHWADDR, &ifr[i]) == 0) 
+            {  
+                if (strncmp(ifr[i].ifr_name, "lo", 2) == 0)
+                    continue;
+                memcpy(out, ifr[i].ifr_hwaddr.sa_data, 6);
+                out[6] = 0;
+                return true;
+            } 
+        }
+    }
+}
+
 int main(int argc, char** argv)
 {
     if (argc != 2)
@@ -237,7 +271,8 @@ int main(int argc, char** argv)
             Log(g_logger, LOG_FATAL, "Failed to accept connection");
             exit(EXIT_FAILURE);
         }
-
+        
+        // handshake!
         param = (SReceiveParam*)malloc(sizeof(SReceiveParam));
         param->clientSock = clientFd;
         param->host = inet_ntoa(clientAddr.sin_addr);
