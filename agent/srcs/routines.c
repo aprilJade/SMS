@@ -37,7 +37,7 @@ void* CpuInfoRoutine(void* param)
     sprintf(logmsgBuf, "Ready CPU information collection routine in %lu ms cycle", *collectPeriod);
     Log(globResource.logger, LOG_INFO, logmsgBuf);
     
-    while (globResource.turnOff == false && globResource.collectorSwitch[CPU_COLLECTOR_ID] == true)
+    while (globResource.turnOff == false)
     {
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
@@ -104,7 +104,7 @@ void* MemInfoRoutine(void* param)
     DestorySCData(&avgData);
     usleep(*collectPeriod * 1000);
 
-    while(globResource.turnOff == false && globResource.collectorSwitch[MEM_COLLECTOR_ID] == true)
+    while(globResource.turnOff == false)
     {
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
@@ -200,7 +200,7 @@ void* NetInfoRoutine(void* param)
     sprintf(logmsgBuf, "Ready network information collection routine in %lu ms cycle", *collectPeriod);
     Log(globResource.logger, LOG_INFO, logmsgBuf);
    
-    while(globResource.turnOff == false && globResource.collectorSwitch[NET_COLLECTOR_ID] == true)
+    while(globResource.turnOff == false)
     {
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
@@ -258,7 +258,7 @@ void* ProcInfoRoutine(void* param)
     uchar dataBuf[1024 * 1024] = { 0, };
     SCData* collectedData;
     
-    while(globResource.turnOff == false && globResource.collectorSwitch[PROC_COLLECTOR_ID] == true)
+    while(globResource.turnOff == false)
     {
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;
@@ -313,7 +313,7 @@ void* DiskInfoRoutine(void* param)
     
     SCData* collectedData;
     
-    while(globResource.turnOff == false && globResource.collectorSwitch[DISK_COLLECTOR_ID] == true)
+    while(globResource.turnOff == false)
     {
         gettimeofday(&timeVal, NULL);
         prevTime = timeVal.tv_sec * 1000000 + timeVal.tv_usec;

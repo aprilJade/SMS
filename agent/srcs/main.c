@@ -3,11 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
-#include <sys/time.h>
 #include <string.h>
 #include <errno.h>
-#include <net/if.h>
-#include <sys/ioctl.h>
 #include "globalResource.h"
 #include "sender.h"
 
@@ -97,12 +94,8 @@ int RunCollectors()
 		{
 			if (strcmp(tmp, "true") == 0)
 			{
-				globResource.collectorSwitch[i] = true;
-
 				if ((tmp = GetValueByKey(periodKeys[i], globResource.configurations)) != NULL)
 					globResource.collectPeriods[i] = atoi(tmp);
-				else
-					globResource.collectPeriods[i] = 1000;
 						
 				if (globResource.collectPeriods[i] < MIN_SLEEP_MS)
 					globResource.collectPeriods[i] = MIN_SLEEP_MS;
@@ -198,48 +191,11 @@ static void InitializeAgent(int argc, char** argv)
 	globResource.peerPort = value != NULL ? atoi(value) : 4242;
 }
 
-static bool GetMacAddr(int targetSock, uchar* out, int outSize)
-{
-    struct ifconf ifc = { 0, };
-    struct ifreq ifr[10];
-
-    ifc.ifc_len = 10 * sizeof(struct ifreq);
-    ifc.ifc_buf = (char *)ifr;
-
-    if (ioctl(targetSock, SIOCGIFCONF, (char *)&ifc) < 0)
-    {
-        // TODO: handle error: couldn't get a MAC address
-        fprintf(stderr, "Failed to get MAC address\n");
-        return false;
-    }
-    else
-    {
-        int nicCnt = ifc.ifc_len / (sizeof(struct ifreq));
-        for (int i = 0; i < nicCnt; i++)
-        {        
-            if (ioctl(targetSock, SIOCGIFHWADDR, &ifr[i]) == 0) 
-            {  
-                if (strncmp(ifr[i].ifr_name, "lo", 2) == 0)
-                    continue;
-                memcpy(out, ifr[i].ifr_hwaddr.sa_data, 6);
-                out[6] = 0;
-                return true;
-            } 
-        }
-    }
-}
-
 int main(int argc, char** argv)
 {
-	uchar buf[12];
-	int fd = socket(AF_INET, SOCK_STREAM, 0);
-	GetMacAddr(fd, buf, 12);
-	printf("%02X:%02X:%02X:%02X:%02X:%02X\n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
-	exit(0);
 	char logmsgBuf[128] = { 0, };
 
 	RunCollectors();
-	
 	pthread_t senderTid;
 	if (pthread_create(&senderTid, NULL, SendRoutine, NULL) != 0)
 	{

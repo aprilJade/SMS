@@ -18,7 +18,6 @@ typedef struct SGlobResource
 	int stderrFd;
 	pthread_t collectors[COLLECTOR_COUNT];
 	ulong collectPeriods[COLLECTOR_COUNT];
-	bool collectorSwitch[COLLECTOR_COUNT];
 	SHashTable* configurations;
 	bool turnOff;
 	bool bIsConnected;
