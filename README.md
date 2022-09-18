@@ -13,9 +13,7 @@ DB에는 시스템 기동 시간별 CPU사용율, Memory 사용량, 초당 네�
 - [LD_PRELOAD](https://man7.org/linux/man-pages/man8/ld.so.8.html)기술을 이용한 모듈로, Agent의 TCP 송신을 후킹하여 모니터링합니다.
 - 해당 모듈을 부착하여 Agent를 기동하면 Agent-Server간 통신상태를 모니터링 할 수 있습니다.
 - 송신하는데 소요되는 시간, 그 시간의 최근 1분간의 평균값, 송신하는 바이트 수, 그 바이트 수의 최근 1분간의 평균값을 측정하여 Server에 송신합니다. 
-### Agent's client
-- agent의 정보 (수집 데이터 종류, 수집 주기, 송신 대상 서버, 네트워크 연결 상태 등)을 조회하거나 agent의 옵션 값을 수정할 수 있는 프로그램입니다.
-- UDS(Unix Domain Socket)를 통해 agent와 통신합니다.
+
 
 ## Server
 - 복수의 Agent가 보내온 수집정보를 DB에 저장합니다. 

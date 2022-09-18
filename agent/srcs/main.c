@@ -11,9 +11,6 @@
 #include "globalResource.h"
 #include "sender.h"
 
-// CHECK: modify below path when deploy SMS
-#define UDS_SOCKET_PATH "/home/apriljade/repo/SMS/bin/.agent.sock"
-
 static const char* const strSignal[] = {
 	[SIGBUS] = "SIGBUS",
 	[SIGABRT] = "SIGABRT",
@@ -79,7 +76,6 @@ void HandleSignal(int signo)
 		sprintf(logMsg, "SMS: Agent is aborted. Check below log.\n%s\n", logPathBuf);
 		write(globResource.stderrFd, logMsg, strlen(logMsg));
 	}
-	remove(UDS_SOCKET_PATH);
 	exit(signo);
 }
 
@@ -242,6 +238,8 @@ int main(int argc, char** argv)
 	exit(0);
 	char logmsgBuf[128] = { 0, };
 
+	RunCollectors();
+	
 	pthread_t senderTid;
 	if (pthread_create(&senderTid, NULL, SendRoutine, NULL) != 0)
 	{
@@ -249,10 +247,7 @@ int main(int argc, char** argv)
 		Log(globResource.logger, LOG_FATAL, logmsgBuf);
 		exit(EXIT_FAILURE);
 	}
-	pthread_detach(senderTid);
-
-	RunCollectors();
-	ManageAgentRoutine();
-		
+	pthread_join(senderTid, NULL);
+	
 	exit(EXIT_SUCCESS);
 }
