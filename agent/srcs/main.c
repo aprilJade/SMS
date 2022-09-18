@@ -47,32 +47,30 @@ void* (*collectRoutines[COLLECTOR_COUNT])(void*) = {
 
 SGlobResource globResource = { 0, };
 
-void HandleSignal(int signo)
+static void HandleTerminateSignals(int signo)
+{
+    globResource.turnOff = true;
+	for (int i = 0; i < COLLECTOR_COUNT; i++)
+	{
+		if (globResource.collectors[i] == 0)
+			continue;
+		pthread_join(globResource.collectors[i], NULL);
+	}
+	Log(globResource.logger, LOG_INFO, "Agent is terminated");
+	exit(EXIT_SUCCESS);
+}
+
+static void HandleFatalSignals(int signo)
 {
 	char logMsg[512];
 
-	if (signo == SIGQUIT || signo == SIGTERM)
-	{
-		globResource.turnOff = true;
-		for (int i = 0; i < COLLECTOR_COUNT; i++)
-		{
-			if (globResource.collectors[i] == 0)
-				continue;
-			pthread_join(globResource.collectors[i], NULL);
-		}
-		sprintf(logMsg, "Agent is terminated");
-		Log(globResource.logger, LOG_INFO, logMsg);
-	}
-	else
-	{
-		sprintf(logMsg, "Agent is aborted: %s", strSignal[signo]);
-		Log(globResource.logger, LOG_FATAL, logMsg);
-		char logPathBuf[128];
-		GenLogFileFullPath(globResource.logger->logPath, logPathBuf);
+    sprintf(logMsg, "Agent is aborted: %s", strSignal[signo]);
+	Log(globResource.logger, LOG_FATAL, logMsg);
+	char logPathBuf[128];
+	GenLogFileFullPath(globResource.logger->logPath, logPathBuf);
 
-		sprintf(logMsg, "SMS: Agent is aborted. Check below log.\n%s\n", logPathBuf);
-		write(globResource.stderrFd, logMsg, strlen(logMsg));
-	}
+	sprintf(logMsg, "SMS: Agent is aborted. Check below log.\n%s\n", logPathBuf);
+	write(globResource.stderrFd, logMsg, strlen(logMsg));
 	exit(signo);
 }
 
@@ -135,16 +133,16 @@ static void InitializeAgent(int argc, char** argv)
 		exit(EXIT_FAILURE);
 	}
 
-	signal(SIGBUS, HandleSignal);
-	signal(SIGABRT, HandleSignal);
-	signal(SIGFPE, HandleSignal);
-	signal(SIGQUIT, HandleSignal);
-	signal(SIGSEGV, HandleSignal); 
-	signal(SIGINT, HandleSignal);
-	signal(SIGILL, HandleSignal);
-	signal(SIGSYS, HandleSignal);
-	signal(SIGTERM, HandleSignal);
-	signal(SIGKILL, HandleSignal);
+	signal(SIGBUS, HandleFatalSignals);	// bus error
+	signal(SIGABRT, HandleFatalSignals);	// abort signal
+	signal(SIGFPE, HandleFatalSignals);	// floating point error
+	signal(SIGQUIT, HandleFatalSignals);	// quit signal
+	signal(SIGSEGV, HandleFatalSignals);  // segmentation fault
+	signal(SIGINT, HandleFatalSignals);	// interrupted
+	signal(SIGILL, HandleFatalSignals);	// illegal instruction
+	signal(SIGSYS, HandleFatalSignals);	// system call error
+	signal(SIGTERM, HandleTerminateSignals);	// terminate signalr
+	signal(SIGKILL, HandleTerminateSignals);	// terminate signal
 
 	globResource.loadTime = time(NULL);
 	globResource.configurations = NewHashTable();

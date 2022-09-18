@@ -49,36 +49,30 @@ pthread_cond_t g_clientCntCond = PTHREAD_COND_INITIALIZER;
 unsigned int g_clientCnt = 0;
 unsigned int g_workerCnt;
 
-void HandleSignal(int signo)
+static void HandleTerminateSignals(int signo)
+{
+    g_turnOff = true;
+    pthread_mutex_lock(&g_clientCntLock);
+    pthread_cond_broadcast(&g_clientCntCond);
+    pthread_mutex_unlock(&g_clientCntLock);
+    for (int i = 0; i < g_workerCnt; i++)
+        pthread_join(workerId[i], NULL);
+    Log(g_logger, LOG_INFO, "Server is terminated");
+    exit(EXIT_SUCCESS);
+}
+
+static void HandleFatalSignals(int signo)
 {
 	char logMsg[512];
 
-	if (signo == SIGQUIT || signo == SIGTERM)
-	{
-        g_turnOff = true;
-        pthread_mutex_lock(&g_clientCntLock);
-        pthread_cond_broadcast(&g_clientCntCond);
-        pthread_mutex_unlock(&g_clientCntLock);
-        for (int i = 0; i < g_workerCnt; i++)
-            pthread_join(workerId[i], NULL);
-		Log(g_logger, LOG_INFO, "Server is terminated");
-	}
-	else
-	{
-		sprintf(logMsg, "Server is aborted: %s", strSignal[signo]);
-		Log(g_logger, LOG_FATAL, logMsg);
-        pthread_mutex_lock(&g_clientCntLock);
-        pthread_cond_broadcast(&g_clientCntCond);
-        pthread_mutex_unlock(&g_clientCntLock);
-		char logPathBuf[128];
-		GenLogFileFullPath(g_logger->logPath, logPathBuf);
+    sprintf(logMsg, "Server is aborted: %s", strSignal[signo]);
+    Log(g_logger, LOG_FATAL, logMsg);
+    char logPathBuf[128];
+    GenLogFileFullPath(g_logger->logPath, logPathBuf);
 
-		sprintf(logMsg, "SMS: Server is aborted. Check below log.\n%s\n", logPathBuf);
-		write(g_stderrFd, logMsg, strlen(logMsg));
-	    exit(signo);
-	}
-
-	exit(signo);
+    sprintf(logMsg, "SMS: Server is aborted. Check below log.\n%s\n", logPathBuf);
+    write(g_stderrFd, logMsg, strlen(logMsg));
+    exit(signo);
 }
 
 static void CreateWorker(int workerCount, SHashTable* options)
@@ -206,16 +200,16 @@ int main(int argc, char** argv)
 		}
 	}
 
-    signal(SIGBUS, HandleSignal);	// bus error
-	signal(SIGABRT, HandleSignal);	// abort signal
-	signal(SIGFPE, HandleSignal);	// floating point error
-	signal(SIGQUIT, HandleSignal);	// quit signal
-	signal(SIGSEGV, HandleSignal);  // segmentation fault
-	signal(SIGINT, HandleSignal);	// interrupted
-	signal(SIGILL, HandleSignal);	// illegal instruction
-	signal(SIGSYS, HandleSignal);	// system call error
-	signal(SIGTERM, HandleSignal);	// terminate signalr
-	signal(SIGKILL, HandleSignal);	// terminate signal
+    signal(SIGBUS, HandleFatalSignals);	// bus error
+	signal(SIGABRT, HandleFatalSignals);	// abort signal
+	signal(SIGFPE, HandleFatalSignals);	// floating point error
+	signal(SIGQUIT, HandleFatalSignals);	// quit signal
+	signal(SIGSEGV, HandleFatalSignals);  // segmentation fault
+	signal(SIGINT, HandleFatalSignals);	// interrupted
+	signal(SIGILL, HandleFatalSignals);	// illegal instruction
+	signal(SIGSYS, HandleFatalSignals);	// system call error
+	signal(SIGTERM, HandleTerminateSignals);	// terminate signalr
+	signal(SIGKILL, HandleTerminateSignals);	// terminate signal
 
     tmp = GetValueByKey(CONF_KEY_LISTEN_PORT, options);
     unsigned short port = DEFAULT_PORT;
