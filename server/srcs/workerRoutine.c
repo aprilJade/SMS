@@ -16,8 +16,8 @@ extern bool g_turnOff;
 extern const Logger* g_logger;
 extern Queue* g_queue;
 extern unsigned int g_clientCnt;
-extern pthread_mutex_t g_clientCntLock;
-extern pthread_cond_t g_clientCntCond;
+extern pthread_mutex_t g_workerLock;
+extern pthread_cond_t g_workerCond;
 
 const int dbConnMaxCnt = 600;
 const int dbConnInterval = 1;
@@ -84,9 +84,9 @@ void* WorkerRoutine(void* param)
             {
                 sprintf(logMsg, "%d Go to sleep: No clients connected, No work remained", pParam->workerId);
                 Log(g_logger, LOG_INFO, logMsg);
-                pthread_mutex_lock(&g_clientCntLock);
-                pthread_cond_wait(&g_clientCntCond, &g_clientCntLock);
-                pthread_mutex_unlock(&g_clientCntLock);
+                pthread_mutex_lock(&g_workerLock);
+                pthread_cond_wait(&g_workerCond, &g_workerLock);
+                pthread_mutex_unlock(&g_workerLock);
                 if (g_turnOff)
                     break;
                 sprintf(logMsg, "%d Wakeup: New client connected", pParam->workerId);

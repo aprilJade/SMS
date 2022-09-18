@@ -44,17 +44,17 @@ pthread_t udpTid;
 pthread_t* workerId;
 Queue* g_queue;
 int g_stderrFd = 2;
-pthread_mutex_t g_clientCntLock = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t g_clientCntCond = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t g_workerLock = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t g_workerCond = PTHREAD_COND_INITIALIZER;
 unsigned int g_clientCnt = 0;
 unsigned int g_workerCnt;
 
 static void HandleTerminateSignals(int signo)
 {
     g_turnOff = true;
-    pthread_mutex_lock(&g_clientCntLock);
-    pthread_cond_broadcast(&g_clientCntCond);
-    pthread_mutex_unlock(&g_clientCntLock);
+    pthread_mutex_lock(&g_workerLock);
+    pthread_cond_broadcast(&g_workerCond);
+    pthread_mutex_unlock(&g_workerLock);
     for (int i = 0; i < g_workerCnt; i++)
         pthread_join(workerId[i], NULL);
     Log(g_logger, LOG_INFO, "Server is terminated");
@@ -279,10 +279,10 @@ int main(int argc, char** argv)
             continue;
         }
         
-        pthread_mutex_lock(&g_clientCntLock);
+        pthread_mutex_lock(&g_workerLock);
         g_clientCnt++;
-        pthread_cond_broadcast(&g_clientCntCond);
-        pthread_mutex_unlock(&g_clientCntLock);
+        pthread_cond_broadcast(&g_workerCond);
+        pthread_mutex_unlock(&g_workerLock);
         
 
         sprintf(logMsg, "Start TCP receiver for %s:%d", param->host, param->port);
