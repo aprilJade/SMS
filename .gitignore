@@ -10,3 +10,4 @@ objs/
 bin/
 printer
 agent-cli
+multiple.sh

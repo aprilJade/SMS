@@ -21,7 +21,6 @@ void* CpuInfoRoutine(void* param)
     ushort cpuCnt = sysconf(_SC_NPROCESSORS_ONLN);
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
-    char logmsgBuf[128];
     ulong* collectPeriod = &globResource.collectPeriods[CPU_COLLECTOR_ID];
     int maxCount = (int)(AVG_TARGET_TIME_AS_MS / (float)*collectPeriod);
     SCData* avgData;
@@ -34,8 +33,7 @@ void* CpuInfoRoutine(void* param)
     DestorySCData(&avgData);
     usleep(*collectPeriod * 1000);
 
-    sprintf(logmsgBuf, "Ready CPU information collection routine in %lu ms cycle", *collectPeriod);
-    Log(globResource.logger, LOG_INFO, logmsgBuf);
+    LOG_INFO(globResource.logger, "Ready CPU information collection routine in %lu ms cycle", *collectPeriod);
     
     while (globResource.turnOff == false)
     {
@@ -44,8 +42,7 @@ void* CpuInfoRoutine(void* param)
         
         if ((collectedData = CollectEachCpuInfo(cpuCnt, toMs, buf, *collectPeriod, globResource.agentID)) == NULL)
         {
-            sprintf(logmsgBuf, "CPU: failed to collect");
-            Log(globResource.logger, LOG_ERROR, logmsgBuf);
+            LOG_ERROR(globResource.logger, "CPU: failed to collect");
             gettimeofday(&timeVal, NULL);
             postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
             elapseTime = postTime - prevTime;
@@ -71,13 +68,12 @@ void* CpuInfoRoutine(void* param)
         gettimeofday(&timeVal, NULL);
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
-        sprintf(logmsgBuf, "CPU: Collected in %ldus", elapseTime);
-        Log(globResource.logger, LOG_DEBUG, logmsgBuf);
+        LOG_DEBUG(globResource.logger, "CPU: Collected in %ldus", elapseTime);
         
         usleep(*collectPeriod * 1000 - elapseTime);
     }
 
-    Log(globResource.logger, LOG_INFO, "CPU: terminate collector");
+    LOG_INFO(globResource.logger, "CPU: terminate collector");
 }
 
 void* MemInfoRoutine(void* param)
@@ -87,13 +83,11 @@ void* MemInfoRoutine(void* param)
     ulong prevTime, postTime, elapseTime;
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
-    char logmsgBuf[128];
     SCData* collectedData;
     ulong* collectPeriod = &globResource.collectPeriods[MEM_COLLECTOR_ID];
     SCData* avgData;
     
-    sprintf(logmsgBuf, "Ready memory information collection routine in %lu ms cycle", *collectPeriod);
-    Log(globResource.logger, LOG_INFO, logmsgBuf);
+    LOG_INFO(globResource.logger, "Ready memory information collection routine in %lu ms cycle", *collectPeriod);
     
     int maxCount = (int)(AVG_TARGET_TIME_AS_MS / (float)*collectPeriod);
     
@@ -111,8 +105,7 @@ void* MemInfoRoutine(void* param)
 
         if ((collectedData = CollectMemInfo(buf, *collectPeriod, globResource.agentID)) == NULL)
         {
-            sprintf(logmsgBuf, "memory: failed to collect");
-            Log(globResource.logger, LOG_ERROR, logmsgBuf);
+            LOG_ERROR(globResource.logger, "memory: failed to collect");
             gettimeofday(&timeVal, NULL);
             postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
             elapseTime = postTime - prevTime;
@@ -139,12 +132,12 @@ void* MemInfoRoutine(void* param)
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 
-        sprintf(logmsgBuf, "memory: collected in %ldus", elapseTime);
-        Log(globResource.logger, LOG_DEBUG, logmsgBuf);
+        LOG_DEBUG(globResource.logger, "memory: collected in %ldus", elapseTime);
 
         usleep(*collectPeriod * 1000 - elapseTime);
     }
-    Log(globResource.logger, LOG_INFO, "memory: terminate collector");
+
+    LOG_INFO(globResource.logger, "memory: terminate collector");
 }
 
 int GetNicCount()
@@ -184,7 +177,6 @@ void* NetInfoRoutine(void* param)
     ulong prevTime, postTime, elapseTime;
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
-    char logmsgBuf[128];
     int nicCount = GetNicCount();
     ulong* collectPeriod = &globResource.collectPeriods[NET_COLLECTOR_ID];
     SCData* collectedData;
@@ -197,8 +189,7 @@ void* NetInfoRoutine(void* param)
     DestorySCData(&avgData);
     usleep(*collectPeriod * 1000);
 
-    sprintf(logmsgBuf, "Ready network information collection routine in %lu ms cycle", *collectPeriod);
-    Log(globResource.logger, LOG_INFO, logmsgBuf);
+    LOG_INFO(globResource.logger, "Ready network information collection routine in %lu ms cycle", *collectPeriod);
    
     while(globResource.turnOff == false)
     {
@@ -207,8 +198,7 @@ void* NetInfoRoutine(void* param)
 
         if ((collectedData = CollectNetInfo(buf, nicCount, *collectPeriod, globResource.agentID)) == NULL)
         {
-            sprintf(logmsgBuf, "network: failed to collect");
-            Log(globResource.logger, LOG_ERROR, logmsgBuf);
+            LOG_ERROR(globResource.logger, "network: failed to collect");
             gettimeofday(&timeVal, NULL);
             postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
             elapseTime = postTime - prevTime;
@@ -235,11 +225,10 @@ void* NetInfoRoutine(void* param)
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 
-        sprintf(logmsgBuf, "network: collected in %ldus", elapseTime);
-        Log(globResource.logger, LOG_DEBUG, logmsgBuf);
+        LOG_DEBUG(globResource.logger, "network: collected in %ldus", elapseTime);
         usleep(*collectPeriod * 1000 - elapseTime);
     }
-    Log(globResource.logger, LOG_INFO, "network: terminate collector");
+    LOG_INFO(globResource.logger, "network: terminate collector");
 }
 
 void* ProcInfoRoutine(void* param)
@@ -249,11 +238,9 @@ void* ProcInfoRoutine(void* param)
     ulong prevTime, postTime, elapseTime, totalElapsed;
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
-    char logmsgBuf[128];
     ulong* collectPeriod = &globResource.collectPeriods[PROC_COLLECTOR_ID];
     
-    sprintf(logmsgBuf, "Ready process information collection routine in %lu ms cycle", *collectPeriod);
-    Log(globResource.logger, LOG_INFO, logmsgBuf);
+    LOG_INFO(globResource.logger, "Ready process information collection routine in %lu ms cycle", *collectPeriod);
     
     uchar dataBuf[1024 * 1024] = { 0, };
     SCData* collectedData;
@@ -266,8 +253,7 @@ void* ProcInfoRoutine(void* param)
         memset(dataBuf, 0, 1024 * 1024);
         if ((collectedData = CollectProcInfo(buf, dataBuf, *collectPeriod, globResource.agentID)) == NULL)
         {
-            sprintf(logmsgBuf, "process: failed to collect");
-            Log(globResource.logger, LOG_ERROR, logmsgBuf);
+            LOG_ERROR(globResource.logger, "process: failed to collect");
             gettimeofday(&timeVal, NULL);
             postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
             elapseTime = postTime - prevTime;
@@ -290,12 +276,11 @@ void* ProcInfoRoutine(void* param)
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 
-        sprintf(logmsgBuf, "process: collected in %ldus", elapseTime);
-        Log(globResource.logger, LOG_DEBUG, logmsgBuf);
+        LOG_DEBUG(globResource.logger, "process: collected in %ldus", elapseTime);
 
         usleep(*collectPeriod * 1000 - elapseTime);
     }
-    Log(globResource.logger, LOG_INFO, "process: terminate collector");
+    LOG_INFO(globResource.logger, "process: terminate collector");
 }
 
 void* DiskInfoRoutine(void* param)
@@ -305,11 +290,9 @@ void* DiskInfoRoutine(void* param)
     ulong prevTime, postTime, elapseTime;
     char buf[BUFFER_SIZE + 1] = { 0, };
     struct timeval timeVal;
-    char logmsgBuf[128];
     ulong* collectPeriod = &globResource.collectPeriods[DISK_COLLECTOR_ID];
     
-    sprintf(logmsgBuf, "Ready disk information collection routine in %lu ms cycle", *collectPeriod);
-    Log(globResource.logger, LOG_INFO, logmsgBuf);
+    LOG_INFO(globResource.logger, "Ready disk information collection routine in %lu ms cycle", *collectPeriod);
     
     SCData* collectedData;
     
@@ -320,8 +303,7 @@ void* DiskInfoRoutine(void* param)
 
         if ((collectedData = CollectDiskInfo(buf, *collectPeriod, globResource.agentID)) == NULL)
         {
-            sprintf(logmsgBuf, "disk: failed to collect");
-            Log(globResource.logger, LOG_ERROR, logmsgBuf);
+            LOG_ERROR(globResource.logger, "disk: failed to collect");
             gettimeofday(&timeVal, NULL);
             postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
             elapseTime = postTime - prevTime;
@@ -344,9 +326,8 @@ void* DiskInfoRoutine(void* param)
         postTime = timeVal.tv_sec * 1000000  + timeVal.tv_usec;
         elapseTime = postTime - prevTime;
 
-        sprintf(logmsgBuf, "disk: collected in %ldus", elapseTime);
-        Log(globResource.logger, LOG_DEBUG, logmsgBuf);
+        LOG_DEBUG(globResource.logger, "disk: collected in %ldus", elapseTime);
         usleep(*collectPeriod * 1000 - elapseTime);
     }
-    Log(globResource.logger, LOG_INFO, "disk: terminate collector");
+    LOG_INFO(globResource.logger, "disk: terminate collector");
 }

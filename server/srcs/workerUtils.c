@@ -50,8 +50,7 @@ int InsertCpuInfo(char* sqlBuffer, void* data, SWorkTools* tools)
                     hBody[i].waitTime);
         if (Query(tools->dbWrapper, sqlBuffer) == -1)
         {
-            sprintf(sqlBuffer, "%d: Failed to store in DB: CPU", tools->workerId);
-            Log(g_logger, LOG_ERROR, sqlBuffer);
+            LOG_ERROR(g_logger, "%d: Failed to store in DB: CPU", tools->workerId);
             return -1;
         }
         tools->queriedSqlCnt++;
@@ -81,8 +80,7 @@ int InsertCpuAvgInfo(char* sqlBuffer, void* data, SWorkTools* tools)
         totalCpuUtilization += hBody[i].cpuUtilization;
         if (Query(tools->dbWrapper, sql) == -1)
         {
-            sprintf(sql, "%d: Failed to store in DB: CPU AVG", tools->workerId);
-            Log(g_logger, LOG_ERROR, sql);
+            LOG_ERROR(g_logger, "%d: Failed to store in DB: CPU AVG", tools->workerId);
             return -1;
         }
     }
@@ -98,8 +96,7 @@ int InsertCpuAvgInfo(char* sqlBuffer, void* data, SWorkTools* tools)
             totalCpuUtilization);
         if (Query(tools->dbWrapper, sql) == -1)
         {
-            sprintf(sql, "%d: Failed to store in DB: CPU Threshold", tools->workerId);
-            Log(g_logger, LOG_ERROR, sql);
+            LOG_ERROR(g_logger, "%d: Failed to store in DB: CPU Threshold", tools->workerId);
             return -1;
         }
     }
@@ -128,8 +125,7 @@ int InsertMemInfo(char* sqlBuffer, void* data, SWorkTools* tools)
         hBody->swapFree);
     if (Query(tools->dbWrapper, sql) == -1)
     {
-        sprintf(sql, "%d: Failed to store in DB: Memory", tools->workerId);
-        Log(g_logger, LOG_ERROR, sql);
+        LOG_ERROR(g_logger, "%d: Failed to store in DB: Memory", tools->workerId);
         return -1;
     }
     tools->queriedSqlCnt++;
@@ -155,8 +151,7 @@ int InsertMemAvgInfo(char* sqlBuffer, void* data, SWorkTools* tools)
         hBody->swapUsageAvg);
     if (Query(tools->dbWrapper, sql) == -1)
     {
-        sprintf(sql, "%d: Failed to store in DB: Memory AVG", tools->workerId);
-        Log(g_logger, LOG_ERROR, sql);
+        LOG_ERROR(g_logger, "%d: Failed to store in DB: Memory AVG", tools->workerId);
         return -1;
     }
     tools->queriedSqlCnt++;
@@ -172,8 +167,7 @@ int InsertMemAvgInfo(char* sqlBuffer, void* data, SWorkTools* tools)
             hBody->memUsage);
         if (Query(tools->dbWrapper, sql) == -1)
         {
-            sprintf(sql, "%d: Failed to store in DB: Mem usage Threshold", tools->workerId);
-            Log(g_logger, LOG_ERROR, sql);
+            LOG_ERROR(g_logger, "%d: Failed to store in DB: Mem usage Threshold", tools->workerId);
             return -1;
         }
         tools->queriedSqlCnt++;
@@ -190,8 +184,7 @@ int InsertMemAvgInfo(char* sqlBuffer, void* data, SWorkTools* tools)
             hBody->swapUsage);
         if (Query(tools->dbWrapper, sql) == -1)
         {
-            sprintf(sql, "%d: Failed to store in DB: swap usage Threshold", tools->workerId);
-            Log(g_logger, LOG_ERROR, sql);
+            LOG_ERROR(g_logger, "%d: Failed to store in DB: swap usage Threshold", tools->workerId);
             return -1;
         }
         tools->queriedSqlCnt++;
@@ -224,8 +217,7 @@ int InsertNetInfo(char* sqlBuffer, void* data, SWorkTools* tools)
             hBody[i].sendPackets);
         if (Query(tools->dbWrapper, sql) == -1)
         {
-            sprintf(sql, "%d: Failed to store in DB: Network", tools->workerId);
-            Log(g_logger, LOG_ERROR, sql);
+            LOG_ERROR(g_logger, "%d: Failed to store in DB: Network", tools->workerId);
             return -1;
         }
         tools->queriedSqlCnt++;
@@ -262,9 +254,7 @@ int InsertNetAvgInfo(char* sqlBuffer, void* data, SWorkTools* tools)
             hBody[i].sendPacketsPerSecAvg);
         if (Query(tools->dbWrapper, sql) == -1)
         {
-            Log(g_logger, LOG_DEBUG, sql);
-            sprintf(sql, "%d: Failed to store in DB: Network AVG", tools->workerId);
-            Log(g_logger, LOG_ERROR, sql);
+            LOG_ERROR(g_logger, "%d: Failed to store in DB: Network AVG", tools->workerId);
             return -1;
         }
         
@@ -281,8 +271,7 @@ int InsertNetAvgInfo(char* sqlBuffer, void* data, SWorkTools* tools)
             hBody->recvBytesPerSec);
             if (Query(tools->dbWrapper, sql) == -1)
             {
-                sprintf(sql, "%d: Failed to store in DB: send bytes threshold", tools->workerId);
-                Log(g_logger, LOG_ERROR, sql);
+                LOG_ERROR(g_logger, "%d: Failed to store in DB: send bytes threshold", tools->workerId);
                 return -1;
             }
             tools->queriedSqlCnt++;
@@ -298,8 +287,7 @@ int InsertNetAvgInfo(char* sqlBuffer, void* data, SWorkTools* tools)
             hBody->sendBytesPerSec);
             if (Query(tools->dbWrapper, sql) == -1)
             {
-                sprintf(sql, "%d: Failed to store in DB: recv bytes threshold", tools->workerId);
-                Log(g_logger, LOG_ERROR, sql);
+                LOG_ERROR(g_logger, "%d: Failed to store in DB: recv bytes threshold", tools->workerId);
                 return -1;
             }
             tools->queriedSqlCnt++;
@@ -362,8 +350,8 @@ int InsertProcInfo(char* sqlBuffer, void* data, SWorkTools* tools)
 
         if (Query(tools->dbWrapper, sql) == -1)
         {
-            sprintf(sql, "%d: Failed to store in DB: Process", tools->workerId);
-            Log(g_logger, LOG_ERROR, sql);
+            LOG_ERROR(g_logger, "%d: Failed to store in DB: Process", tools->workerId);
+            return -1;
         }
         tools->queriedSqlCnt++;
     }
@@ -390,8 +378,7 @@ int InsertDiskInfo(char* sqlBuffer, void* data, SWorkTools* tools)
             hBody->totalSizeGB, hBody->freeSizeGB, hBody->diskUsage);
         if (Query(tools->dbWrapper, sql) == -1)
         {
-            sprintf(sql, "%d: Failed to store in DB: Disk", tools->workerId);
-            Log(g_logger, LOG_ERROR, sql);
+            LOG_ERROR(g_logger, "%d: Failed to store in DB: Disk", tools->workerId);
             return -1;
         }
         hBody++;
@@ -464,6 +451,12 @@ SThreshold GetThresholds(SHashTable* options)
         if (atoi(value) >= 0)
             ret.recvBytes = ConvertToBytesFromLargeUnit(value);   
     }
+
+    LOG_INFO(g_logger, "Threshold: cpu utilization: %.2f%%", ret.cpuUtilization);
+    LOG_INFO(g_logger, "Threshold: memory usage: %.2f%%", ret.memUsage);
+    LOG_INFO(g_logger, "Threshold: swap usage: %.2f%%", ret.swapUsage);
+    LOG_INFO(g_logger, "Threshold: send bytes: %lu B", ret.sendBytes);
+    LOG_INFO(g_logger, "Threshold: receive bytes: %lu B", ret.recvBytes);
 
     return ret;
 }

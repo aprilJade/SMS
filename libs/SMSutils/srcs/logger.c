@@ -7,14 +7,15 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <stdarg.h>
 
 #define TIME_FORMAT "[%02d:%02d:%02d+0900]"
 
 static const char* const strLogMsg[] = {
-    [LOG_FATAL] = "ERROR: FATAL:",
-    [LOG_ERROR] = "ERROR:",
-    [LOG_INFO] = "INFO:",
-    [LOG_DEBUG] = "DEBUG:"
+    [LOG_LEVEL_FATAL] = "FATAL:",
+    [LOG_LEVEL_ERROR] = "ERROR:",
+    [LOG_LEVEL_INFO] = "INFO:",
+    [LOG_LEVEL_DEBUG] = "DEBUG:"
 };
 
 static int g_currentDay;
@@ -101,24 +102,21 @@ Logger* NewLogger(char* logPath, int logLevel)
     return logger;
 }
 
-int Log(const Logger* handle, int logLevel, char* logMsg)
+int Log(const Logger* handle, int logLevel,
+    const char* fileName, const char* funcName, int lineNo, char* fmt, ...)
 {
-    assert(handle != NULL && logMsg != NULL);
+    assert(handle != NULL && fmt != NULL);
 
     if (handle->loggingLevel < logLevel)
         return 0;
 
+    va_list ap;
     time_t localTime;
     struct tm* timeStruct;
     localTime = time(NULL);
     timeStruct = localtime(&localTime);
     char msgBuf[LOG_BUFFER_SIZE] = { 0, };
-    sprintf(msgBuf, "[%02d:%02d:%02d+0900] %s %s\n", 
-        timeStruct->tm_hour,
-        timeStruct->tm_min,
-        timeStruct->tm_sec,
-        strLogMsg[logLevel],
-        logMsg);
+    va_start(ap, fmt);
 
     if (g_currentDay != timeStruct->tm_mday)
     {
@@ -130,10 +128,22 @@ int Log(const Logger* handle, int logLevel, char* logMsg)
         close(fd);
         g_currentDay = timeStruct->tm_mday;
     }
+    
+    
+    sprintf(msgBuf, "[%02d:%02d:%02d+0900] %s ", 
+        timeStruct->tm_hour,
+        timeStruct->tm_min,
+        timeStruct->tm_sec,
+        strLogMsg[logLevel]);
+    // [hh:mm:ss+0900] ERROR: 
+    vsprintf(msgBuf + strlen(msgBuf), fmt, ap);
+    sprintf(msgBuf + strlen(msgBuf), ": %s:%s:%d\n", fileName, funcName, lineNo);
 
     pthread_mutex_lock((pthread_mutex_t*)&handle->fdLock);
     write(handle->logFd, msgBuf, strlen(msgBuf));
     pthread_mutex_unlock((pthread_mutex_t*)&handle->fdLock);
+
+    va_end(ap);
     return 0;
 }
 

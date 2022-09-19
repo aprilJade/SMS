@@ -10,6 +10,6 @@ do
         break
     fi
     PID=$(command ps -aux | grep ./bin/agent | head -1 | tr -s ' ' | cut -d ' ' -f 2)
-    kill -15 $PID
+    kill $PID
 done
 echo SMS: There are no more agents running.

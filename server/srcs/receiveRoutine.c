@@ -51,12 +51,10 @@ void* TcpReceiveRoutine(void* param)
     int readSize;
     int totalReadSize;
     char buf[RECV_BUFFER_SIZE] = { 0, };
-    char logMsg[128];
     char* pb;
     int packetSize;
 
-    sprintf(logMsg, "Start communication with %s:%d", pParam->host, pParam->port);
-    Log(g_logger, LOG_INFO, logMsg);
+    LOG_INFO(g_logger, "Start communication with %s:%d", pParam->host, pParam->port);
 
     SHeader* hHeader;
     while (1)
@@ -67,25 +65,22 @@ void* TcpReceiveRoutine(void* param)
         
         if ((readSize = recv(pParam->clientSock, pb, sizeof(SHeader), 0)) == -1)
         {
-            sprintf(logMsg, "Disconnect to agent %s:%d (Failed to receive packet)", pParam->host, pParam->port);
-            Log(g_logger, LOG_ERROR, logMsg);
+            LOG_ERROR(g_logger, "Disconnect to agent %s:%d (Failed to receive packet)", pParam->host, pParam->port);
             break;
         }
 
         if (readSize == 0)
         {
-            sprintf(logMsg, "Disconnected from %s:%d", pParam->host, pParam->port);
-            Log(g_logger, LOG_INFO, logMsg);
+            LOG_INFO(g_logger, "Disconnected from %s:%d", pParam->host, pParam->port);
             break;
         }
         
         hHeader = (SHeader*)pb;
         if (!IsValidSignature(hHeader->signature))
         {
-            sprintf(logMsg, "Disconnect to agent %s:%d (Invalid packet signature)",
+            LOG_FATAL(g_logger,"Disconnect to agent %s:%d (Invalid packet signature)",
                 pParam->host,
                 pParam->port);
-            Log(g_logger, LOG_FATAL, logMsg);
             break;
         }
 
@@ -101,24 +96,20 @@ void* TcpReceiveRoutine(void* param)
             {
                 if (readSize == 0)
                 {
-                    sprintf(logMsg, "Disconnected from %s:%d", pParam->host, pParam->port);
-                    Log(g_logger, LOG_INFO, logMsg);
+                    LOG_INFO(g_logger, "Disconnected from %s:%d", pParam->host, pParam->port);
                     break;
                 }
-                sprintf(logMsg, "Disconnect to agent %s:%d (Failed to receive packet)", pParam->host, pParam->port);
-                Log(g_logger, LOG_ERROR, logMsg);
+                LOG_ERROR(g_logger, "Disconnect to agent %s:%d (Failed to receive packet)", pParam->host, pParam->port);
                 break;
             }
             totalReadSize += readSize;
         }
         pb[totalReadSize] = 0;
 
-        sprintf(logMsg, "Received packet from %s:%d %d B",
+        LOG_DEBUG(g_logger, "Received packet from %s:%d %d B",
             pParam->host,
             pParam->port,
             packetSize);
-        Log(g_logger, LOG_DEBUG, logMsg);
-        
 
         uchar* receivedData = (uchar*)malloc(sizeof(uchar) * packetSize);
         memcpy(receivedData, pb, packetSize);
@@ -128,8 +119,7 @@ void* TcpReceiveRoutine(void* param)
     }
 
     close(pParam->clientSock);
-    sprintf(logMsg, "End communication with %s:%d", pParam->host, pParam->port);
-    Log(g_logger, LOG_INFO, logMsg);
+    LOG_INFO(g_logger, "End communication with %s:%d", pParam->host, pParam->port);
 
     pthread_mutex_lock(&g_workerLock);
     g_clientCnt--;
@@ -156,14 +146,12 @@ void* UdpReceiveRoutine(void* param)
     int sqlCnt = 0;
     int readSize;
     char buf[1024];
-    char logMsg[256];
     struct sockaddr_in udpClientAddr;
     socklen_t len;
     SPrefixPkt* prevPkt;
     SPostfixPkt* postPkt;
 
-    sprintf(logMsg, "Start UDP receiver");
-    Log(g_logger, LOG_INFO, logMsg);
+    LOG_INFO(g_logger, "Start UDP receiver");
     char* strInsert = "INSERT INTO udp_informations (agent_id, measurement_time, process_name, pid, send_bytes, max_send_bytes, send_bytes_avg, elapse_time, max_elapse_time, elapse_time_avg) VALUES";
     char sql[512];
     Query(db, "BEGIN");
@@ -174,8 +162,7 @@ void* UdpReceiveRoutine(void* param)
 
         if ((readSize = recvfrom(udpSockFd, buf, sizeof(SPrefixPkt), 0, (struct sockaddr*)&udpClientAddr, &len)) < 0)
         {
-            sprintf(logMsg, "Fail to receive UDP packet");
-            Log(g_logger, LOG_ERROR, logMsg);
+            LOG_ERROR(g_logger, "Fail to receive UDP packet");
             continue;
         }
         buf[readSize];
@@ -191,8 +178,7 @@ void* UdpReceiveRoutine(void* param)
 
         if ((readSize = recvfrom(udpSockFd, buf, sizeof(SPostfixPkt), 0, (struct sockaddr*)&udpClientAddr, &len)) < 0)
         {
-            sprintf(logMsg, "Fail to receive UDP packet");
-            Log(g_logger, LOG_ERROR, logMsg);  
+            LOG_ERROR(g_logger, "Fail to receive UDP packet");
             continue;
         }
         buf[readSize];
@@ -229,13 +215,11 @@ void* UdpReceiveRoutine(void* param)
 
         if (Query(db, sql) == -1)
         {
-            sprintf(sql, "Failed to store in DB: UDP");
-            Log(g_logger, LOG_ERROR, sql);
+            LOG_ERROR(g_logger, "Failed to store in DB: UDP");
             continue;
         }
         sqlCnt++;
     }
 
-    sprintf(logMsg, "End UDP receiver");
-    Log(g_logger, LOG_INFO, logMsg);
+    LOG_INFO(g_logger, "End UDP receiver");
 }

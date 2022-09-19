@@ -50,31 +50,28 @@ SGlobResource globResource = { 0, };
 static void HandleTerminateSignals(int signo)
 {
     globResource.turnOff = true;
-	Log(globResource.logger, LOG_INFO, "Agent is terminated");
+	LOG_INFO(globResource.logger, "Agent is terminated");
 	exit(EXIT_SUCCESS);
 }
 
 static void HandleFatalSignals(int signo)
 {
-	char logMsg[512];
-
-    sprintf(logMsg, "Agent is aborted: %s", strSignal[signo]);
-	Log(globResource.logger, LOG_FATAL, logMsg);
+	char buf[512];
 	char logPathBuf[128];
+
+	LOG_FATAL(globResource.logger, "Agent is aborted: %s", strSignal[signo]);
 	GenLogFileFullPath(globResource.logger->logPath, logPathBuf);
 
-	sprintf(logMsg, "SMS: Agent is aborted. Check below log.\n%s\n", logPathBuf);
-	write(globResource.stderrFd, logMsg, strlen(logMsg));
+	sprintf(buf, "SMS: Agent is aborted. Check below log.\n%s\n", logPathBuf);
+	write(globResource.stderrFd, buf, strlen(buf));
 	exit(signo);
 }
 
 int RunCollectors()
 {
-	char logmsgBuf[128];
 	char* tmp;
 
 	memset(globResource.agentID, 0, 16);
-	// TODO: change agent ID processing
 	if ((tmp = GetValueByKey(CONF_KEY_ID, globResource.configurations)) == NULL)
 		strcpy(globResource.agentID, "debug");
 	else
@@ -94,8 +91,7 @@ int RunCollectors()
 				
 				if (pthread_create(&globResource.collectors[i], NULL, collectRoutines[i], NULL) == -1)
 				{
-					sprintf(logmsgBuf, "Failed to start collector");
-					Log(globResource.logger, LOG_FATAL, logmsgBuf);
+					LOG_FATAL(globResource.logger, "Failed to start collector");
 					exit(EXIT_FAILURE);
 				}
 			}
@@ -113,9 +109,9 @@ Logger* GenLogger(SHashTable* options)
 	if ((logLevel = GetValueByKey(CONF_KEY_LOG_LEVEL, options)) != NULL)
 	{
 		if (strcmp(logLevel, "default") == 0)
-			return NewLogger(logPath, LOG_INFO);
+			return NewLogger(logPath, LOG_LEVEL_INFO);
 	}
-	return NewLogger(logPath, LOG_DEBUG);
+	return NewLogger(logPath, LOG_LEVEL_DEBUG);
 }
 
 __attribute__((constructor))
@@ -127,16 +123,16 @@ static void InitializeAgent(int argc, char** argv)
 		exit(EXIT_FAILURE);
 	}
 
-	signal(SIGBUS, HandleFatalSignals);	// bus error
-	signal(SIGABRT, HandleFatalSignals);	// abort signal
-	signal(SIGFPE, HandleFatalSignals);	// floating point error
-	signal(SIGQUIT, HandleFatalSignals);	// quit signal
-	signal(SIGSEGV, HandleFatalSignals);  // segmentation fault
-	signal(SIGINT, HandleFatalSignals);	// interrupted
-	signal(SIGILL, HandleFatalSignals);	// illegal instruction
-	signal(SIGSYS, HandleFatalSignals);	// system call error
-	signal(SIGTERM, HandleTerminateSignals);	// terminate signalr
-	signal(SIGKILL, HandleTerminateSignals);	// terminate signal
+	signal(SIGBUS, HandleFatalSignals);
+	signal(SIGABRT, HandleFatalSignals);
+	signal(SIGFPE, HandleFatalSignals);
+	signal(SIGQUIT, HandleFatalSignals);
+	signal(SIGSEGV, HandleFatalSignals);
+	signal(SIGINT, HandleFatalSignals);
+	signal(SIGILL, HandleFatalSignals);
+	signal(SIGSYS, HandleFatalSignals);
+	signal(SIGTERM, HandleTerminateSignals);
+	signal(SIGKILL, HandleTerminateSignals);
 
 	globResource.loadTime = time(NULL);
 	globResource.configurations = NewHashTable();
@@ -153,7 +149,7 @@ static void InitializeAgent(int argc, char** argv)
 	{
 		if (strcmp(value, "true") == 0)
 		{
-			Log(globResource.logger, LOG_INFO, "Agent run as daemon");
+			LOG_INFO(globResource.logger, "Agent run as daemon");
 			pid_t pid = fork();
 
 			if (pid == -1)
@@ -192,7 +188,7 @@ int main(int argc, char** argv)
 	if (pthread_create(&senderTid, NULL, SendRoutine, NULL) != 0)
 	{
 		sprintf(logmsgBuf, "Fail to start sender: %s", strerror(errno));
-		Log(globResource.logger, LOG_FATAL, logmsgBuf);
+		LOG_FATAL(globResource.logger, logmsgBuf);
 		exit(EXIT_FAILURE);
 	}
 	pthread_join(senderTid, NULL);

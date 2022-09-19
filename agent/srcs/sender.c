@@ -16,12 +16,9 @@ static void RecoverTcpConnection(int signo)
     globResource.bIsConnected = false;
 
     int connFailCount = 0;
-    char logmsgBuf[128];
-    sprintf(logmsgBuf, "Disconnected to server: %s:%d", globResource.peerIP, globResource.peerPort);
-    Log(globResource.logger, LOG_FATAL, logmsgBuf);
-
-    sprintf(logmsgBuf, "Try to reconnect: %s:%d", globResource.peerIP, globResource.peerPort);
-    Log(globResource.logger, LOG_DEBUG, logmsgBuf);
+    LOG_FATAL(globResource.logger, "Disconnected to server: %s:%d", globResource.peerIP, globResource.peerPort);
+    LOG_DEBUG(globResource.logger, "Try to reconnect: %s:%d", globResource.peerIP, globResource.peerPort);
+    
     while (1)
     {
         if (globResource.turnOff)
@@ -30,13 +27,11 @@ static void RecoverTcpConnection(int signo)
         if ((g_servSockFd = ConnectToServer(globResource.peerIP, globResource.peerPort)) != -1)
             break;
         connFailCount++;
-        sprintf(logmsgBuf, "Failed to connect %s:%d...%d", globResource.peerIP, globResource.peerPort, connFailCount);
-        Log(globResource.logger, LOG_ERROR, logmsgBuf);
+        LOG_ERROR(globResource.logger, "Failed to connect %s:%d...%d", globResource.peerIP, globResource.peerPort, connFailCount);
         sleep(RECONNECT_PERIOD);
     }
     
-    sprintf(logmsgBuf, "Re-connected to %s:%d", globResource.peerIP, globResource.peerPort);
-    Log(globResource.logger, LOG_INFO, logmsgBuf);
+    LOG_INFO(globResource.logger, "Re-connected to %s:%d", globResource.peerIP, globResource.peerPort);
     globResource.bIsConnected = true;
 }
 
@@ -44,11 +39,10 @@ void* SendRoutine(void* param)
 {
     SCData* collectedData = NULL;
     int sendBytes;
-    char logmsgBuf[128];
     int connFailCount = 0;
 
 	signal(SIGPIPE, RecoverTcpConnection);
-    Log(globResource.logger, LOG_INFO, "Start sender routine");
+    LOG_INFO(globResource.logger, "Start sender routine");
 
     globResource.bIsConnected = false;
 
@@ -56,21 +50,17 @@ void* SendRoutine(void* param)
     {
         if (globResource.turnOff)
         {
-            sprintf(logmsgBuf, "Terminate sender");
-            Log(globResource.logger, LOG_INFO, logmsgBuf);
+            LOG_INFO(globResource.logger, "Terminate sender");
             return NULL;
         }
         if ((g_servSockFd = ConnectToServer(globResource.peerIP, globResource.peerPort)) != -1)
             break;
-        sprintf(logmsgBuf, "Failed to connect %s:%d (%d)", globResource.peerIP, globResource.peerPort, connFailCount);
         connFailCount++;
-        Log(globResource.logger, LOG_ERROR, logmsgBuf);
-        sprintf(logmsgBuf, "Try to reconnect: %s:%d", globResource.peerIP, globResource.peerPort);
+        LOG_ERROR(globResource.logger, "Failed to connect %s:%d (%d)", globResource.peerIP, globResource.peerPort, connFailCount);
         sleep(RECONNECT_PERIOD);
     }
 
-    sprintf(logmsgBuf, "Connected to %s:%d", globResource.peerIP, globResource.peerPort);
-    Log(globResource.logger, LOG_INFO, logmsgBuf);
+    LOG_INFO(globResource.logger, "Connected to %s:%d", globResource.peerIP, globResource.peerPort);
     
     globResource.bIsConnected = true;
 
@@ -92,12 +82,10 @@ void* SendRoutine(void* param)
         if ((sendBytes = send(g_servSockFd, collectedData->data, collectedData->dataSize, 0)) == -1)
             continue;
 
-        sprintf(logmsgBuf, "Send %d bytes to %s:%d ", sendBytes, globResource.peerIP, globResource.peerPort);
-        Log(globResource.logger, LOG_DEBUG, logmsgBuf);
+        LOG_DEBUG(globResource.logger, "Send %d bytes to %s:%d ", sendBytes, globResource.peerIP, globResource.peerPort);
 
         DestorySCData(&collectedData);
     }
     
-    sprintf(logmsgBuf, "Terminate sender");
-    Log(globResource.logger, LOG_INFO, logmsgBuf);
+    LOG_INFO(globResource.logger, "Terminate sender");
 }

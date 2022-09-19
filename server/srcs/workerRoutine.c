@@ -35,23 +35,19 @@ static const int (*InsertFunc[])(char*, void*, SWorkTools*) = {
 
 void RecoverDBConnection(SWorkTools* workTools)
 {
-    char logMsg[128];
     while (TryConectPg(workTools->dbWrapper, dbConnMaxCnt, dbConnInterval) == false)
     {
-        sprintf(logMsg, "%d DB connection is failed %d times in %d second interval",
+        LOG_FATAL(g_logger, "%d DB connection is failed %d times in %d second interval",
             workTools->workerId, dbConnMaxCnt, dbConnInterval);
-        Log(g_logger, LOG_FATAL, logMsg);
     }
 }
 
 void* WorkerRoutine(void* param)
 {
     SWorkerParam* pParam = (SWorkerParam*)param;
-    char logMsg[128];
     char sqlBuffer[1024];
 
-    sprintf(logMsg, "%d worker-created", pParam->workerId);
-    Log(g_logger, LOG_INFO, logMsg);
+    LOG_INFO(g_logger, "%d worker-created", pParam->workerId);
 
     SHeader* hHeader;
     void* data;
@@ -67,8 +63,7 @@ void* WorkerRoutine(void* param)
     if (workTools.dbWrapper->connected == false)
         RecoverDBConnection(&workTools);
     
-    sprintf(logMsg, "%d strat transaction", workTools.workerId);
-    Log(g_logger, LOG_DEBUG, logMsg);
+    LOG_DEBUG(g_logger, "%d strat transaction", workTools.workerId);
     Query(workTools.dbWrapper, "BEGIN");
 
     while (1)
@@ -81,29 +76,25 @@ void* WorkerRoutine(void* param)
             usleep(500);
             if (g_clientCnt == 0)
             {
-                sprintf(logMsg, "%d Go to sleep: No clients connected, No work remained", pParam->workerId);
-                Log(g_logger, LOG_INFO, logMsg);
+                LOG_INFO(g_logger, "%d Go to sleep: No clients connected, No work remained", pParam->workerId);
                 pthread_mutex_lock(&g_workerLock);
                 pthread_cond_wait(&g_workerCond, &g_workerLock);
                 pthread_mutex_unlock(&g_workerLock);
                 if (g_turnOff)
                     break;
-                sprintf(logMsg, "%d Wakeup: New client connected", pParam->workerId);
-                Log(g_logger, LOG_INFO, logMsg);
+                LOG_INFO(g_logger, "%d Wakeup: New client connected", pParam->workerId);
             }
             continue;
         }
         
         if (workTools.queriedSqlCnt >= QUERY_COUNT_THRESHOLD)
         {
-            sprintf(logMsg, "%d end transaction", workTools.workerId);
-            Log(g_logger, LOG_DEBUG, logMsg);
+            LOG_DEBUG(g_logger, "%d end transaction", workTools.workerId);
             Query(workTools.dbWrapper, "END");
 
             workTools.queriedSqlCnt = 0;
 
-            sprintf(logMsg, "%d strat transaction", workTools.workerId);
-            Log(g_logger, LOG_DEBUG, logMsg);
+            LOG_DEBUG(g_logger, "%d strat transaction", workTools.workerId);
             Query(workTools.dbWrapper, "BEGIN");
         }
 
@@ -114,6 +105,7 @@ void* WorkerRoutine(void* param)
             continue;
         }
         data = Pop(g_queue);
+        printf("%d\n", g_queue->cnt);
         pthread_mutex_unlock(&g_queue->lock);
 
         gettimeofday(&timeVal, NULL);
@@ -123,27 +115,22 @@ void* WorkerRoutine(void* param)
         if (InsertFunc[hHeader->signature & EXTRACT_SIGNATURE](sqlBuffer, data, &workTools) == -1)
         {
             workTools.dbWrapper->connected = false;
-            sprintf(logMsg, "%d DB connection bad. Try to recover DB connection", workTools.workerId);
-            Log(g_logger, LOG_ERROR, logMsg);
+            LOG_ERROR(g_logger, "%d DB connection bad. Try to recover DB connection", workTools.workerId);
 
             RecoverDBConnection(&workTools);
             
-            sprintf(logMsg, "%d DB connection is recovered", workTools.workerId);
-            Log(g_logger, LOG_INFO, logMsg);
+            LOG_INFO(g_logger, "%d DB connection is recovered", workTools.workerId);
             continue;
         }
 
-        sprintf(logMsg, "%d query count: %d", pParam->workerId, workTools.queriedSqlCnt);
-        Log(g_logger, LOG_DEBUG, logMsg);
+        LOG_DEBUG(g_logger, "%d query count: %d", pParam->workerId, workTools.queriedSqlCnt);
 
         free(data);
 
         gettimeofday(&timeVal, NULL);
         elapseTime = (timeVal.tv_sec * 1000000 + timeVal.tv_usec) - prevTime;
-        sprintf(logMsg, "%d work-done in %ld us", pParam->workerId, elapseTime);
-        Log(g_logger, LOG_DEBUG, logMsg);
+        LOG_DEBUG(g_logger, "%d work-done in %ld us", pParam->workerId, elapseTime);
     }
     DisconnectPg(workTools.dbWrapper);
-    sprintf(logMsg, "%d worker-destroied", pParam->workerId);
-    Log(g_logger, LOG_INFO, logMsg);
+    LOG_INFO(g_logger, "%d worker-destroied", pParam->workerId);
 }

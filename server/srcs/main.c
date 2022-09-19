@@ -57,7 +57,7 @@ static void HandleTerminateSignals(int signo)
     pthread_mutex_unlock(&g_workerLock);
     for (int i = 0; i < g_workerCnt; i++)
         pthread_join(workerId[i], NULL);
-    Log(g_logger, LOG_INFO, "Server is terminated");
+    LOG_INFO(g_logger, "Server is terminated");
     exit(EXIT_SUCCESS);
 }
 
@@ -65,8 +65,7 @@ static void HandleFatalSignals(int signo)
 {
 	char logMsg[512];
 
-    sprintf(logMsg, "Server is aborted: %s", strSignal[signo]);
-    Log(g_logger, LOG_FATAL, logMsg);
+    LOG_FATAL(g_logger, "Server is aborted: %s", strSignal[signo]);
     char logPathBuf[128];
     GenLogFileFullPath(g_logger->logPath, logPathBuf);
 
@@ -102,9 +101,9 @@ static Logger* GenLogger(SHashTable* options)
 	if ((logLevel = GetValueByKey(CONF_KEY_LOG_LEVEL, options)) != NULL)
 	{
 		if (strcmp(logLevel, "default") == 0)
-			return NewLogger(logPath, LOG_INFO);
+			return NewLogger(logPath, LOG_LEVEL_INFO);
 	}
-	return NewLogger(logPath, LOG_DEBUG);
+	return NewLogger(logPath, LOG_LEVEL_DEBUG);
 }
 
 static int OpenServerSocket(short port)
@@ -112,7 +111,10 @@ static int OpenServerSocket(short port)
     struct sockaddr_in servAddr;
     int servFd = socket(PF_INET, SOCK_STREAM, 0);
     if (servFd == -1)
+    {
+        LOG_FATAL(g_logger, "Failed to create socket: %s", strerror(errno));
         return -1;
+    }
 
     memset(&servAddr, 0, sizeof(servAddr));
     servAddr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -121,6 +123,7 @@ static int OpenServerSocket(short port)
 
     if (bind(servFd, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1)
     {
+        LOG_FATAL(g_logger, "Failed to bind: %s", strerror(errno));
         close(servFd);
         return -1;
     }
@@ -219,19 +222,15 @@ int main(int argc, char** argv)
     if (tmp != NULL)
         port = (unsigned short)atoi(tmp);
 	g_logger = GenLogger(options);
-    char logMsg[256];
 
-    sprintf(logMsg, "Server loaded: %d", getpid());
-    Log(g_logger, LOG_INFO, logMsg);
+    LOG_INFO(g_logger, "Server loaded: %d", getpid());
     
     pthread_create(&udpTid, NULL, UdpReceiveRoutine, NULL);
     
     int servFd;
     if ((servFd = OpenServerSocket(port)) == -1)
     {
-        sprintf(logMsg, "Socket is not opened: %s", strerror(errno));
-        Log(g_logger, LOG_FATAL, "Socket is not opened.");
-
+        char logMsg[256];
         char logPath[128];
 		GenLogFileFullPath(g_logger->logPath, logPath);
 		sprintf(logMsg, "SMS: Socket is not opened. Check below log.\n%s\n", logPath);
@@ -254,28 +253,26 @@ int main(int argc, char** argv)
 
 void ListenAndCreateSession(int sock, int serverPort)
 {
-    char logMsg[256];
     int clientFd;
     struct sockaddr_in clientAddr;
     socklen_t sockLen = sizeof(clientAddr);
     SReceiveParam* param;
     pthread_t tid;
 
-    sprintf(logMsg, "Listen at %d", serverPort);
-    Log(g_logger, LOG_INFO, logMsg);
+    LOG_INFO(g_logger, "Listen at %d", serverPort);
 
     while (1)
     {
         if (listen(sock, CONNECTION_COUNT) == -1)
         {
-            Log(g_logger, LOG_FATAL, "Failed listening");
+            LOG_FATAL(g_logger, "Failed to listen");
             exit(EXIT_FAILURE);
         }
 
         clientFd = accept(sock, (struct sockaddr*)&clientAddr, &sockLen);
         if (clientFd == -1)
         {
-            Log(g_logger, LOG_FATAL, "Failed to accept connection");
+            LOG_FATAL(g_logger, "Failed to accept connection");
             exit(EXIT_FAILURE);
         }
         
@@ -286,7 +283,7 @@ void ListenAndCreateSession(int sock, int serverPort)
 
         if (pthread_create(&tid, NULL, TcpReceiveRoutine, param) == -1)
         {
-            Log(g_logger, LOG_FATAL, "Failed to create receiver");
+            LOG_FATAL(g_logger, "Failed to create receiver");
             close(clientFd);
             continue;
         }
