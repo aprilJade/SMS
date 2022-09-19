@@ -153,6 +153,7 @@ void* UdpReceiveRoutine(void* param)
     if (bind(udpSockFd, (struct sockaddr*)&udpAddr, sizeof(udpAddr)) < 0)
         return 0;
     
+    int sqlCnt = 0;
     int readSize;
     char buf[1024];
     char logMsg[256];
@@ -165,6 +166,7 @@ void* UdpReceiveRoutine(void* param)
     Log(g_logger, LOG_INFO, logMsg);
     char* strInsert = "INSERT INTO udp_informations (agent_id, measurement_time, process_name, pid, send_bytes, max_send_bytes, send_bytes_avg, elapse_time, max_elapse_time, elapse_time_avg) VALUES";
     char sql[512];
+    Query(db, "BEGIN");
     while (1)
     {
         if (g_turnOff)
@@ -218,12 +220,20 @@ void* UdpReceiveRoutine(void* param)
             postPkt->maxElapseTime,
             postPkt->elapseTimeAvg);
 
+        if (sqlCnt >= 128)
+        {
+            Query(db, "COMMIT");
+            sqlCnt = 0;
+            Query(db, "BEGIN");
+        }
+
         if (Query(db, sql) == -1)
         {
             sprintf(sql, "Failed to store in DB: UDP");
             Log(g_logger, LOG_ERROR, sql);
             continue;
         }
+        sqlCnt++;
     }
 
     sprintf(logMsg, "End UDP receiver");

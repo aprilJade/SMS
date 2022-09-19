@@ -50,12 +50,6 @@ SGlobResource globResource = { 0, };
 static void HandleTerminateSignals(int signo)
 {
     globResource.turnOff = true;
-	for (int i = 0; i < COLLECTOR_COUNT; i++)
-	{
-		if (globResource.collectors[i] == 0)
-			continue;
-		pthread_join(globResource.collectors[i], NULL);
-	}
 	Log(globResource.logger, LOG_INFO, "Agent is terminated");
 	exit(EXIT_SUCCESS);
 }

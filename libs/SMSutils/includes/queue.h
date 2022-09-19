@@ -7,6 +7,7 @@ typedef struct Queue
     void* data;
     pthread_mutex_t lock;
     struct Queue* next;
+    unsigned int cnt;
 } Queue;
 
 Queue* NewQueue();

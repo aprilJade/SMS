@@ -115,6 +115,7 @@ void* WorkerRoutine(void* param)
             continue;
         }
         data = Pop(g_queue);
+//        printf ("%.2f%%\n", g_queue->cnt / 128.0 * 100.0);
         pthread_mutex_unlock(&g_queue->lock);
 
         gettimeofday(&timeVal, NULL);

@@ -9,6 +9,7 @@ Queue* NewQueue()
     pthread_mutex_init(&ret->lock, NULL);
     ret->data = NULL;
     ret->next = NULL;
+    ret->cnt = 0;
     return ret;
 }
 
@@ -26,7 +27,7 @@ void* Pop(Queue* queue)
     void* ret = tmp->data;
     queue->next = tmp->next;
     free(tmp);
-
+    queue->cnt--;
     return ret;
 }
 
@@ -36,6 +37,7 @@ int Push(void* data, Queue* queue)
     if (tmp == NULL)
         return 1;
 
+    queue->cnt++;
     tmp->data = data;
     tmp->next = NULL;
     
