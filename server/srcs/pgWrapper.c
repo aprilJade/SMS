@@ -42,7 +42,7 @@ int Query(SPgWrapper* handle, const char* sql)
     PGresult* res;
 
     res = PQexec(handle->conn, sql);
-    
+
     if (PQresultStatus(res) != PGRES_COMMAND_OK)
     {
         PQclear(res);

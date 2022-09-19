@@ -28,35 +28,6 @@ static const char* const thresholdInsertSql =
 
 extern Logger* g_logger;
 
-
-void NewSqlQueue(SSqlVec* vec, int maxCnt)
-{
-    vec = (SSqlVec*)malloc(sizeof(SSqlVec));
-    vec->maxCnt = maxCnt;
-    vec->data = (char**)malloc(sizeof(char*) * maxCnt);
-    vec->dataCnt = 0;
-}
-
-int AddTailSql(char* sql, SSqlVec* vec)
-{
-    if (vec->dataCnt < vec->maxCnt)
-    {
-        vec->data[vec->dataCnt++] = sql;
-        return 0;
-    }
-    return 1;
-}
-
-char* GetHeadSql(SSqlVec* vec)
-{
-    if (vec->dataCnt > 0)
-    {
-        return vec->data[vec->dataCnt-- - 1];
-    }
-    return NULL;
-}
-
-
 int InsertCpuInfo(char* sqlBuffer, void* data, SWorkTools* tools)
 {
     SHeader* hHeader = (SHeader*)data;

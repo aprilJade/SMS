@@ -21,17 +21,6 @@ typedef struct SWorkTools
     int queriedSqlCnt;
 } SWorkTools;
 
-typedef struct SSqlVec
-{
-    char** data;
-    int dataCnt;
-    int maxCnt;
-} SSqlVec;
-
-void NewSqlQueue(SSqlVec* vec, int maxCnt);
-int AddTailSql(char* sql, SSqlVec* vec);
-char* GetHeadSql(SSqlVec* vec);
-
 int InsertCpuInfo(char* sqlBuffer, void* data, SWorkTools* tools);
 int InsertCpuAvgInfo(char* sqlBuffer, void* data, SWorkTools* tools);
 int InsertMemInfo(char* sqlBuffer, void* data, SWorkTools* tools);

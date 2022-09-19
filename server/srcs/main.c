@@ -88,6 +88,7 @@ static void CreateWorker(int workerCount, SHashTable* options)
         param->threshold = threshold;
         pthread_create(&workerId[i], NULL, WorkerRoutine, param);
     }
+    g_workerCnt = workerCount;
 }
 
 static Logger* GenLogger(SHashTable* options)
@@ -157,6 +158,8 @@ static bool GetMacAddr(int targetSock, uchar* out, int outSize)
     }
 }
 
+void ListenAndCreateSession();
+
 int main(int argc, char** argv)
 {
     if (argc != 2)
@@ -200,14 +203,14 @@ int main(int argc, char** argv)
 		}
 	}
 
-    signal(SIGBUS, HandleFatalSignals);	// bus error
-	signal(SIGABRT, HandleFatalSignals);	// abort signal
-	signal(SIGFPE, HandleFatalSignals);	// floating point error
-	signal(SIGQUIT, HandleFatalSignals);	// quit signal
-	signal(SIGSEGV, HandleFatalSignals);  // segmentation fault
-	signal(SIGINT, HandleFatalSignals);	// interrupted
-	signal(SIGILL, HandleFatalSignals);	// illegal instruction
-	signal(SIGSYS, HandleFatalSignals);	// system call error
+    signal(SIGBUS, HandleFatalSignals);	        // bus error
+	signal(SIGABRT, HandleFatalSignals);	    // abort signal
+	signal(SIGFPE, HandleFatalSignals);	        // floating point error
+	signal(SIGQUIT, HandleFatalSignals);	    // quit signal
+	signal(SIGSEGV, HandleFatalSignals);        // segmentation fault
+	signal(SIGINT, HandleFatalSignals);	        // interrupted
+	signal(SIGILL, HandleFatalSignals);	        // illegal instruction
+	signal(SIGSYS, HandleFatalSignals);	        // system call error
 	signal(SIGTERM, HandleTerminateSignals);	// terminate signalr
 	signal(SIGKILL, HandleTerminateSignals);	// terminate signal
 
@@ -223,9 +226,7 @@ int main(int argc, char** argv)
     
     pthread_create(&udpTid, NULL, UdpReceiveRoutine, NULL);
     
-    int servFd, clientFd;
-    struct sockaddr_in clientAddr;
-
+    int servFd;
     if ((servFd = OpenServerSocket(port)) == -1)
     {
         sprintf(logMsg, "Socket is not opened: %s", strerror(errno));
@@ -238,35 +239,46 @@ int main(int argc, char** argv)
         exit(EXIT_FAILURE);
     }
 
-    socklen_t len = sizeof(clientAddr);
-    pthread_t tid;
-    SReceiveParam* param;
     g_queue = NewQueue();
+
+    int workerCount = 4;
     tmp = GetValueByKey(CONF_KEY_WORKER_COUNT, options);
-    int workerCount = 2;
     if (tmp != NULL)
         workerCount = atoi(tmp);
+    
     CreateWorker(workerCount, options);
-    g_workerCnt = workerCount;
+    ListenAndCreateSession(servFd, port);
+
+    exit(EXIT_SUCCESS);
+}
+
+void ListenAndCreateSession(int sock, int serverPort)
+{
+    char logMsg[256];
+    int clientFd;
+    struct sockaddr_in clientAddr;
+    socklen_t sockLen = sizeof(clientAddr);
+    SReceiveParam* param;
+    pthread_t tid;
+
+    sprintf(logMsg, "Listen at %d", serverPort);
+    Log(g_logger, LOG_INFO, logMsg);
+
     while (1)
     {
-        if (listen(servFd, CONNECTION_COUNT) == -1)
+        if (listen(sock, CONNECTION_COUNT) == -1)
         {
             Log(g_logger, LOG_FATAL, "Failed listening");
             exit(EXIT_FAILURE);
         }
 
-        sprintf(logMsg, "Wait for connection from client at %d", port);
-        Log(g_logger, LOG_INFO, logMsg);
-
-        clientFd = accept(servFd, (struct sockaddr*)&clientAddr, &len);
+        clientFd = accept(sock, (struct sockaddr*)&clientAddr, &sockLen);
         if (clientFd == -1)
         {
             Log(g_logger, LOG_FATAL, "Failed to accept connection");
             exit(EXIT_FAILURE);
         }
         
-        // handshake!
         param = (SReceiveParam*)malloc(sizeof(SReceiveParam));
         param->clientSock = clientFd;
         param->host = inet_ntoa(clientAddr.sin_addr);
@@ -283,10 +295,7 @@ int main(int argc, char** argv)
         g_clientCnt++;
         pthread_cond_broadcast(&g_workerCond);
         pthread_mutex_unlock(&g_workerLock);
-        
 
-        sprintf(logMsg, "Start TCP receiver for %s:%d", param->host, param->port);
-        Log(g_logger, LOG_INFO, logMsg);
         pthread_detach(tid);
     }
-}   
+}

@@ -55,6 +55,9 @@ void* TcpReceiveRoutine(void* param)
     char* pb;
     int packetSize;
 
+    sprintf(logMsg, "Start communication with %s:%d", pParam->host, pParam->port);
+    Log(g_logger, LOG_INFO, logMsg);
+
     SHeader* hHeader;
     while (1)
     {
@@ -125,7 +128,7 @@ void* TcpReceiveRoutine(void* param)
     }
 
     close(pParam->clientSock);
-    sprintf(logMsg, "End receiver for %s:%d", pParam->host, pParam->port);
+    sprintf(logMsg, "End communication with %s:%d", pParam->host, pParam->port);
     Log(g_logger, LOG_INFO, logMsg);
 
     pthread_mutex_lock(&g_workerLock);
