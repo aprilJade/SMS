@@ -18,7 +18,14 @@ bool ConnectPg(SPgWrapper* wrapper)
 {
     wrapper->conn = PQconnectdb(wrapper->connInfo);
     wrapper->connected = CheckPgStatus(wrapper);
+    
     return wrapper->connected;
+}
+
+void DisconnectPg(SPgWrapper* wrapper)
+{
+    PQfinish(wrapper->conn);
+    wrapper->connected = false;
 }
 
 bool TryConectPg(SPgWrapper* wrapper, int tryCnt, int tryPeriodSec)

@@ -15,6 +15,7 @@ typedef struct SPgWrapper
 SPgWrapper* NewPgWrapper(const char* conninfo);
 bool CheckPgStatus(SPgWrapper* db);
 bool ConnectPg(SPgWrapper* wrapper);
+void DisconnectPg(SPgWrapper* wrapper);
 bool TryConectPg(SPgWrapper* wrapper, int tryCnt, int tryPeriodSec);
 int Query(SPgWrapper* handle, const char* sql);
 

@@ -71,7 +71,6 @@ void* WorkerRoutine(void* param)
     Log(g_logger, LOG_DEBUG, logMsg);
     Query(workTools.dbWrapper, "BEGIN");
 
-
     while (1)
     {
         if (g_turnOff)
@@ -115,7 +114,6 @@ void* WorkerRoutine(void* param)
             continue;
         }
         data = Pop(g_queue);
-//        printf ("%.2f%%\n", g_queue->cnt / 128.0 * 100.0);
         pthread_mutex_unlock(&g_queue->lock);
 
         gettimeofday(&timeVal, NULL);
@@ -145,7 +143,7 @@ void* WorkerRoutine(void* param)
         sprintf(logMsg, "%d work-done in %ld us", pParam->workerId, elapseTime);
         Log(g_logger, LOG_DEBUG, logMsg);
     }
-
+    DisconnectPg(workTools.dbWrapper);
     sprintf(logMsg, "%d worker-destroied", pParam->workerId);
     Log(g_logger, LOG_INFO, logMsg);
 }
