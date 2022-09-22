@@ -375,6 +375,7 @@ SCData* CollectDiskInfo(char *buf, int collectPeriod, char* agentId)
 
 SCData* CalcCpuUtilizationAvg(uchar* collectedData, int cpuCnt, int maxCount, float toMs, int collectPeriod)
 {
+	// TODO: Refactoring
     static ulong* curIdle;
     static ulong* prevIdle;
     static float* deltaIdle;
@@ -433,6 +434,7 @@ SCData* CalcCpuUtilizationAvg(uchar* collectedData, int cpuCnt, int maxCount, fl
 
 SCData* CalcMemAvg(uchar* collectedData, int maxCount)
 {
+	// TODO: Refactoring
     static int curCount;
     static int idx;
     static bool initialized;
@@ -486,6 +488,7 @@ SCData* CalcMemAvg(uchar* collectedData, int maxCount)
 
 SCData* CalcNetThroughputAvg(uchar* collectedData, int nicCount, int maxCount, int collectPeriod)
 {
+	// TODO: Refactoring
     static int idx;
     static int curCount;
     static bool initialized;

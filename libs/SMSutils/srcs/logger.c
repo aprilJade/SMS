@@ -135,7 +135,6 @@ int Log(const Logger* handle, int logLevel,
         timeStruct->tm_min,
         timeStruct->tm_sec,
         strLogMsg[logLevel]);
-    // [hh:mm:ss+0900] ERROR: 
     vsprintf(msgBuf + strlen(msgBuf), fmt, ap);
     sprintf(msgBuf + strlen(msgBuf), ": %s:%s:%d\n", fileName, funcName, lineNo);
 
